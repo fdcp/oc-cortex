@@ -1,0 +1,10 @@
+# Phase 1 依赖
+loguru>=0.7.0
+pyyaml>=6.0
+tiktoken>=0.5.0
+
+# Phase 2+ 需要(本版本不用,先列上)
+# qdrant-client>=1.7.0
+# sentence-transformers>=2.7.0
+# networkx>=3.2
+# openai>=1.30.0

@@ -1,0 +1,32 @@
+# Phase 1 配置
+# 用法: 在 main.py 中通过 config.py 加载
+
+project:
+  data_dir: "./data"
+  output_dir: "./output"
+  mock_data: true  # 是否使用 mock 数据(无 OpenCode session 时用于演示)
+
+opencode:
+  # 数据源: JSONL 文件(每行一个 session JSON)
+  session_source: "./data/opencode_sessions.jsonl"
+  # 或 API 拉取(Phase 1 不实现,占位)
+  # session_api: "https://api.opencode.example/v1/sessions"
+  session_filter:
+    type: "root"             # 只处理 root session
+    min_user_messages: 2     # 至少 2 个 user 输入
+
+chunking:
+  boundary: "user_message"   # 轮次边界
+  max_tokens_per_chunk: 30000
+
+content_cleaning:
+  preserve_full: ["user", "assistant"]
+  summarize:
+    - "bash"
+    - "tool_call"
+    - "mcp_call"
+  max_error_length: 200      # 错误日志最大长度
+
+logging:
+  level: "INFO"              # DEBUG / INFO / WARNING / ERROR
+  file: "./logs/phase1.log"
