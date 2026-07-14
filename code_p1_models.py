@@ -75,6 +75,7 @@ class Chunk:
     raw_size_tokens: int = 0
     cleaned_size_tokens: int = 0
     created_at: Optional[str] = None
+    task_summary: Optional[str] = None  # Phase 2 CoT 生成的 chunk 总结
 
     def add_raw_tool_call(self, tc) -> None:
         """chunker 阶段: 添加原始工具调用"""

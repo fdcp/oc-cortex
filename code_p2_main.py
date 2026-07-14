@@ -49,6 +49,7 @@ def load_chunks_from_jsonl(path: str) -> list[Chunk]:
                     raw_size_tokens=data.get("raw_size_tokens", 0),
                     cleaned_size_tokens=data.get("cleaned_size_tokens", 0),
                     created_at=data.get("created_at"),
+                    task_summary=data.get("task_summary"),
                 )
                 chunks.append(chunk)
             except (json.JSONDecodeError, KeyError) as e:
@@ -75,6 +76,22 @@ def save_tasks(tasks: list[Task], output_path: str):
         for t in tasks:
             f.write(json.dumps(t.to_dict(), ensure_ascii=False) + "\n")
     logger.info(f"已写入 {len(tasks)} 个 task 到 {output_path}")
+
+
+def save_chunk_summaries(chunks: list[Chunk], output_path: str):
+    """将 chunk 总结写入独立的 JSONL 文件 (仅含 chunk_id + summary)"""
+    p = Path(output_path)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    count = 0
+    with open(p, "w", encoding="utf-8") as f:
+        for c in chunks:
+            if c.task_summary:
+                f.write(json.dumps(
+                    {"chunk_id": c.chunk_id, "summary": c.task_summary},
+                    ensure_ascii=False,
+                ) + "\n")
+                count += 1
+    logger.info(f"已写入 {count} 条 chunk 总结到 {output_path}")
 
 
 def main():
@@ -164,12 +181,19 @@ def main():
     # 7. 输出
     save_tasks(tasks, args.output)
 
+    # 7b. 写入 chunk summaries 到独立文件
+    summary_file = config.get("output.chunk_summaries", "./output/chunks_summary_p2.jsonl")
+    save_chunk_summaries(chunks, summary_file)
+
     # 8. 打印摘要
+    chunks_with_summary = sum(1 for c in chunks if c.task_summary)
     logger.info("=" * 60)
     logger.info("Phase 2 完成")
     logger.info(f"  输入 session: {len(sessions_chunks)}")
     logger.info(f"  生成 task: {len(tasks)}")
+    logger.info(f"  chunk 含总结: {chunks_with_summary}/{len(chunks)}")
     logger.info(f"  输出文件: {args.output}")
+    logger.info(f"  chunk 总结: {summary_file}")
     logger.info("=" * 60)
 
     # 9. 打印示例
