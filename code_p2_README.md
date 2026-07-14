@@ -2,7 +2,7 @@
 
 ## 概述
 
-Phase 2 是知识图谱系统的核心环节:利用 LLM 对 Phase 1 输出的 session chunks 进行整 session 视角的分析,提炼出 1-5 个 session 级 Task。每个 Task 包含简短标签、详细总结和关联的 chunk 列表。同时,LLM 还会为每个 chunk 生成一句话总结,输出到独立的 `chunks_summary_p2.jsonl` 文件(通过 chunk_id 与 chunks.jsonl 关联),为后续 Phase 3 的向量化嵌入和跨 session 检索提供更丰富的语义信息。
+Phase 2 是知识图谱系统的核心环节:利用 LLM 对 Phase 1 输出的 session chunks 进行整 session 视角的分析,提炼出 1-5 个 session 级 Task。每个 Task 包含简短标签、详细总结和关联的 chunk 列表。同时,LLM 还会为每个 chunk 生成一句话总结(task_summary),回写到 chunks.jsonl,为后续 Phase 3 的向量化嵌入和跨 session 检索提供更丰富的语义信息。
 
 ## 文件结构
 
@@ -30,7 +30,7 @@ Phase 1 chunks (JSONL)
    [校验 + 兜底] ── 任务数量 / chunk_id 合法性 / 自动补全未覆盖 chunk
         │
    ├─→ Task 列表 (tasks.jsonl)
-   └─→ Chunk 总结 (chunks_summary_p2.jsonl, 通过 chunk_id 关联)
+   └─→ chunk_summaries 回写 (chunks.jsonl 增加 task_summary 字段)
 ```
 
 ## CoT Prompt 设计
@@ -88,6 +88,8 @@ python code_p2_main.py --concurrency 8
 
 # 指定输入/输出
 python code_p2_main.py --chunks ./output/chunks.jsonl --output ./output/tasks.jsonl
+
+export OPENCODE_ZEN_API_KEY=$your_api_pw && python3 code_p2_main.py --config code_p2_config.yaml --chunks ./output/chunks.jsonl --concurrency 8 --output ./output/tasks_concurrent_test.jsonl 2>&1
 ```
 
 ### 3. 输出
@@ -105,11 +107,17 @@ python code_p2_main.py --chunks ./output/chunks.jsonl --output ./output/tasks.js
 }
 ```
 
-**chunks_summary_p2.jsonl** — 独立的 chunk 总结文件,通过 chunk_id 与 chunks.jsonl 关联:
+**chunks.jsonl** — 回写,每个 chunk 新增 `task_summary` 字段:
 
 ```json
-{"chunk_id": "ses_0a53b6807ffex4xr4a0wNdi5EQ_c1", "summary": "用户请求查看当前机器上的opencode session，助手通过SQLite查询返回了全部22个session的列表。"}
-{"chunk_id": "ses_0a53b6807ffex4xr4a0wNdi5EQ_c2", "summary": "用户询问mavis-branch session是否为subagent，助手解释了其在minimax框架中的角色。"}
+{
+  "chunk_id": "ses_0a53b6807ffe_c1",
+  "session_id": "ses_0a53b6807ffex4xr4a0wNdi5EQ",
+  "turn_index": 1,
+  "user_message": "...",
+  "task_summary": "用户请求查看当前机器上的opencode session，助手通过SQLite查询返回了全部22个session的列表。",
+  "...": "..."
+}
 ```
 
 ## 技术细节
@@ -173,36 +181,39 @@ DeepSeek V4 Flash 是 reasoning 模型,会在 `reasoning_content` 中产生 thin
 
 在 15 个真实 OpenCode session (86 个 chunks) 上运行:
 
-| 指标 | 值 |
-|------|------|
-| 处理 session 数 | 15 (全部成功) |
-| 生成 task 总数 | 30 |
-| 平均每 session task 数 | 2.0 |
-| chunk 总结覆盖率 | 86/86 (100%) |
-| LLM 模型 | deepseek-v4-flash-free (OpenCode Zen) |
-| 并发数 | 8 |
-| 总耗时 | ~93s (并发=8) |
+
+| 指标                   | 值                                    |
+| ------------------------ | --------------------------------------- |
+| 处理 session 数        | 15 (全部成功)                         |
+| 生成 task 总数         | 30                                    |
+| 平均每 session task 数 | 2.0                                   |
+| chunk 总结覆盖率       | 86/86 (100%)                          |
+| LLM 模型               | deepseek-v4-flash-free (OpenCode Zen) |
+| 并发数                 | 8                                     |
+| 总耗时                 | ~93s (并发=8)                         |
 
 ### Task 分布
 
+
 | 每 session task 数 | session 数量 |
-|-------------------|------------|
-| 1 | 4 |
-| 2 | 7 |
-| 3 | 2 |
-| 4 | 2 |
+| -------------------- | -------------- |
+| 1                  | 4            |
+| 2                  | 7            |
+| 3                  | 2            |
+| 4                  | 2            |
 
 ## 支持的 LLM 提供商
 
 通过修改 `code_p2_config.yaml` 切换:
 
-| 提供商 | model | base_url | api_key_env |
-|--------|-------|----------|-------------|
-| OpenCode Zen (免费) | deepseek-v4-flash-free | https://opencode.ai/zen/v1 | OPENCODE_ZEN_API_KEY |
-| DashScope (通义千问) | qwen-plus | https://dashscope.aliyuncs.com/compatible-mode/v1 | DASHSCOPE_API_KEY |
-| SiliconFlow | deepseek-ai/DeepSeek-V3 | https://api.siliconflow.cn/v1 | SILICONFLOW_API_KEY |
-| OpenAI | gpt-4o-mini | https://api.openai.com/v1 | OPENAI_API_KEY |
-| Ollama (本地) | qwen2.5:7b | http://localhost:11434/v1 | (不需要) |
+
+| 提供商               | model                   | base_url                                          | api_key_env          |
+| ---------------------- | ------------------------- | --------------------------------------------------- | ---------------------- |
+| OpenCode Zen (免费)  | deepseek-v4-flash-free  | https://opencode.ai/zen/v1                        | OPENCODE_ZEN_API_KEY |
+| DashScope (通义千问) | qwen-plus               | https://dashscope.aliyuncs.com/compatible-mode/v1 | DASHSCOPE_API_KEY    |
+| SiliconFlow          | deepseek-ai/DeepSeek-V3 | https://api.siliconflow.cn/v1                     | SILICONFLOW_API_KEY  |
+| OpenAI               | gpt-4o-mini             | https://api.openai.com/v1                         | OPENAI_API_KEY       |
+| Ollama (本地)        | qwen2.5:7b              | http://localhost:11434/v1                         | (不需要)             |
 
 ## 依赖
 
@@ -219,5 +230,5 @@ Phase 2 的 Task 输出将作为 Phase 3 的输入:
 
 - **Phase 3**: Qdrant 双 Collection (Tasks + Chunks) 向量化存储
 - Task 的 `task_label` + `task_summary` 用于 embedding 和跨 session 检索
-- `chunks_summary_p2.jsonl` 的 `summary` + chunks.jsonl 的 `cleaned_text()` 用于细粒度检索
+- Chunk 的 `task_summary` (Phase 2 新增) + `cleaned_text()` 用于细粒度检索
 - Task summary 提供高层语义, chunk summary 提供轮次级语义, 形成双层检索结构
