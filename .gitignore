@@ -2,6 +2,8 @@ logs/
 tmp/
 __pycache__/
 output/
+qdrant_data/
+
 .DS_Store
 *.pyc
 *.pyo
