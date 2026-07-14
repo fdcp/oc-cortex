@@ -1,0 +1,29 @@
+# Phase 3 配置
+# Qdrant 双集合向量存储
+
+# Phase 2 输出
+phase2:
+  tasks_file: "./output/tasks.jsonl"
+  chunk_summaries_file: "./output/chunks_summary_p2.jsonl"
+
+# Phase 1 输出
+phase1:
+  chunks_file: "./output/chunks.jsonl"
+
+# Embedding 模型
+embedding:
+  model: "BAAI/bge-small-zh-v1.5"
+  dim: 512
+  batch_size: 32
+  device: "cpu"           # auto / cpu / mps / cuda  (MPS 有挂起风险, 暂用 cpu)
+
+# Qdrant
+qdrant:
+  path: "./qdrant_data"   # 本地文件持久化路径
+  collections:
+    tasks: "tasks"
+    chunks: "chunks"
+
+logging:
+  level: "INFO"
+  file: "./logs/phase3.log"
