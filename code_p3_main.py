@@ -11,10 +11,25 @@ import argparse
 import json
 import sys
 import time
+import os
 from pathlib import Path
-from loguru import logger
 
-from code_p1_utils import Config, setup_logger
+# 加载配置并设置 HuggingFace 环境 (必须在其他导入之前)
+from code_p1_utils import Config
+_args = argparse.ArgumentParser(add_help=False)
+_args.add_argument("--config", default="code_p3_config.yaml")
+_temp_args, _ = _args.parse_known_args()
+_config = Config.load(_temp_args.config)
+
+from code_p3_hf_config import setup_hf_env
+_cache_folder = _config.get("embedding.cache_folder")
+if _cache_folder is None:
+    _cache_folder = os.path.expanduser("~/.cache/huggingface/hub")
+_offline_mode = _config.get("embedding.offline_mode", True)
+setup_hf_env(offline_mode=_offline_mode, cache_folder=_cache_folder)
+
+from loguru import logger
+from code_p1_utils import setup_logger
 from code_p1_models import Chunk, CleanedToolCall
 from code_p2_models import Task
 from code_p3_qdrant_store import Phase3Store
@@ -118,12 +133,15 @@ def main():
     )
     args = parser.parse_args()
 
-    # 1. 加载配置
-    config = Config.load(args.config)
+    # 1. 加载配置 (已在模块级别完成)
+    config = _config
     setup_logger(
         log_file=config.get("logging.file"),
         level=config.get("logging.level", "INFO"),
     )
+
+    if _offline_mode:
+        logger.info(f"离线模式: 仅使用本地缓存 ({_cache_folder})")
 
     logger.info("=" * 60)
     logger.info("Phase 3: Qdrant 双集合向量存储")
@@ -184,6 +202,14 @@ def main():
         qdrant_path=config.get("qdrant.path", "./qdrant_data"),
         tasks_collection=config.get("qdrant.collections.tasks", "tasks"),
         chunks_collection=config.get("qdrant.collections.chunks", "chunks"),
+        sparse_method=config.get("sparse.method", "bm25"),
+        jieba_mode=config.get("sparse.jieba_mode", "search"),
+        bm25_k1=config.get("sparse.bm25_params.k1", 1.5),
+        bm25_b=config.get("sparse.bm25_params.b", 0.75),
+        fuse_k=config.get("sparse.fuse_k", 60),
+        bge_m3_model=config.get("sparse.bge_m3_model", "BAAI/bge-m3"),
+        cache_folder=config.get("embedding.cache_folder"),
+        offline_mode=config.get("embedding.offline_mode", True),
     )
 
     # 7. 初始化集合
