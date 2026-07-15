@@ -548,6 +548,7 @@ class Phase3Store:
         texts = []
         valid_chunks = []
         skipped = 0
+        summary_only_count = 0
 
         for c in chunks:
             summary = summaries.get(c.chunk_id, "")
@@ -555,13 +556,26 @@ class Phase3Store:
             if not summary and not cleaned:
                 skipped += 1
                 continue
-            embed_text = f"{summary}\n\n{cleaned}" if summary else cleaned
+            # 如果 chunk 已被 task 覆盖, embedding 优先用 chunk_summary (更精准)
+            # task 集合已包含 task_summary 向量, chunks 集合用 summary 减少冗余
+            if summary and c.chunk_id in chunk_to_task:
+                embed_text = summary
+                summary_only_count += 1
+            elif summary:
+                embed_text = f"{summary}\n\n{cleaned}"
+            else:
+                embed_text = cleaned
             texts.append(embed_text)
             valid_chunks.append(c)
 
         if skipped > 0:
             logger.warning(
                 f"跳过 {skipped} 个空 chunk (无 summary 且无 cleaned_text)"
+            )
+        if summary_only_count > 0:
+            logger.info(
+                f"Chunk embedding: {summary_only_count}/{len(valid_chunks)} 个 "
+                f"chunk 使用 summary-only (已被 task 覆盖, 减少冗余)"
             )
         if not texts:
             logger.warning("upsert_chunks: 无有效 chunk 可写入")
