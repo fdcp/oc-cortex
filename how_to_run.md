@@ -320,3 +320,35 @@ Query "GPU对比分析"
 - **Prompt 格式**: 使用 chat template `<Instruct> + <Query> + <Document>` 格式，系统 prompt 要求模型回答 "yes" 或 "no"
 - **离线模式**: 复用 Phase 3 的 `offline_mode` 配置，模型加载后不需要网络
 - **数据预加载**: 启动时一次性将 tasks/chunks/summaries 读入内存，查询时直接查 map
+
+---
+
+## 里程碑检视工具
+
+`code_MS_inspect.py` 是第一个里程碑的数据检视工具，替代 Qdrant Dashboard（项目用嵌入式 Qdrant，无 Web UI）。
+
+### 前置条件
+
+Phase 1-3 已完成，Qdrant 数据已写入 `./qdrant_data/`。
+
+### 运行命令
+
+```bash
+cd /path/to/oc_sess_graph
+python3 code_MS_inspect.py
+```
+
+### 检视内容
+
+脚本依次执行 6 项检查：
+
+1. **集合统计** — 两个集合的点数、维度、状态
+2. **样本浏览** — 随机抽取 5 个 task 和 5 个 chunk 的 payload
+3. **数据分析** — session/task/chunk 分布、token 压缩率、summary 覆盖率
+4. **向量近邻分析** — 抽样 10 个 task，检查 cosine > 0.85 的近重复对
+5. **检索质量测试** — 5 组预设查询的 Dense 检索命中率
+6. **Chunk Summary 质量** — 长度分布、过短 summary 列表、task vs chunk summary 对比
+
+### 调优笔记
+
+`code_MS_tuning_notes.md` 记录了基于检视数据的 prompt 调优分析和改进建议，包括发现的问题、优先级和是否需要重跑的判断。
