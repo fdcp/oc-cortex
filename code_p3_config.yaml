@@ -36,6 +36,14 @@ qdrant:
     tasks: "tasks"
     chunks: "chunks"
 
+# Reranker (Phase 4: 跨 session 搜索精排)
+reranker:
+  model: "Qwen/Qwen3-Reranker-0.6B"
+  device: "cpu"            # auto / cpu / mps / cuda
+  instruction: "Given a web search query, retrieve relevant passages."
+  max_length: 8192
+  batch_size: 4
+
 logging:
   level: "INFO"
   file: "./logs/phase3.log"
