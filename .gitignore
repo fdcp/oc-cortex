@@ -3,6 +3,7 @@ tmp/
 __pycache__/
 output/
 qdrant_data/
+qdrant_data_sample/
 
 .DS_Store
 *.pyc
