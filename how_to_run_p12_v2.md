@@ -64,20 +64,21 @@ python3 code_p1_main.py --sqlite ~/.local/share/opencode/opencode.db --limit 3
 # 从 JSONL 文件读取
 python3 code_p1_main.py --source ./data/my_sessions.jsonl
 
-# 自定义输出路径
+# 自定义输出路径（test）
 python3 code_p1_main.py --sqlite ~/.local/share/opencode/opencode.db --output ./output/chunks_real.jsonl
 ```
 
 **命令行参数：**
 
-| 参数 | 默认值 | 说明 |
-|------|--------|------|
-| `--config` | `code_p1_config.yaml` | 配置文件路径 |
-| `--source` | 无 | Session JSONL/JSON 文件路径 |
-| `--sqlite` | 无 | OpenCode SQLite DB 路径 |
-| `--limit` | 无 | 最多处理 N 个 session |
-| `--mock` | false | 使用内置 mock 数据 |
-| `--output` | `./output/chunks.jsonl` | 输出文件路径 |
+
+| 参数       | 默认值                  | 说明                        |
+| ------------ | ------------------------- | ----------------------------- |
+| `--config` | `code_p1_config.yaml`   | 配置文件路径                |
+| `--source` | 无                      | Session JSONL/JSON 文件路径 |
+| `--sqlite` | 无                      | OpenCode SQLite DB 路径     |
+| `--limit`  | 无                      | 最多处理 N 个 session       |
+| `--mock`   | false                   | 使用内置 mock 数据          |
+| `--output` | `./output/chunks.jsonl` | 输出文件路径                |
 
 #### 输出
 
@@ -127,13 +128,14 @@ logging:
 
 **支持的 LLM Provider：**
 
-| Provider | 模型 | Base URL | 环境变量 |
-|----------|------|----------|----------|
-| OpenCode Zen (免费) | `deepseek-v4-flash-free` | `https://opencode.ai/zen/v1` | `OPENCODE_ZEN_API_KEY` |
-| DashScope | `qwen-plus` | `https://dashscope.aliyuncs.com/compatible-mode/v1` | `DASHSCOPE_API_KEY` |
-| SiliconFlow | `deepseek-ai/DeepSeek-V3` | `https://api.siliconflow.cn/v1` | `SILICONFLOW_API_KEY` |
-| OpenAI | `gpt-4o-mini` | `https://api.openai.com/v1` | `OPENAI_API_KEY` |
-| Ollama (本地) | `qwen2.5:7b` | `http://localhost:11434/v1` | 无需 |
+
+| Provider            | 模型                      | Base URL                                            | 环境变量               |
+| --------------------- | --------------------------- | ----------------------------------------------------- | ------------------------ |
+| OpenCode Zen (免费) | `deepseek-v4-flash-free`  | `https://opencode.ai/zen/v1`                        | `OPENCODE_ZEN_API_KEY` |
+| DashScope           | `qwen-plus`               | `https://dashscope.aliyuncs.com/compatible-mode/v1` | `DASHSCOPE_API_KEY`    |
+| SiliconFlow         | `deepseek-ai/DeepSeek-V3` | `https://api.siliconflow.cn/v1`                     | `SILICONFLOW_API_KEY`  |
+| OpenAI              | `gpt-4o-mini`             | `https://api.openai.com/v1`                         | `OPENAI_API_KEY`       |
+| Ollama (本地)       | `qwen2.5:7b`              | `http://localhost:11434/v1`                         | 无需                   |
 
 #### 运行命令
 
@@ -154,17 +156,21 @@ python3 code_p2_main.py --concurrency 8
 
 # 自定义输入输出
 python3 code_p2_main.py --chunks ./output/chunks.jsonl --output ./output/tasks.jsonl
+
+# test
+export OPENCODE_ZEN_API_KEY=$(python3 -c "import json; d=json.load(open('/Users/zhaoxiuwei/.local/share/opencode/auth.json')); print(d['opencode-go']['key'])") && python3 code_p2_main.py --chunks ./output/chunks_real.jsonl --output ./output/tasks_real.jsonl --concurrency 8  2>&1 | tail -30
 ```
 
 **命令行参数：**
 
-| 参数 | 默认值 | 说明 |
-|------|--------|------|
-| `--config` | `code_p2_config.yaml` | 配置文件路径 |
-| `--chunks` | 无 | Phase 1 chunks JSONL 路径 (覆盖配置) |
-| `--output` | `./output/tasks.jsonl` | Task 输出路径 |
-| `--limit` | 无 | 只处理前 N 个 session |
-| `--concurrency` | 无 (从配置读) | LLM 并发线程数 |
+
+| 参数            | 默认值                 | 说明                                 |
+| ----------------- | ------------------------ | -------------------------------------- |
+| `--config`      | `code_p2_config.yaml`  | 配置文件路径                         |
+| `--chunks`      | 无                     | Phase 1 chunks JSONL 路径 (覆盖配置) |
+| `--output`      | `./output/tasks.jsonl` | Task 输出路径                        |
+| `--limit`       | 无                     | 只处理前 N 个 session                |
+| `--concurrency` | 无 (从配置读)          | LLM 并发线程数                       |
 
 #### 输出
 
