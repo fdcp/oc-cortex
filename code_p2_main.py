@@ -162,6 +162,7 @@ def main():
             "https://dashscope.aliyuncs.com/compatible-mode/v1",
         ),
         max_retries=config.get("llm.max_retries", 3),
+        content_retries=config.get("llm.content_retries", 3),
         timeout=config.get("llm.timeout", 120),
         max_tokens_per_chunk=config.get("llm.max_tokens_per_chunk", 2000),
         max_total_prompt_tokens=config.get(
@@ -173,9 +174,46 @@ def main():
     # 6. 执行 task 提取
     import time as _time
     t0 = _time.time()
-    tasks = extractor.extract_tasks_batch(sessions_chunks)
+    tasks, session_coverage = extractor.extract_tasks_batch(sessions_chunks)
     elapsed = _time.time() - t0
     logger.info(f"Task 提取耗时: {elapsed:.1f}s")
+
+    # 6b. Session 级详细报告
+    incomplete = [
+        s for s in session_coverage if s["status"] == "incomplete"
+    ]
+    failed_sessions = [
+        s for s in session_coverage if s["status"] in ("failed", "thread_error")
+    ]
+    retried_sessions = [
+        s for s in session_coverage if s.get("total_attempts", 0) > 1
+    ]
+
+    if incomplete or failed_sessions or retried_sessions:
+        logger.warning("=" * 60)
+        logger.warning("Session 处理详情:")
+        for s in retried_sessions:
+            if s["status"] == "success":
+                logger.info(
+                    f"  {s['session_id']}: 重试后成功 "
+                    f"(尝试 {s['total_attempts']} 次)"
+                )
+        for s in incomplete:
+            missing = s["total_chunks"] - s["summaries_written"]
+            logger.warning(
+                f"  {s['session_id']}: INCOMPLETE "
+                f"- chunk_summaries {s['summaries_written']}/{s['total_chunks']} "
+                f"(缺失 {missing}), "
+                f"尝试 {s['total_attempts']} 次, "
+                f"原因: {s.get('error', 'unknown')}"
+            )
+        for s in failed_sessions:
+            logger.warning(
+                f"  {s['session_id']}: FAILED "
+                f"- 尝试 {s.get('total_attempts', 0)} 次, "
+                f"原因: {s.get('error', 'unknown')}"
+            )
+        logger.warning("=" * 60)
 
 
     # 7. 输出

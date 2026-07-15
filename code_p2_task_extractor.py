@@ -241,6 +241,7 @@ class TaskExtractor:
         api_key_env: str = "DASHSCOPE_API_KEY",
         base_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1",
         max_retries: int = 3,
+        content_retries: int = 3,
         timeout: int = 120,
         max_tokens_per_chunk: int = 2000,
         max_total_prompt_tokens: int = 30000,
@@ -248,6 +249,7 @@ class TaskExtractor:
     ):
         self.model = model
         self.max_retries = max_retries
+        self.content_retries = max(1, content_retries)
         self.timeout = timeout
         self.max_tokens_per_chunk = max_tokens_per_chunk
         self.max_total_prompt_tokens = max_total_prompt_tokens
@@ -272,7 +274,8 @@ class TaskExtractor:
 
         logger.info(
             f"TaskExtractor 初始化: model={self.model}, "
-            f"base_url={self.base_url}, concurrency={self.concurrency}"
+            f"base_url={self.base_url}, concurrency={self.concurrency}, "
+            f"network_retries={self.max_retries}, content_retries={self.content_retries}"
         )
 
     # --------------------------------------------------------
@@ -355,7 +358,7 @@ class TaskExtractor:
         llm_output: str,
         session_id: str,
         chunks: list[Chunk],
-    ) -> list[Task]:
+    ) -> tuple[list[Task], int, int]:
         """
         解析 LLM 输出并校验
 
@@ -365,6 +368,8 @@ class TaskExtractor:
         3. 所有 chunk_ids 都对应到实际 chunk
         4. 每个 chunk 至少属于一个 task (不遗漏, 自动兜底补全)
         5. 不允许一个 chunk 同时属于多个 task
+
+        返回: (tasks, summaries_written, total_chunks)
         """
         valid_chunk_ids = {c.chunk_id for c in chunks}
         # chunk_id -> turn_index 映射, 用于兜底时就近分配
@@ -512,7 +517,8 @@ class TaskExtractor:
                 f"Session {session_id}: {len(duplicates)} 个 chunk 被多个 task 引用"
             )
 
-        return tasks
+        summaries_written = sum(1 for c in chunks if c.task_summary)
+        return tasks, summaries_written, len(chunks)
 
     # --------------------------------------------------------
     # 主方法
@@ -542,13 +548,38 @@ class TaskExtractor:
 
         return prompt
 
-    def extract_tasks(self, session_id: str, chunks: list[Chunk]) -> list[Task]:
+    def extract_tasks(
+        self, session_id: str, chunks: list[Chunk]
+    ) -> dict:
         """
         从单个 session 的 chunks 中提炼 task
+
+        包含内容校验重试: 如果 LLM 返回不完整 (chunk_summaries 缺失或 tasks 为空),
+        自动重试, 最多 content_retries 次。
+
+        返回 dict:
+        {
+            "tasks": list[Task],
+            "summaries_written": int,
+            "total_chunks": int,
+            "total_attempts": int,
+            "status": "success" | "incomplete" | "failed",
+            "error": str | None,
+        }
         """
+        empty_result = {
+            "tasks": [],
+            "summaries_written": 0,
+            "total_chunks": len(chunks),
+            "total_attempts": 0,
+            "status": "failed",
+            "error": None,
+        }
+
         if not chunks:
             logger.warning(f"Session {session_id}: 没有 chunks, 跳过")
-            return []
+            empty_result["status"] = "skipped"
+            return empty_result
 
         prompt = self._build_prompt(chunks)
 
@@ -557,17 +588,94 @@ class TaskExtractor:
             f"prompt~{count_tokens(prompt)} tokens"
         )
 
-        llm_output = self._call_llm_with_retry(prompt)
-        tasks = self._parse_and_validate(llm_output, session_id, chunks)
+        # 记录哪些 chunk 在第一次调用前就有 task_summary (正常情况: 都没有)
+        pre_existing = {c.chunk_id for c in chunks if c.task_summary}
+        last_error = None
 
-        logger.info(f"Session {session_id}: 提取到 {len(tasks)} 个 task")
-        return tasks
+        for attempt in range(1, self.content_retries + 1):
+            # 重试前清除上一次 attempt 设置的 task_summary, 避免残留
+            if attempt > 1:
+                for c in chunks:
+                    if c.chunk_id not in pre_existing:
+                        c.task_summary = None
+
+            try:
+                llm_output = self._call_llm_with_retry(prompt)
+                tasks, summaries_written, total_chunks = self._parse_and_validate(
+                    llm_output, session_id, chunks
+                )
+            except Exception as e:
+                last_error = str(e)
+                logger.warning(
+                    f"Session {session_id}: LLM 调用失败 "
+                    f"(内容重试 {attempt}/{self.content_retries}): {e}"
+                )
+                continue
+
+            # 内容校验: chunk_summaries 是否完整 + tasks 是否非空
+            issues = []
+            if summaries_written < total_chunks:
+                missing = total_chunks - summaries_written
+                issues.append(
+                    f"chunk_summaries 缺失 {missing}/{total_chunks}"
+                )
+            if not tasks:
+                issues.append("tasks 为空")
+
+            if not issues:
+                logger.info(
+                    f"Session {session_id}: 提取到 {len(tasks)} 个 task"
+                    + (f" (第 {attempt} 次尝试)" if attempt > 1 else "")
+                )
+                return {
+                    "tasks": tasks,
+                    "summaries_written": summaries_written,
+                    "total_chunks": total_chunks,
+                    "total_attempts": attempt,
+                    "status": "success",
+                    "error": None,
+                }
+
+            # 内容不完整
+            issue_str = "; ".join(issues)
+            if attempt < self.content_retries:
+                logger.warning(
+                    f"Session {session_id}: {issue_str}, "
+                    f"内容重试 {attempt}/{self.content_retries}"
+                )
+                last_error = issue_str
+            else:
+                logger.error(
+                    f"Session {session_id}: {issue_str}, "
+                    f"已达最大内容重试 ({self.content_retries}), 使用不完整结果"
+                )
+                return {
+                    "tasks": tasks,
+                    "summaries_written": summaries_written,
+                    "total_chunks": total_chunks,
+                    "total_attempts": attempt,
+                    "status": "incomplete",
+                    "error": issue_str,
+                }
+
+        # 所有尝试都异常 (每次 _call_llm_with_retry 都失败)
+        logger.error(
+            f"Session {session_id}: 全部 {self.content_retries} 次内容重试均失败, "
+            f"最后错误: {last_error}"
+        )
+        empty_result["total_attempts"] = self.content_retries
+        empty_result["error"] = last_error
+        return empty_result
 
     def extract_tasks_batch(
         self, sessions_chunks: dict[str, list[Chunk]]
-    ) -> list[Task]:
+    ) -> tuple[list[Task], list[dict]]:
         """
         批量处理多个 session
+
+        返回: (all_tasks, session_coverage)
+        - all_tasks: 所有 session 的 task 列表
+        - session_coverage: 每个 session 的 summary 覆盖统计列表
 
         当 concurrency > 1 时使用线程池并行调用 LLM,加速处理。
         OpenAI SDK 的 client 是线程安全的,可以安全地在多线程中使用。
@@ -581,40 +689,49 @@ class TaskExtractor:
 
     def _extract_tasks_serial(
         self, sessions_chunks: dict[str, list[Chunk]]
-    ) -> list[Task]:
+    ) -> tuple[list[Task], list[dict]]:
         """串行处理所有 session"""
         all_tasks: list[Task] = []
+        session_coverage: list[dict] = []
         total = len(sessions_chunks)
-        success = 0
-        failed = 0
 
         for idx, (session_id, chunks) in enumerate(
             sessions_chunks.items(), 1
         ):
             logger.info(f"[{idx}/{total}] 处理 session: {session_id}")
             try:
-                tasks = self.extract_tasks(session_id, chunks)
-                all_tasks.extend(tasks)
-                success += 1
+                result = self.extract_tasks(session_id, chunks)
+                all_tasks.extend(result["tasks"])
+                session_coverage.append({
+                    "session_id": session_id,
+                    "total_chunks": result["total_chunks"],
+                    "summaries_written": result["summaries_written"],
+                    "total_attempts": result["total_attempts"],
+                    "status": result["status"],
+                    "error": result["error"],
+                })
             except Exception as e:
-                logger.error(f"Session {session_id} 处理失败: {e}")
-                failed += 1
+                # extract_tasks 内部已 catch 所有异常, 这里兜底意外错误
+                logger.error(f"Session {session_id} 意外错误: {e}")
+                session_coverage.append({
+                    "session_id": session_id,
+                    "total_chunks": len(chunks),
+                    "summaries_written": 0,
+                    "total_attempts": 0,
+                    "status": "failed",
+                    "error": str(e),
+                })
 
-        logger.info(
-            f"Task 提取完成 (串行): {total} sessions, "
-            f"成功 {success}, 失败 {failed}, "
-            f"共 {len(all_tasks)} 个 task"
-        )
-        return all_tasks
+        self._log_batch_summary("串行", session_coverage, all_tasks)
+        return all_tasks, session_coverage
 
     def _extract_tasks_parallel(
         self, sessions_chunks: dict[str, list[Chunk]]
-    ) -> list[Task]:
+    ) -> tuple[list[Task], list[dict]]:
         """并行处理所有 session (线程池)"""
         all_tasks: list[Task] = []
+        session_coverage: list[dict] = []
         total = len(sessions_chunks)
-        success = 0
-        failed = 0
 
         # 线程安全的进度计数器
         progress_lock = threading.Lock()
@@ -627,16 +744,26 @@ class TaskExtractor:
             f"并行处理 {total} 个 session, 并发数: {self.concurrency}"
         )
 
-        def _process_one(item: tuple[str, list[Chunk]]) -> tuple[str, list[Task] | None]:
-            """处理单个 session, 返回 (session_id, tasks_or_None)"""
+        def _process_one(
+            item: tuple[str, list[Chunk]]
+        ) -> tuple[str, dict]:
+            """处理单个 session, 返回 (session_id, result_dict)"""
             nonlocal completed_count
             session_id, chunks = item
             try:
-                tasks = self.extract_tasks(session_id, chunks)
-                return session_id, tasks
+                result = self.extract_tasks(session_id, chunks)
+                return session_id, result
             except Exception as e:
-                logger.error(f"Session {session_id} 处理失败: {e}")
-                return session_id, None
+                # extract_tasks 内部已 catch 所有异常, 这里兜底意外错误
+                logger.error(f"Session {session_id} 意外错误: {e}")
+                return session_id, {
+                    "tasks": [],
+                    "summaries_written": 0,
+                    "total_chunks": len(chunks),
+                    "total_attempts": 0,
+                    "status": "failed",
+                    "error": str(e),
+                }
             finally:
                 with progress_lock:
                     completed_count += 1
@@ -654,19 +781,55 @@ class TaskExtractor:
             for future in as_completed(future_to_session):
                 session_id = future_to_session[future]
                 try:
-                    sid, tasks = future.result()
-                    if tasks is not None:
-                        all_tasks.extend(tasks)
-                        success += 1
-                    else:
-                        failed += 1
+                    sid, result = future.result()
+                    all_tasks.extend(result["tasks"])
+                    session_coverage.append({
+                        "session_id": sid,
+                        "total_chunks": result["total_chunks"],
+                        "summaries_written": result["summaries_written"],
+                        "total_attempts": result["total_attempts"],
+                        "status": result["status"],
+                        "error": result["error"],
+                    })
                 except Exception as e:
                     logger.error(f"Session {session_id} 线程异常: {e}")
-                    failed += 1
+                    session_coverage.append({
+                        "session_id": session_id,
+                        "total_chunks": 0,
+                        "summaries_written": 0,
+                        "total_attempts": 0,
+                        "status": "thread_error",
+                        "error": str(e),
+                    })
 
-        logger.info(
-            f"Task 提取完成 (并发={self.concurrency}): {total} sessions, "
-            f"成功 {success}, 失败 {failed}, "
-            f"共 {len(all_tasks)} 个 task"
+        self._log_batch_summary(
+            f"并发={self.concurrency}", session_coverage, all_tasks
         )
-        return all_tasks
+        return all_tasks, session_coverage
+
+    @staticmethod
+    def _log_batch_summary(
+        mode: str, session_coverage: list[dict], all_tasks: list[Task]
+    ) -> None:
+        """输出批次处理汇总"""
+        total = len(session_coverage)
+        n_success = sum(1 for s in session_coverage if s["status"] == "success")
+        n_incomplete = sum(1 for s in session_coverage if s["status"] == "incomplete")
+        n_failed = sum(1 for s in session_coverage if s["status"] in ("failed", "thread_error"))
+        retried = sum(
+            1 for s in session_coverage
+            if s.get("total_attempts", 0) > 1
+        )
+
+        parts = [
+            f"Task 提取完成 ({mode}): {total} sessions",
+            f"成功 {n_success}",
+        ]
+        if n_incomplete:
+            parts.append(f"不完整 {n_incomplete}")
+        if n_failed:
+            parts.append(f"失败 {n_failed}")
+        if retried:
+            parts.append(f"重试后恢复 {retried}")
+        parts.append(f"共 {len(all_tasks)} 个 task")
+        logger.info(", ".join(parts))
