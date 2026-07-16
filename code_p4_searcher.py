@@ -1,7 +1,7 @@
 """
 Phase 4 搜索编排模块
-跨 session 搜索完整流程:
-  Query → 混合检索(tasks) → Reranker 精排 → 取回 chunk 原文 → 结构化输出
+跨 session 搜索完整流程 (两阶段查询):
+  Query → Dense(tasks.task_summary) + BM25(chunks_cleaned_text→task映射) → RRF → Reranker → chunk 展开
 
 复用 Phase 3 的 Phase3Store + Qdrant 数据
 """
@@ -136,6 +136,11 @@ class SessionSearcher:
         self.task_map: dict[str, Task] = {t.task_id: t for t in self.tasks}
         # chunk map: chunk_id -> Chunk
         self.chunk_map: dict[str, Chunk] = {c.chunk_id: c for c in self.chunks}
+        # chunk -> task mapping (用于两阶段查询: BM25 命中 chunk 后映射回 task)
+        self.chunk_to_task: dict[str, str] = {}
+        for t in self.tasks:
+            for cid in t.chunk_ids:
+                self.chunk_to_task[cid] = t.task_id
         logger.info(
             f"数据加载: {len(self.tasks)} tasks, "
             f"{len(self.chunks)} chunks, {len(self.summaries)} summaries"
@@ -154,7 +159,12 @@ class SessionSearcher:
             device=self.config.get("embedding.device", "cpu"),
             qdrant_path=self.config.get("qdrant.path", "./qdrant_data"),
             tasks_collection=self.config.get("qdrant.collections.tasks", "tasks"),
-            chunks_collection=self.config.get("qdrant.collections.chunks", "chunks"),
+            chunks_summary_collection=self.config.get(
+                "qdrant.collections.chunks_summary", "chunks_summary"
+            ),
+            chunks_cleaned_text_collection=self.config.get(
+                "qdrant.collections.chunks_cleaned_text", "chunks_cleaned_text"
+            ),
             sparse_method=self.config.get("sparse.method", "bm25"),
             jieba_mode=self.config.get("sparse.jieba_mode", "search"),
             bm25_k1=self.config.get("sparse.bm25_params.k1", 1.5),
@@ -196,26 +206,31 @@ class SessionSearcher:
         logger.info("SessionSearcher 初始化完成")
 
     def _rebuild_bm25_index(self) -> None:
-        """从已加载的 tasks 数据重建 BM25 索引"""
+        """从已加载的 chunks 数据重建 BM25 索引 (在 chunks_cleaned_text 集合上)"""
         from code_p3_qdrant_store import _stable_uuid
 
-        texts = [t.task_summary for t in self.tasks]
-        point_ids = [_stable_uuid(t.task_id) for t in self.tasks]
-        payloads = [
-            {
-                "task_id": t.task_id,
-                "session_id": t.session_id,
-                "task_label": t.task_label,
-                "task_summary": t.task_summary,
-                "chunk_ids": t.chunk_ids,
-                "created_at": t.created_at,
-            }
-            for t in self.tasks
-        ]
+        texts = []
+        point_ids = []
+        payloads = []
+        for c in self.chunks:
+            cleaned = c.cleaned_text()
+            if not cleaned:
+                continue
+            texts.append(cleaned)
+            point_ids.append(_stable_uuid(c.chunk_id))
+            payloads.append({
+                "chunk_id": c.chunk_id,
+                "session_id": c.session_id,
+                "turn_index": c.turn_index,
+                "task_id": self.chunk_to_task.get(c.chunk_id, ""),
+            })
         self.store.build_bm25_index(
-            self.store.tasks_collection, texts, point_ids, payloads
+            self.store.chunks_cleaned_text_collection, texts, point_ids, payloads
         )
-        logger.info("BM25 索引重建完成 (tasks)")
+        logger.info(
+            f"BM25 索引重建完成 ({self.store.chunks_cleaned_text_collection}): "
+            f"{len(texts)} 条 cleaned_text"
+        )
 
     def search(
         self,
@@ -225,7 +240,13 @@ class SessionSearcher:
         skip_rerank: bool = False,
     ) -> list[SessionSearchResult]:
         """
-        跨 session 搜索
+        跨 session 搜索 (两阶段查询)
+
+        阶段 1: Dense 搜 tasks 集合 (task_summary 语义匹配)
+        阶段 2: BM25 搜 chunks_cleaned_text 集合 (关键词匹配) → 映射回 task
+        阶段 3: RRF 融合两路结果
+        阶段 4: Reranker 精排 (可选)
+        阶段 5: 展开 chunk 详情
 
         Args:
             query: 自然语言查询
@@ -237,21 +258,43 @@ class SessionSearcher:
             SessionSearchResult 列表 (按 rerank_score 降序)
         """
         t_total = time.time()
-        logger.info(f"搜索: '{query}' (top_k={top_k}, skip_rerank={skip_rerank})")
-
-        # 1. 混合检索 → 候选 tasks
         n_candidates = top_k * candidate_multiplier
-        candidates = self.store.search_hybrid(
+        logger.info(
+            f"搜索: '{query}' (top_k={top_k}, skip_rerank={skip_rerank})"
+        )
+
+        # 阶段 1: Dense → tasks 集合
+        dense_results = self.store.search_dense(
             query, collection=self.store.tasks_collection, top_k=n_candidates
         )
-        logger.info(f"粗排: {len(candidates)} 个候选 task")
+        logger.info(f"  Dense[tasks]: {len(dense_results)} 结果")
+
+        # 阶段 2: BM25 → chunks_cleaned_text → 映射回 task
+        sparse_chunk_results = self.store.search_sparse_bm25(
+            query,
+            collection=self.store.chunks_cleaned_text_collection,
+            top_k=n_candidates * 3,  # 取更多 chunk, 映射后去重
+        )
+        logger.info(
+            f"  BM25[chunks_cleaned_text]: {len(sparse_chunk_results)} chunk 命中"
+        )
+
+        # 将 chunk 级 BM25 结果聚合为 task 级 (同一 task 取最高分)
+        sparse_task_results = self._aggregate_chunks_to_tasks(sparse_chunk_results)
+        logger.info(
+            f"  BM25 → task 聚合: {len(sparse_task_results)} 个 task"
+        )
+
+        # 阶段 3: RRF 融合 (dense tasks + sparse tasks)
+        fused = self.store._rrf_fuse(dense_results, sparse_task_results, self.store.fuse_k)
+        candidates = fused[:n_candidates]
+        logger.info(f"  RRF 融合: {len(candidates)} 个候选 task")
 
         if not candidates:
             logger.warning("粗排无结果")
             return []
 
         if skip_rerank:
-            # 跳过 reranker, 直接用 RRF score
             results = []
             for c in candidates[:top_k]:
                 task_id = c.payload.get("task_id", "")
@@ -274,11 +317,11 @@ class SessionSearcher:
             )
             return results
 
-        # 2. Reranker 精排
+        # 阶段 4: Reranker 精排
         documents = [c.payload.get("task_summary", "") for c in candidates]
         reranked = self.reranker.rank(query, documents, top_k=top_k)
 
-        # 3. 展开: 关联 chunks
+        # 阶段 5: 展开 chunk 详情
         results = []
         for rr in reranked:
             candidate = candidates[rr.index]
@@ -304,6 +347,38 @@ class SessionSearcher:
             f"耗时 {time.time() - t_total:.2f}s"
         )
         return results
+
+    def _aggregate_chunks_to_tasks(
+        self, chunk_results: list[SearchResult]
+    ) -> list[SearchResult]:
+        """
+        将 chunk 级 BM25 结果聚合为 task 级
+        同一 task 下多个 chunk 命中时, 取最高 BM25 score
+        point_id 使用 task 级的 stable UUID, 以便 RRF 融合时正确去重
+        """
+        from code_p3_qdrant_store import _stable_uuid
+
+        task_best: dict[str, SearchResult] = {}
+        for r in chunk_results:
+            task_id = r.payload.get("task_id", "")
+            if not task_id:
+                continue
+            if task_id not in task_best or r.score > task_best[task_id].score:
+                task = self.task_map.get(task_id)
+                if task:
+                    task_payload = {
+                        "task_id": task.task_id,
+                        "session_id": task.session_id,
+                        "task_label": task.task_label,
+                        "task_summary": task.task_summary,
+                        "chunk_ids": task.chunk_ids,
+                    }
+                    task_best[task_id] = SearchResult(
+                        point_id=_stable_uuid(task.task_id),
+                        score=r.score,
+                        payload=task_payload,
+                    )
+        return list(task_best.values())
 
     def _expand_chunks(self, chunk_ids: list[str]) -> list[ChunkDetail]:
         """通过 chunk_ids 从内存 map 取 chunk 详情"""
