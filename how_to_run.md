@@ -1,6 +1,6 @@
 ## Phase 3 运行指南
 
-Phase 3 将 Phase 1 (chunks) 和 Phase 2 (tasks + chunk summaries) 的输出向量化，写入 Qdrant 双集合，并提供稠密 + 稀疏混合检索。
+Phase 3 将 Phase 1 (chunks) 和 Phase 2 (tasks + chunk summaries) 的输出向量化，写入 Qdrant 三集合 (tasks / chunks_summary / chunks_cleaned_text)，Dense 用 summary 语义匹配，BM25 用 cleaned_text 关键词匹配。
 
 ### 前置条件
 
@@ -342,7 +342,7 @@ python3 code_MS_inspect.py
 
 脚本依次执行 6 项检查：
 
-1. **集合统计** — 两个集合的点数、维度、状态
+1. **集合统计** — 三个集合 (tasks / chunks_summary / chunks_cleaned_text) 的点数、维度、状态
 2. **样本浏览** — 随机抽取 5 个 task 和 5 个 chunk 的 payload
 3. **数据分析** — session/task/chunk 分布、token 压缩率、summary 覆盖率
 4. **向量近邻分析** — 抽样 10 个 task，检查 cosine > 0.85 的近重复对

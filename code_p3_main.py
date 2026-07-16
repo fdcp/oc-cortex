@@ -201,7 +201,8 @@ def main():
         device=config.get("embedding.device", "auto"),
         qdrant_path=config.get("qdrant.path", "./qdrant_data"),
         tasks_collection=config.get("qdrant.collections.tasks", "tasks"),
-        chunks_collection=config.get("qdrant.collections.chunks", "chunks"),
+        chunks_summary_collection=config.get("qdrant.collections.chunks_summary", "chunks_summary"),
+        chunks_cleaned_text_collection=config.get("qdrant.collections.chunks_cleaned_text", "chunks_cleaned_text"),
         sparse_method=config.get("sparse.method", "bm25"),
         jieba_mode=config.get("sparse.jieba_mode", "search"),
         bm25_k1=config.get("sparse.bm25_params.k1", 1.5),
@@ -226,14 +227,19 @@ def main():
     else:
         logger.warning("无 task, 跳过 task upsert")
 
-    # 9. Upsert chunks
-    chunks_upserted = 0
+    # 9. Upsert chunks (summary + cleaned_text 分两个集合)
+    chunks_summary_upserted = 0
+    chunks_cleaned_upserted = 0
     if chunks:
         logger.info("-" * 40)
         logger.info("开始 upsert chunks ...")
         t2 = time.time()
-        chunks_upserted = store.upsert_chunks(chunks, summaries, tasks=tasks)
-        logger.info(f"Chunk upsert 耗时: {time.time() - t2:.1f}s")
+        chunks_summary_upserted = store.upsert_chunks_summary(chunks, summaries, tasks=tasks)
+        chunks_cleaned_upserted = store.upsert_chunks_cleaned_text(chunks, tasks=tasks)
+        logger.info(
+            f"Chunk upsert 耗时: {time.time() - t2:.1f}s "
+            f"(summary: {chunks_summary_upserted}, cleaned_text: {chunks_cleaned_upserted})"
+        )
     else:
         logger.warning("无 chunk, 跳过 chunk upsert")
 
@@ -246,7 +252,11 @@ def main():
     logger.info("Phase 3 完成")
     logger.info(f"  总耗时: {elapsed_total:.1f}s")
     logger.info(f"  输入 task: {len(tasks)}, upsert: {tasks_upserted}")
-    logger.info(f"  输入 chunk: {len(chunks)}, upsert: {chunks_upserted}")
+    logger.info(
+        f"  输入 chunk: {len(chunks)}, "
+        f"summary upsert: {chunks_summary_upserted}, "
+        f"cleaned_text upsert: {chunks_cleaned_upserted}"
+    )
     logger.info(f"  chunk summary 匹配: {len(summaries)}")
 
     for name, info in stats.items():

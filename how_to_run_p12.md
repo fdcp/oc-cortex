@@ -429,5 +429,5 @@ head -1 output/tasks.jsonl | python3 -m json.tool
 ## 5. 下一步
 
 Phase 1 + 2 跑通后，接 Phase 3：
-- `code_p3_main.py` 把 tasks + chunks 向量化写入 Qdrant 双集合
+- `code_p3_main.py` 把 tasks + chunks 向量化写入 Qdrant 三集合 (tasks / chunks_summary / chunks_cleaned_text)
 - 详见 `code_p3_README.md`（以及 `图谱方案.md` 第 7 章 Phase 划分）

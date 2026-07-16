@@ -223,6 +223,9 @@ def main():
         batch_size=batch_size,
         device=config.get("embedding.device", "cpu"),
         qdrant_path=qdrant_path,
+        tasks_collection=config.get("qdrant.collections.tasks", "tasks"),
+        chunks_summary_collection=config.get("qdrant.collections.chunks_summary", "chunks_summary"),
+        chunks_cleaned_text_collection=config.get("qdrant.collections.chunks_cleaned_text", "chunks_cleaned_text"),
         sparse_method=sparse_method,
         jieba_mode=config.get("sparse.jieba_mode", "search"),
         bm25_k1=config.get("sparse.bm25_params.k1", 1.5),
@@ -239,7 +242,8 @@ def main():
     logger.info("-" * 40)
     logger.info("开始 upsert ...")
     store.upsert_tasks(tasks)
-    store.upsert_chunks(chunks, summaries, tasks=tasks)
+    store.upsert_chunks_summary(chunks, summaries, tasks=tasks)
+    store.upsert_chunks_cleaned_text(chunks, tasks=tasks)
 
     stats = store.get_stats()
     elapsed = time.time() - t0
@@ -258,23 +262,45 @@ def main():
     for query in queries:
         logger.info(f"\n>>> 查询: {query}")
 
-        # Dense only
-        dense_results = store.search_dense(query, top_k=args.top_k)
-        print(fmt_search_results(dense_results, f"Dense 检索 ({dense_model})"))
+        # Dense only (on chunks_summary)
+        dense_results = store.search_dense(
+            query, collection=store.chunks_summary_collection, top_k=args.top_k
+        )
+        print(fmt_search_results(
+            dense_results,
+            f"Dense 检索 ({dense_model}) → {store.chunks_summary_collection}"
+        ))
 
-        # Sparse only
+        # Sparse only (on chunks_cleaned_text)
         if sparse_method == "bm25":
-            sparse_results = store.search_sparse_bm25(query, top_k=args.top_k)
-            print(fmt_search_results(sparse_results, "Sparse 检索 (BM25)"))
+            sparse_results = store.search_sparse_bm25(
+                query, collection=store.chunks_cleaned_text_collection, top_k=args.top_k
+            )
+            print(fmt_search_results(
+                sparse_results,
+                f"Sparse 检索 (BM25) → {store.chunks_cleaned_text_collection}"
+            ))
         else:
-            sparse_results = store.search_sparse_bge_m3(query, top_k=args.top_k)
-            print(fmt_search_results(sparse_results, f"Sparse 检索 (BGE-M3)"))
+            sparse_results = store.search_sparse_bge_m3(
+                query, collection=store.chunks_cleaned_text_collection, top_k=args.top_k
+            )
+            print(fmt_search_results(
+                sparse_results,
+                f"Sparse 检索 (BGE-M3) → {store.chunks_cleaned_text_collection}"
+            ))
 
-        # Hybrid
-        hybrid_results = store.search_hybrid(query, top_k=args.top_k)
+        # Hybrid (cross-collection: dense → summary, sparse → cleaned_text)
+        hybrid_results = store.search_hybrid_cross_collection(
+            query,
+            dense_collection=store.chunks_summary_collection,
+            sparse_collection=store.chunks_cleaned_text_collection,
+            top_k=args.top_k,
+        )
         print(fmt_hybrid_results(
             hybrid_results,
-            f"Hybrid 检索 (RRF, k={store.fuse_k})"
+            f"Hybrid 跨集合检索 (RRF, k={store.fuse_k}): "
+            f"dense[{store.chunks_summary_collection}] + "
+            f"sparse[{store.chunks_cleaned_text_collection}]"
         ))
 
     logger.info("\n" + "=" * 60)

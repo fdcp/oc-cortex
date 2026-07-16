@@ -1,8 +1,9 @@
 """
-Phase 3 核心模块: Qdrant 双集合向量存储 + 混合检索
-- tasks 集合: task_summary 向量化
-- chunks 集合: summary + cleaned_text 向量化
-- 混合检索: dense (embedding) + sparse (BM25 / BGE-M3) + RRF 融合
+Phase 3 核心模块: Qdrant 三集合向量存储 + 混合检索
+- tasks 集合: task_summary 向量化 (dense only)
+- chunks_summary 集合: chunk summary 向量化 (dense only)
+- chunks_cleaned_text 集合: cleaned_text 向量化 (dense + BM25)
+- 混合检索: dense (summary) + sparse (cleaned_text BM25) + RRF 融合
 """
 import os
 import platform
@@ -96,7 +97,7 @@ def _stable_uuid(text: str) -> str:
 
 class Phase3Store:
     """
-    Qdrant 双集合向量存储 + 混合检索
+    Qdrant 三集合向量存储 + 混合检索
     封装 QdrantClient + SentenceTransformer + BM25/BGE-M3
     """
 
@@ -108,7 +109,8 @@ class Phase3Store:
         device: str = "auto",
         qdrant_path: str = "./qdrant_data",
         tasks_collection: str = "tasks",
-        chunks_collection: str = "chunks",
+        chunks_summary_collection: str = "chunks_summary",
+        chunks_cleaned_text_collection: str = "chunks_cleaned_text",
         sparse_method: str = "bm25",
         jieba_mode: str = "search",
         bm25_k1: float = 1.5,
@@ -122,7 +124,8 @@ class Phase3Store:
         self.dim = dim
         self.batch_size = batch_size
         self.tasks_collection = tasks_collection
-        self.chunks_collection = chunks_collection
+        self.chunks_summary_collection = chunks_summary_collection
+        self.chunks_cleaned_text_collection = chunks_cleaned_text_collection
         self.sparse_method = sparse_method
         self.fuse_k = fuse_k
 
@@ -377,8 +380,12 @@ class Phase3Store:
     # --------------------------------------------------------
 
     def init_collections(self) -> None:
-        """创建或验证 tasks / chunks 集合"""
-        for name in [self.tasks_collection, self.chunks_collection]:
+        """创建或验证 tasks / chunks_summary / chunks_cleaned_text 集合"""
+        for name in [
+            self.tasks_collection,
+            self.chunks_summary_collection,
+            self.chunks_cleaned_text_collection,
+        ]:
             existing = [c.name for c in self.client.get_collections().collections]
             if name not in existing:
                 if self.sparse_method == "bge_m3":
@@ -504,40 +511,24 @@ class Phase3Store:
         )
         logger.info(f"Task upsert 完成: {len(points)} 条写入 '{self.tasks_collection}'")
 
-        # BM25 索引
-        if self.sparse_method == "bm25":
-            pids = [_stable_uuid(t.task_id) for t in tasks]
-            pls = [
-                {
-                    "task_id": t.task_id,
-                    "session_id": t.session_id,
-                    "task_label": t.task_label,
-                    "task_summary": t.task_summary,
-                    "chunk_ids": t.chunk_ids,
-                    "created_at": t.created_at,
-                }
-                for t in tasks
-            ]
-            self.build_bm25_index(self.tasks_collection, texts, pids, pls)
-
         return len(points)
 
     # --------------------------------------------------------
     # Chunk upsert
     # --------------------------------------------------------
 
-    def upsert_chunks(
+    def upsert_chunks_summary(
         self,
         chunks: list[Chunk],
         summaries: dict[str, str],
         tasks: Optional[list[Task]] = None,
     ) -> int:
-        """将 Chunk 列表写入 chunks 集合"""
+        """将 Chunk summary 写入 chunks_summary 集合 (dense only, 无 BM25)"""
         if not chunks:
-            logger.warning("upsert_chunks: 无 chunk 可写入")
+            logger.warning("upsert_chunks_summary: 无 chunk 可写入")
             return 0
 
-        logger.info(f"准备 upsert {len(chunks)} 个 chunk ...")
+        logger.info(f"准备 upsert {len(chunks)} 个 chunk summary ...")
 
         chunk_to_task: dict[str, str] = {}
         if tasks:
@@ -548,51 +539,34 @@ class Phase3Store:
         texts = []
         valid_chunks = []
         skipped = 0
-        summary_only_count = 0
 
         for c in chunks:
             summary = summaries.get(c.chunk_id, "")
-            cleaned = c.cleaned_text()
-            if not summary and not cleaned:
+            if not summary:
                 skipped += 1
                 continue
-            # 如果 chunk 已被 task 覆盖, embedding 优先用 chunk_summary (更精准)
-            # task 集合已包含 task_summary 向量, chunks 集合用 summary 减少冗余
-            if summary and c.chunk_id in chunk_to_task:
-                embed_text = summary
-                summary_only_count += 1
-            elif summary:
-                embed_text = f"{summary}\n\n{cleaned}"
-            else:
-                embed_text = cleaned
-            texts.append(embed_text)
+            texts.append(summary)
             valid_chunks.append(c)
 
         if skipped > 0:
             logger.warning(
-                f"跳过 {skipped} 个空 chunk (无 summary 且无 cleaned_text)"
-            )
-        if summary_only_count > 0:
-            logger.info(
-                f"Chunk embedding: {summary_only_count}/{len(valid_chunks)} 个 "
-                f"chunk 使用 summary-only (已被 task 覆盖, 减少冗余)"
+                f"跳过 {skipped} 个无 summary 的 chunk"
             )
         if not texts:
-            logger.warning("upsert_chunks: 无有效 chunk 可写入")
+            logger.warning("upsert_chunks_summary: 无有效 summary 可写入")
             return 0
 
         vectors = self.embed(texts)
-        logger.info(f"Chunk embedding 完成: {len(vectors)} 个向量")
+        logger.info(f"Chunks summary embedding 完成: {len(vectors)} 个向量")
 
         sparse_vectors = None
         if self.sparse_method == "bge_m3":
             sparse_vectors = self._encode_sparse_bge_m3(texts)
             logger.info(
-                f"Chunk sparse embedding (BGE-M3) 完成: {len(sparse_vectors)}"
+                f"Chunks summary sparse embedding (BGE-M3) 完成: {len(sparse_vectors)}"
             )
 
         points = []
-        payload_list = []
         for idx, (chunk, vec) in enumerate(zip(valid_chunks, vectors)):
             point_id = _stable_uuid(chunk.chunk_id)
             summary = summaries.get(chunk.chunk_id, "")
@@ -602,6 +576,93 @@ class Phase3Store:
                 "turn_index": chunk.turn_index,
                 "task_id": chunk_to_task.get(chunk.chunk_id, ""),
                 "summary": summary,
+                "raw_size_tokens": chunk.raw_size_tokens,
+                "cleaned_size_tokens": chunk.cleaned_size_tokens,
+                "created_at": chunk.created_at or "",
+            }
+
+            if self.sparse_method == "bge_m3":
+                points.append(rest.PointStruct(
+                    id=point_id,
+                    vector={"dense": vec, "sparse": sparse_vectors[idx]},
+                    payload=payload,
+                ))
+            else:
+                points.append(rest.PointStruct(
+                    id=point_id,
+                    vector=vec,
+                    payload=payload,
+                ))
+
+        self.client.upsert(
+            collection_name=self.chunks_summary_collection,
+            points=points,
+        )
+        logger.info(
+            f"Chunks summary upsert 完成: {len(points)} 条写入 "
+            f"'{self.chunks_summary_collection}'"
+        )
+
+        return len(points)
+
+    def upsert_chunks_cleaned_text(
+        self,
+        chunks: list[Chunk],
+        tasks: Optional[list[Task]] = None,
+    ) -> int:
+        """将 Chunk cleaned_text 写入 chunks_cleaned_text 集合 (dense + BM25)"""
+        if not chunks:
+            logger.warning("upsert_chunks_cleaned_text: 无 chunk 可写入")
+            return 0
+
+        logger.info(f"准备 upsert {len(chunks)} 个 chunk cleaned_text ...")
+
+        chunk_to_task: dict[str, str] = {}
+        if tasks:
+            for t in tasks:
+                for cid in t.chunk_ids:
+                    chunk_to_task[cid] = t.task_id
+
+        texts = []
+        valid_chunks = []
+        skipped = 0
+
+        for c in chunks:
+            cleaned = c.cleaned_text()
+            if not cleaned:
+                skipped += 1
+                continue
+            texts.append(cleaned)
+            valid_chunks.append(c)
+
+        if skipped > 0:
+            logger.warning(
+                f"跳过 {skipped} 个空 chunk (无 cleaned_text)"
+            )
+        if not texts:
+            logger.warning("upsert_chunks_cleaned_text: 无有效 cleaned_text 可写入")
+            return 0
+
+        vectors = self.embed(texts)
+        logger.info(f"Chunks cleaned_text embedding 完成: {len(vectors)} 个向量")
+
+        sparse_vectors = None
+        if self.sparse_method == "bge_m3":
+            sparse_vectors = self._encode_sparse_bge_m3(texts)
+            logger.info(
+                f"Chunks cleaned_text sparse embedding (BGE-M3) 完成: "
+                f"{len(sparse_vectors)}"
+            )
+
+        points = []
+        payload_list = []
+        for idx, (chunk, vec) in enumerate(zip(valid_chunks, vectors)):
+            point_id = _stable_uuid(chunk.chunk_id)
+            payload = {
+                "chunk_id": chunk.chunk_id,
+                "session_id": chunk.session_id,
+                "turn_index": chunk.turn_index,
+                "task_id": chunk_to_task.get(chunk.chunk_id, ""),
                 "raw_size_tokens": chunk.raw_size_tokens,
                 "cleaned_size_tokens": chunk.cleaned_size_tokens,
                 "created_at": chunk.created_at or "",
@@ -622,17 +683,19 @@ class Phase3Store:
                 ))
 
         self.client.upsert(
-            collection_name=self.chunks_collection,
+            collection_name=self.chunks_cleaned_text_collection,
             points=points,
         )
         logger.info(
-            f"Chunk upsert 完成: {len(points)} 条写入 '{self.chunks_collection}'"
+            f"Chunks cleaned_text upsert 完成: {len(points)} 条写入 "
+            f"'{self.chunks_cleaned_text_collection}'"
         )
 
+        # BM25 索引 (cleaned_text)
         if self.sparse_method == "bm25":
             pids = [_stable_uuid(c.chunk_id) for c in valid_chunks]
             self.build_bm25_index(
-                self.chunks_collection, texts, pids, payload_list
+                self.chunks_cleaned_text_collection, texts, pids, payload_list
             )
 
         return len(points)
@@ -648,7 +711,7 @@ class Phase3Store:
         top_k: int = 10,
     ) -> list[SearchResult]:
         """稠密检索 (embedding cosine similarity)"""
-        collection = collection or self.chunks_collection
+        collection = collection or self.chunks_summary_collection
         query_vec = self.embed([query])[0]
 
         using = "dense" if self.sparse_method == "bge_m3" else None
@@ -680,7 +743,7 @@ class Phase3Store:
         top_k: int = 10,
     ) -> list[SearchResult]:
         """BM25 稀疏检索 (in-memory)"""
-        collection = collection or self.chunks_collection
+        collection = collection or self.chunks_cleaned_text_collection
 
         if collection not in self._bm25_index:
             logger.warning(f"BM25 索引不存在: {collection}")
@@ -722,7 +785,7 @@ class Phase3Store:
         top_k: int = 10,
     ) -> list[SearchResult]:
         """BGE-M3 稀疏检索 (Qdrant sparse vector search)"""
-        collection = collection or self.chunks_collection
+        collection = collection or self.chunks_summary_collection
 
         sparse_vec = self._encode_sparse_bge_m3([query])[0]
 
@@ -759,7 +822,7 @@ class Phase3Store:
         混合检索: dense + sparse + RRF 融合
         RRF_score(d) = sum(1 / (k + rank_i(d)))
         """
-        collection = collection or self.chunks_collection
+        collection = collection or self.chunks_summary_collection
         logger.info(
             f"混合检索 [{collection}]: query='{query[:40]}...', "
             f"dense_top={dense_top_k}, sparse_top={sparse_top_k}, "
@@ -787,6 +850,60 @@ class Phase3Store:
         t_sparse = time.time() - t1
         logger.info(
             f"  Sparse ({self.sparse_method}): "
+            f"{len(sparse_results)} 结果, {t_sparse:.2f}s"
+        )
+
+        # 3. RRF 融合
+        t2 = time.time()
+        fused = self._rrf_fuse(dense_results, sparse_results, self.fuse_k)
+        t_fuse = time.time() - t2
+        logger.info(f"  RRF 融合: {len(fused)} 结果, {t_fuse:.3f}s")
+
+        return fused[:top_k]
+
+    def search_hybrid_cross_collection(
+        self,
+        query: str,
+        dense_collection: Optional[str] = None,
+        sparse_collection: Optional[str] = None,
+        top_k: int = 10,
+        dense_top_k: int = 50,
+        sparse_top_k: int = 50,
+    ) -> list[HybridResult]:
+        """
+        跨集合混合检索: dense 搜一个集合, sparse 搜另一个集合, RRF 融合
+        典型用法: dense → chunks_summary (语义匹配), sparse → chunks_cleaned_text (关键词匹配)
+        """
+        dense_collection = dense_collection or self.chunks_summary_collection
+        sparse_collection = sparse_collection or self.chunks_cleaned_text_collection
+
+        logger.info(
+            f"跨集合混合检索: query='{query[:40]}...', "
+            f"dense[{dense_collection}], sparse[{sparse_collection}], "
+            f"dense_top={dense_top_k}, sparse_top={sparse_top_k}"
+        )
+
+        # 1. Dense search
+        t0 = time.time()
+        dense_results = self.search_dense(query, dense_collection, dense_top_k)
+        t_dense = time.time() - t0
+        logger.info(f"  Dense [{dense_collection}]: {len(dense_results)} 结果, {t_dense:.2f}s")
+
+        # 2. Sparse search
+        t1 = time.time()
+        if self.sparse_method == "bm25":
+            sparse_results = self.search_sparse_bm25(
+                query, sparse_collection, sparse_top_k
+            )
+        elif self.sparse_method == "bge_m3":
+            sparse_results = self.search_sparse_bge_m3(
+                query, sparse_collection, sparse_top_k
+            )
+        else:
+            sparse_results = []
+        t_sparse = time.time() - t1
+        logger.info(
+            f"  Sparse ({self.sparse_method}) [{sparse_collection}]: "
             f"{len(sparse_results)} 结果, {t_sparse:.2f}s"
         )
 
@@ -849,9 +966,13 @@ class Phase3Store:
     # --------------------------------------------------------
 
     def get_stats(self) -> dict:
-        """返回两个集合的统计信息"""
+        """返回三个集合的统计信息"""
         stats = {}
-        for name in [self.tasks_collection, self.chunks_collection]:
+        for name in [
+            self.tasks_collection,
+            self.chunks_summary_collection,
+            self.chunks_cleaned_text_collection,
+        ]:
             try:
                 info = self.client.get_collection(name)
                 vectors_count = getattr(info, "vectors_count", None)

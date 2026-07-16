@@ -1,10 +1,12 @@
-# Phase 3: Qdrant 双集合向量存储 + 混合检索
+# Phase 3: Qdrant 三集合向量存储 + 混合检索
 
 ## 概述
 
-Phase 3 将 Phase 1 (chunks) 和 Phase 2 (tasks + chunk summaries) 的输出向量化，写入本地 Qdrant 双集合，并提供**稠密检索 + 稀疏检索**的混合检索能力。
+Phase 3 将 Phase 1 (chunks) 和 Phase 2 (tasks + chunk summaries) 的输出向量化，写入本地 Qdrant 三集合，并提供**稠密检索 + 稀疏检索**的混合检索能力。
 
-两个集合各有侧重：`tasks` 集合存储 task_summary 的向量，适合按"做了什么"检索；`chunks` 集合存储 summary + cleaned_text 的向量，适合按"具体细节"检索。
+三个集合各有侧重：`tasks` 集合存储 task_summary 的向量，适合按"做了什么"语义检索；`chunks_summary` 集合存储 chunk summary 的向量，适合按单轮摘要检索；`chunks_cleaned_text` 集合存储 cleaned_text 的向量和 BM25 索引，适合按关键词精确匹配。
+
+**核心设计原则：Dense 用 summary（语义聚合），Sparse 用 cleaned_text（原始对话关键词）。**
 
 混合检索架构按环境可配置：
 
@@ -85,29 +87,45 @@ python code_p3_search_demo.py --mode all --query "GPU对比分析"
 |--------|--------|------|
 | `qdrant.path` | `./qdrant_data` | 文件持久化路径 |
 | `qdrant.collections.tasks` | `tasks` | task 集合名 |
-| `qdrant.collections.chunks` | `chunks` | chunk 集合名 |
+| `qdrant.collections.chunks_summary` | `chunks_summary` | chunk summary 集合名 |
+| `qdrant.collections.chunks_cleaned_text` | `chunks_cleaned_text` | chunk cleaned_text 集合名 |
 
 ## 核心设计
 
-### 双集合架构
+### 三集合架构
 
 **tasks 集合** -- 每个 point 代表一个 session 级任务：
-- 向量来源: `task_summary` (50-200 字, Phase 2 LLM 生成)
+- Dense 向量来源: `task_summary` (50-200 字, Phase 2 LLM 生成)
+- 无 BM25 索引 (Phase 4 通过两阶段查询处理)
 - Payload: `task_id`, `session_id`, `task_label`, `task_summary`, `chunk_ids`, `created_at`
 
-**chunks 集合** -- 每个 point 代表一个对话轮次：
-- 向量来源: `summary + "\n\n" + cleaned_text`
+**chunks_summary 集合** -- 每个 point 代表一个对话轮次的摘要：
+- Dense 向量来源: `summary` (Phase 2 生成的 chunk 摘要)
+- 无 BM25 索引
 - Payload: `chunk_id`, `session_id`, `turn_index`, `task_id`, `summary`, `raw_size_tokens`, `cleaned_size_tokens`, `created_at`
 
-### 混合检索流程
+**chunks_cleaned_text 集合** -- 每个 point 代表一个对话轮次的原始对话：
+- Dense 向量来源: `cleaned_text` (格式化后的用户/助手对话)
+- BM25 索引来源: `cleaned_text` (同一文本)
+- Payload: `chunk_id`, `session_id`, `turn_index`, `task_id`, `raw_size_tokens`, `cleaned_size_tokens`, `created_at`
+
+### Cross-Collection 混合检索
+
+Dense 和 Sparse 搜索不同集合，利用各自的文本优势：
 
 ```
 用户查询
-  ├─ Dense:  embedding → Qdrant cosine search → top-K dense 结果
-  ├─ Sparse: jieba 分词 → BM25 打分 → top-K sparse 结果
-  │          (或 BGE-M3 sparse vector → Qdrant sparse search)
+  ├─ Dense:  query embedding → Qdrant cosine search
+  │          Phase 3: 搜 chunks_summary (语义匹配摘要)
+  │          Phase 4: 搜 tasks (语义匹配 task_summary)
+  ├─ Sparse: jieba 分词 → BM25 打分
+  │          始终搜 chunks_cleaned_text (关键词匹配原始对话)
+  │          Phase 4: chunk 级结果 → chunk_to_task 映射 → 聚合为 task 级
   └─ RRF:    Reciprocal Rank Fusion 融合两路结果 → 最终 top-K
 ```
+
+Phase 3 (search_demo) 使用 `search_hybrid_cross_collection()` 直接做跨集合 RRF 融合。
+Phase 4 (searcher) 实现两阶段查询：Dense→tasks + BM25→chunks_cleaned_text→task 映射→RRF。
 
 **RRF 融合公式:**
 
@@ -120,8 +138,9 @@ RRF_score(d) = Σ 1 / (k + rank_i(d))
 ### BM25 模式 (开发)
 
 - 使用 jieba 中文分词构建 BM25 索引 (in-memory, rank_bm25 库)
-- upsert 时同步构建 BM25 索引，Qdrant 只存 dense vectors
-- 检索时分别从 Qdrant (dense) 和内存 (BM25) 获取结果，Python 层面做 RRF 融合
+- BM25 索引仅在 `chunks_cleaned_text` 集合的 upsert 时构建
+- `tasks` 和 `chunks_summary` 集合只做 dense 向量存储
+- 检索时 Dense 从 Qdrant 获取，BM25 从内存获取，Python 层面做 RRF 融合
 - 适合快速迭代，数据量 < 10K 时性能很好
 
 ### BGE-M3 模式 (上线)
@@ -149,7 +168,7 @@ sentence-transformers 版本的 BGE-M3 不支持 `sparse_vec` 输出（原版 Fl
 
 ### Chunk-Task 关联
 
-`upsert_chunks()` 接受 `tasks` 参数，构建 `chunk_id → task_id` 反向映射，写入 chunk payload。
+`upsert_chunks_summary()` 和 `upsert_chunks_cleaned_text()` 都接受 `tasks` 参数，构建 `chunk_id → task_id` 反向映射，写入 chunk payload。Phase 4 的两阶段查询还利用 `chunk_to_task` 映射将 BM25 的 chunk 级结果聚合回 task 级。
 
 ## 性能参考 (Apple M2 CPU)
 
@@ -157,10 +176,10 @@ sentence-transformers 版本的 BGE-M3 不支持 `sparse_vec` 输出（原版 Fl
 
 | 操作 | 数量 | 耗时 |
 |------|------|------|
-| Dense embedding (tasks) | 27 | ~1.2s |
-| Dense embedding (chunks) | 86 | ~2.6s |
-| BM25 索引 (tasks) | 27 | ~0.3s |
-| BM25 索引 (chunks) | 86 | ~0.2s |
+| Dense embedding (tasks) | 29 | ~0.8s |
+| Dense embedding (chunks_summary) | 83 | ~0.6s |
+| Dense embedding (chunks_cleaned_text) | 83 | ~2.7s |
+| BM25 索引 (chunks_cleaned_text) | 83 | ~0.5s |
 | 单次混合检索 | - | <0.02s |
 
 ### Qwen3-Embedding-0.6B + BGE-M3 (1/5 数据示例)
@@ -168,33 +187,40 @@ sentence-transformers 版本的 BGE-M3 不支持 `sparse_vec` 输出（原版 Fl
 | 操作 | 数量 | 耗时 |
 |------|------|------|
 | Dense embedding (tasks) | 5 | ~11s |
-| Sparse embedding (tasks, BGE-M3) | 5 | ~4s |
-| Dense embedding (chunks) | 17 | ~1415s (~23.5min) |
-| Sparse embedding (chunks, BGE-M3) | 17 | ~49s |
+| Dense embedding (chunks_summary) | 17 | ~预估 30s |
+| Dense embedding (chunks_cleaned_text) | 17 | ~预估 15min (CPU 长文本慢) |
 | 单次混合检索 | - | ~0.2s |
 
 CPU 模式下 Qwen3 对长文本 chunk embedding 很慢（每条约 30-120s）。生产环境建议使用 GPU。BGE-M3 sparse 计算（token embedding L2 norm）相对快得多。
 
 ## 检索结果示例
 
-### BM25 模式 (全量数据, bge-small-zh)
+### Phase 3 Cross-Collection 检索 (全量数据, bge-small-zh + BM25)
 
-查询: "GPU对比分析 A800 H100 H800"
-
-```
-Dense #1:  [ses_...c2]  系统对比 A800/A100/H100/H200/H800 ...  (score=0.762)
-Sparse #1: [ses_...c2]  系统对比 A800/A100/H100/H200/H800 ...  (score=26.678)
-Hybrid #1: [ses_...c2]  D#1 S#1  RRF=0.0328  ← 两路都是 #1, 融合后仍然是 #1
-```
-
-### BGE-M3 模式 (1/5 数据, Qwen3 + BGE-M3 sparse)
-
-查询: "GPU对比"
+查询: "GPU对比分析"
 
 ```
-Dense #1:  [ses_...c10] FA-2 相对 FA-1 的关键改进 ...                  (score=0.587)
-Sparse #1: [ses_...c1]  V100 算力参数明确: FP32 14 TFLOPS ...          (score=1561.3)
-Hybrid #1: [ses_...c2]  系统对比 A800/A100/H100/H200/H800 ...  D#2 S#2 RRF=0.0323
+Dense [chunks_summary] #1:  [ses_...c7]  详细解析了TP=2与SP=4的2D mesh配置...     (score=0.592)
+Sparse [chunks_cleaned_text] #1: [ses_...c3]  用户要求生成v2版本...                  (score=5.487)
+Hybrid #1: [ses_...c13]  FA-2的并行策略类比为warp粒度的序列并行...  D#2 S#8  RRF=0.0308
 ```
 
-Dense 和 Sparse 给出了不同的 top-1（语义相似度 vs token 匹配），RRF 融合后系统对比 GPU 的 chunk 升到 #1（两路都排名靠前）。
+Dense 和 Sparse 搜索不同集合：Dense 在 summary 中找语义相关，Sparse 在原始对话中找关键词命中。
+
+### Phase 4 两阶段查询 (全量数据, bge-small-zh + BM25)
+
+查询: "GPU对比分析"
+
+```
+Dense[tasks]:        25 个候选 task
+BM25[cleaned_text]:  38 chunk 命中 → 聚合为 15 个 task
+RRF 融合:            25 个候选 task
+
+#1  数据中心GPU性能对比与选型  hybrid=0.0323  (5 chunks: V100/A800/H100/H200/H800 完整对比)
+#2  生成优化器v2指南          hybrid=0.0315
+#3  SDPA与FlashAttention原理  hybrid=0.0310
+#4  A800形态识别方法          hybrid=0.0309
+#5  NCCL通信性能诊断与优化    hybrid=0.0303
+```
+
+BM25 搜 cleaned_text 后通过 chunk_to_task 映射聚合，与 dense 搜 task_summary 做 RRF 融合。"数据中心GPU性能对比与选型" 因 5 个关联 chunk 在 BM25 中多次命中，获得最高的 RRF 分数。

@@ -19,7 +19,7 @@
 
 session ses_10772d114... (omo 插件安装) 共 13 个 chunk，其中 5 个 (c3-c7) 仅是用户重复询问"这个可以用吗"，信息量为零。类似地，ses_0ee881bdd... c1 是"用户上传图片无说明"。
 
-这些 chunk 在 chunks 集合中各占一个向量点，稀释了有效信息的检索权重。
+这些 chunk 在 chunks_cleaned_text 集合中各占一个向量点，稀释了有效信息的检索权重。
 
 **改进方向 (Phase 1 chunker)**:
 - 新增参数 `min_user_message_length`（当前仅过滤 session 级别，未过滤 chunk 级别）
@@ -47,7 +47,7 @@ session ses_10772d114... (omo 插件安装) 共 13 个 chunk，其中 5 个 (c3-
 
 **改进方向**:
 - 短期可接受：数据量小时冗余不影响检索
-- 长期方案：Phase 3 写入 chunks 集合时，如果 chunk 已被 task 覆盖，embedding 文本优先使用 chunk_summary（更精准），而非 summary + cleaned_text 拼接
+- 长期方案：Phase 3 已将 chunks 拆为 chunks_summary (dense: summary) 和 chunks_cleaned_text (dense+BM25: cleaned_text) 两个独立集合，避免 summary 被 cleaned_text 稀释
 
 #### 问题 4: chunk cleaned_text 压缩率异常
 

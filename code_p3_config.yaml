@@ -34,7 +34,8 @@ qdrant:
   path: "./qdrant_data"   # 本地文件持久化路径
   collections:
     tasks: "tasks"
-    chunks: "chunks"
+    chunks_summary: "chunks_summary"
+    chunks_cleaned_text: "chunks_cleaned_text"
 
 # Reranker (Phase 4: 跨 session 搜索精排)
 reranker:
