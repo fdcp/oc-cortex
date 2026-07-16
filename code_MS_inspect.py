@@ -84,7 +84,7 @@ def show_collection_stats(client: QdrantClient) -> None:
 
 def show_sample_payloads(client: QdrantClient, n: int = 5) -> None:
     section("2. 样本浏览")
-    for cname in ["tasks", "chunks"]:
+    for cname in ["tasks", "chunks_summary", "chunks_cleaned_text"]:
         subsection(f"集合: {cname}")
         try:
             info = client.get_collection(cname)
@@ -117,12 +117,14 @@ def show_sample_payloads(client: QdrantClient, n: int = 5) -> None:
                 chunk_ids = pl.get("chunk_ids", [])
                 print(f"      chunk_ids:  {len(chunk_ids)} 个 {chunk_ids[:3]}{'...' if len(chunk_ids) > 3 else ''}")
             else:
+                # chunks_summary 或 chunks_cleaned_text
                 print(f"      chunk_id:   {pl.get('chunk_id', '?')}")
                 print(f"      session_id: {pl.get('session_id', '?')}")
                 print(f"      turn_index: {pl.get('turn_index', '?')}")
                 print(f"      task_id:    {pl.get('task_id', '?')}")
-                summary = pl.get("summary", "")
-                print(f"      summary:    {summary[:120]}{'...' if len(summary) > 120 else ''}")
+                if cname == "chunks_summary":
+                    summary = pl.get("summary", "")
+                    print(f"      summary:    {summary[:120]}{'...' if len(summary) > 120 else ''}")
                 raw = pl.get("raw_size_tokens", 0)
                 cleaned = pl.get("cleaned_size_tokens", 0)
                 ratio = f"{cleaned/raw:.1%}" if raw > 0 else "N/A"
@@ -171,10 +173,10 @@ def show_data_analysis(client: QdrantClient) -> None:
 
     # --- Chunks 分析 ---
     subsection("Chunks 分布")
-    chunk_points, _ = client.scroll("chunks", limit=1000, with_payload=True, with_vectors=False)
+    chunk_points, _ = client.scroll("chunks_summary", limit=1000, with_payload=True, with_vectors=False)
     chunks_data = [p.payload for p in chunk_points if p.payload]
 
-    print(f"  总 chunk 数: {len(chunks_data)}")
+    print(f"  总 chunk 数: {len(chunks_data)} (来源: chunks_summary)")
 
     raws = [c.get("raw_size_tokens", 0) for c in chunks_data]
     cleans = [c.get("cleaned_size_tokens", 0) for c in chunks_data]
