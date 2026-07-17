@@ -111,16 +111,24 @@ claude mcp list
 
 #### 4. QoderWork 接入
 
-在 QoderWork 设置 → MCP Servers 中手动添加：
+在 QoderWork 设置 → 连接器 → 自定义 MCP 中手动添加，粘贴配置：
 
-```
-名称: knowledge-graph
-命令: python3
-参数: /Users/zhaoxiuwei/Desktop/oc_sess_graph/code_mcp_server.py
-环境变量: OPENCODE_ZEN_API_KEY=<your-key>
+```json
+{
+  "mcpServers": {
+    "knowledge-graph": {
+      "command": "python3",
+      "args": ["/Users/zhaoxiuwei/Desktop/oc_sess_graph/code_mcp_server.py"],
+      "cwd": "/Users/zhaoxiuwei/Desktop/oc_sess_graph",
+      "env": {
+        "OPENCODE_ZEN_API_KEY": "<your-key>"
+      }
+    }
+  }
+}
 ```
 
-或通过 QoderWork MCP 配置文件添加。
+> Server 会自动以脚本所在目录为基准解析相对路径，`cwd` 可省略。
 
 #### 5. MCP Inspector 调试
 

@@ -52,8 +52,13 @@ def _load_config() -> dict:
 
 
 _config = _load_config()
-_db_path = _config.get("server", {}).get("db_path", DEFAULT_DB_PATH)
-_tasks_file = _config.get("server", {}).get("tasks_file", "output/tasks.jsonl")
+_project_root = Path(__file__).resolve().parent
+
+_raw_db_path = _config.get("server", {}).get("db_path", DEFAULT_DB_PATH)
+_db_path = str(_project_root / _raw_db_path) if not Path(_raw_db_path).is_absolute() else _raw_db_path
+
+_raw_tasks_file = _config.get("server", {}).get("tasks_file", "output/tasks.jsonl")
+_tasks_file = str(_project_root / _raw_tasks_file) if not Path(_raw_tasks_file).is_absolute() else _raw_tasks_file
 
 # 延迟初始化的全局实例
 _db: Optional[KGDatabase] = None
