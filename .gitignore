@@ -4,6 +4,7 @@ __pycache__/
 output/
 qdrant_data/
 qdrant_data_sample/
+test
 
 .DS_Store
 *.pyc

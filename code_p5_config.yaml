@@ -1,0 +1,55 @@
+# Phase 5 配置: 知识图谱构建
+
+# 输入: Phase 2 产出
+phase2:
+  tasks_file: "./output/tasks.jsonl"
+
+# LLM (同 Phase 2, OpenCode Zen)
+llm:
+  model: "nemotron-3-ultra-free"
+  api_key_env: "OPENCODE_ZEN_API_KEY"
+  base_url: "https://opencode.ai/zen/v1"
+  max_retries: 3
+  content_retries: 2
+  timeout: 120
+  max_tokens: 4000          # 三元组抽取 max_tokens
+  merge_max_tokens: 200     # 实体合并确认 max_tokens (单条)
+  merge_batch_size: 20      # 批量合并确认: 每批发送的实体对数
+  merge_batch_enable: false  # 是否启用批量合并确认 (false=逐条确认, 更稳定)
+  concurrency: 4            # 并发线程数
+
+# Embedding (复用 Phase 3)
+embedding:
+  model: "BAAI/bge-small-zh-v1.5"
+  dim: 512
+  batch_size: 32
+  device: "cpu"
+  offline_mode: true
+  cache_folder: null
+
+# Qdrant (复用 Phase 3 存储, 新增 entities 集合)
+qdrant:
+  path: "./qdrant_data"
+  entities_collection: "entities"
+
+# 知识图谱
+knowledge_graph:
+  entity_alignment_threshold: 0.92
+  graph_path: "./output/knowledge_graph.gpickle"
+  graph_json: "./output/knowledge_graph.json"
+  triples_file: "./output/triples_p5.jsonl"
+  entities_file: "./output/entities_p5.jsonl"
+
+# 可视化
+visualization:
+  backend: "pyvis"
+  html_output: "./output/knowledge_graph.html"
+  height: 800
+  width: 1200
+  physics_solver: "forceAtlas2Based"
+  max_nodes: 500
+  drop_isolated_nodes: false
+
+logging:
+  level: "INFO"
+  file: "./logs/phase5.log"
