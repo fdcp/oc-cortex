@@ -1,0 +1,22 @@
+# MCP Server 配置
+
+server:
+  host: "0.0.0.0"
+  port: 8000
+  db_path: "output/triple/knowledge_graph.db"
+  tasks_file: "output/tasks.jsonl"
+
+# 上下文注入参数
+context:
+  depth: 1                  # BFS 扩散深度
+  max_tasks: 10             # 每个上下文最多注入 task 数
+  max_entities: 3           # 最多对几个实体做图谱扩散
+
+# OpenCode 集成
+opencode:
+  auto_inject: true         # 新 session 自动注入上下文
+  inject_on_keywords:       # 触发注入的关键词
+    - "继续"
+    - "接着"
+    - "上次"
+    - "之前"
