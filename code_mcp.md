@@ -1,33 +1,28 @@
-## MCP Server 封装：知识图谱工具服务
+## MCP Server 封装：知识图谱工具服务（标准 MCP 协议）
 
 ### 概述
 
-将 Phase 5 知识图谱（SQLite）封装为 HTTP API 服务，提供 MCP 兼容的工具发现和调用接口，供 OpenCode 或其他 AI Agent 直接集成，实现跨会话记忆。
+将 Phase 5 知识图谱（SQLite）封装为标准 MCP Server，使用 `mcp` Python SDK + stdio 传输。
+**一套实现，四处可用**：Claude Code、Codex、OpenCode、QoderWork 均可直接加载。
 
-### 新增文件
+### 文件列表
 
 | 文件 | 说明 |
 |------|------|
-| `code_mcp_server.py` | FastAPI MCP Server：5 个工具端点 + MCP 协议兼容层 + 健康检查 |
-| `code_mcp_client.py` | MCP Client：HTTP 客户端 + 实体抽取 + `ContextInjector` 上下文注入器 |
-| `code_mcp_config.yaml` | 服务配置：端口、数据库路径、上下文注入参数 |
+| `code_mcp_server.py` | 标准 MCP Server（stdio/SSE/streamable-http 三种传输可选） |
+| `code_mcp_server_http.py` | HTTP REST 版本（调试/备用，非标准 MCP） |
+| `code_mcp_client.py` | Python 客户端：实体抽取 + `ContextInjector` 上下文注入器 |
+| `code_mcp_config.yaml` | 服务配置 + 各客户端 MCP 配置示例 |
 
-### MCP 工具列表
+### MCP 工具
 
-| 工具 | 方法 | 说明 |
-|------|------|------|
-| `query_kg` | GET `/query_kg` | BFS 扩散查询：从种子实体出发，获取关联 task（核心工具） |
-| `search_entities` | GET `/search_entities` | 模糊搜索实体名称 |
-| `get_entity_info` | GET `/get_entity_info` | 实体详情：类型、别名、关联 task、出入边 |
-| `graph_rag_search` | GET `/graph_rag_search` | Graph-RAG 增强搜索（向量 + 图谱 + Reranker） |
-| `get_stats` | GET `/get_stats` | 图谱统计信息 |
-
-MCP 协议端点：
-
-| 端点 | 说明 |
+| 工具 | 说明 |
 |------|------|
-| GET `/mcp/tools/list` | 工具发现：返回所有工具定义（JSON Schema） |
-| POST `/mcp/tools/call` | 工具调用：统一入口 `{"tool": "query_kg", "arguments": {...}}` |
+| `query_kg(entity, depth, max_nodes)` | BFS 扩散查询：从种子实体出发获取关联 task（跨会话记忆核心） |
+| `search_entities(query, limit)` | 模糊搜索实体名称 |
+| `get_entity_info(entity)` | 实体详情：类型、别名、关联 task、出入边 |
+| `graph_rag_search(query, top_k, use_graph)` | Graph-RAG 增强搜索（向量 + 图谱 + Reranker） |
+| `get_kg_stats()` | 图谱统计：节点数、边数、平均 task 数 |
 
 ---
 
@@ -37,135 +32,139 @@ MCP 协议端点：
 
 ```bash
 # 安装依赖
-pip3 install fastapi uvicorn requests pyyaml --quiet
-
-# 设置 API Key（如需 graph_rag_search）
-export OPENCODE_ZEN_API_KEY=$(python3 -c \
-  "import json; d=json.load(open('$HOME/.local/share/opencode/auth.json')); print(d['opencode-go']['key'])")
+pip3 install mcp[cli] pyyaml --quiet
 
 # 进入项目目录
 cd ~/Desktop/oc_sess_graph
 
 # 确保 Phase 5 数据已生成
 ls output/triple/knowledge_graph.db
-# 如果不存在，先运行: python3 code_p5_main.py --limit 10
+# 如果不存在: python3 code_p5_main.py --limit 10
 ```
 
-#### 1. 启动 MCP Server
+#### 1. Claude Code 接入
 
 ```bash
-# 后台启动
-python3 code_mcp_server.py &
-# 或: uvicorn code_mcp_server:app --host 0.0.0.0 --port 8000 &
+# 方法 1: 命令行添加（推荐）
+claude mcp add knowledge-graph \
+  python3 /Users/zhaoxiuwei/Desktop/oc_sess_graph/code_mcp_server.py \
+  -e OPENCODE_ZEN_API_KEY "$(python3 -c \
+    "import json; d=json.load(open('$HOME/.local/share/opencode/auth.json')); print(d['opencode-go']['key'])")"
 
-# 等待启动完成（约 2 秒）
-sleep 2
+# 验证
+claude mcp list
+# 预期: knowledge-graph (healthy)
 
-# 健康检查
-curl -s http://localhost:8000/health | python3 -m json.tool
-# 预期: {"status": "ok", "db_exists": true, "db_path": "output/triple/knowledge_graph.db", "tools_count": 5}
+# 在 Claude Code 中使用（agent 会自动发现工具）:
+# 直接对话: "帮我查一下 OpenCode 相关的历史任务"
+# Claude Code 会自动调用 query_kg(entity="OpenCode")
 ```
 
-#### 2. 工具发现
-
-```bash
-# 列出所有 MCP 工具
-curl -s http://localhost:8000/mcp/tools/list | python3 -m json.tool
-# 预期: 返回 5 个工具定义，每个包含 name, description, inputSchema
+```json
+// 方法 2: 手动编辑 ~/.claude/claude_desktop_config.json
+{
+  "mcpServers": {
+    "knowledge-graph": {
+      "command": "python3",
+      "args": ["/Users/zhaoxiuwei/Desktop/oc_sess_graph/code_mcp_server.py"],
+      "env": {
+        "OPENCODE_ZEN_API_KEY": "<your-key>"
+      }
+    }
+  }
+}
 ```
 
-#### 3. 核心工具：query_kg（BFS 扩散查询）
+#### 2. Codex 接入
 
-```bash
-# 从 "OpenCode" 实体出发，BFS 扩散 2 跳
-curl -s "http://localhost:8000/query_kg?entity=OpenCode&depth=2" | python3 -m json.tool
-
-# 预期输出（关键字段）:
-# {
-#   "seed_entity": "OpenCode",
-#   "depth": 2,
-#   "expanded_entities": ["OpenCode", "opencode.db", "session管理", ...],
-#   "related_tasks": [
-#     {"task_id": "...", "task_label": "opencode_auth", "task_summary": "..."},
-#     ...
-#   ],
-#   "elapsed_ms": 5
-# }
+```json
+// 编辑 ~/.codex/config.json
+{
+  "mcpServers": {
+    "knowledge-graph": {
+      "command": "python3",
+      "args": ["/Users/zhaoxiuwei/Desktop/oc_sess_graph/code_mcp_server.py"],
+      "env": {
+        "OPENCODE_ZEN_API_KEY": "<your-key>"
+      }
+    }
+  }
+}
 ```
 
-#### 4. 模糊搜索实体
+#### 3. OpenCode 接入
 
-```bash
-curl -s "http://localhost:8000/search_entities?query=RoPE" | python3 -m json.tool
-# 预期: 匹配到 "RoPE位置编码" 等实体
+```json
+// 编辑项目根目录 .opencode/mcp.json
+{
+  "mcpServers": {
+    "knowledge-graph": {
+      "command": "python3",
+      "args": ["/Users/zhaoxiuwei/Desktop/oc_sess_graph/code_mcp_server.py"],
+      "env": {
+        "OPENCODE_ZEN_API_KEY": "<your-key>"
+      }
+    }
+  }
+}
 ```
 
-#### 5. MCP 协议调用
+#### 4. QoderWork 接入
 
-```bash
-# 通过 MCP 统一入口调用
-curl -s -X POST http://localhost:8000/mcp/tools/call \
-  -H "Content-Type: application/json" \
-  -d '{"tool": "query_kg", "arguments": {"entity": "OpenCode", "depth": 1}}' \
-  | python3 -m json.tool
+在 QoderWork 设置 → MCP Servers 中手动添加：
 
-# 预期: {"tool": "query_kg", "result": {...}, "elapsed_ms": ...}
+```
+名称: knowledge-graph
+命令: python3
+参数: /Users/zhaoxiuwei/Desktop/oc_sess_graph/code_mcp_server.py
+环境变量: OPENCODE_ZEN_API_KEY=<your-key>
 ```
 
-#### 6. Client CLI 验证
+或通过 QoderWork MCP 配置文件添加。
+
+#### 5. MCP Inspector 调试
 
 ```bash
-# 健康检查
-python3 code_mcp_client.py health
+# 使用 MCP Inspector 交互式测试工具
+npx @modelcontextprotocol/inspector python3 code_mcp_server.py
 
-# 列出工具
-python3 code_mcp_client.py tools
+# 浏览器打开后：
+# 1. 点击 "Tools" 标签查看 5 个工具定义
+# 2. 选择 query_kg，填入 entity="OpenCode"，depth=2
+# 3. 点击 "Call Tool" 查看返回结果
+```
 
-# BFS 查询
+#### 6. HTTP 模式调试（备选）
+
+```bash
+# 以 streamable-http 模式启动（适合 curl 调试）
+python3 code_mcp_server.py --http &
+# 服务运行在 http://127.0.0.1:8000/mcp
+
+# 或以 SSE 模式启动
+python3 code_mcp_server.py --sse &
+# SSE 端点: http://127.0.0.1:8000/sse
+```
+
+#### 7. Client CLI 验证
+
+```bash
+# 设置 API Key（context 命令需要 LLM 抽取实体）
+export OPENCODE_ZEN_API_KEY=$(python3 -c \
+  "import json; d=json.load(open('$HOME/.local/share/opencode/auth.json')); print(d['opencode-go']['key'])")
+
+# BFS 查询（通过 code_mcp_client.py，调用 HTTP 版本）
 python3 code_mcp_client.py query OpenCode 2
 
-# 模糊搜索
-python3 code_mcp_client.py search RoPE
-
-# 上下文注入（核心功能）
+# 上下文注入演示
 python3 code_mcp_client.py context "继续搞 RoPE 位置编码的优化"
-# 预期输出:
+# 预期:
 #   查询: 继续搞 RoPE 位置编码的优化
-#   实体: ['RoPE', '位置编码', '优化'] → 命中: ['RoPE位置编码']
+#   实体: ['RoPE', '位置编码'] → 命中: ['RoPE位置编码']
 #   关联 task: N
 #   === 注入上下文 ===
 #   ## 跨会话记忆（来自知识图谱）
-#   基于查询中识别的实体 [RoPE位置编码]，以下是相关的历史任务上下文：
-#   1. **rope_impl** (session: ...)
-#      RoPE 旋转位置编码的实现细节...
-```
-
-#### 7. OpenCode 集成验证
-
-```bash
-python3 -c "
-from code_mcp_client import init_opencode, on_new_session
-
-# Step 1: 初始化（注册 MCP 工具）
-tools = init_opencode()
-print(f'注册工具: {[t[\"name\"] for t in tools]}')
-
-# Step 2: 新 session 启动 → 自动注入上下文
-context = on_new_session('继续搞 RoPE 位置编码的优化')
-if context:
-    print('注入上下文:')
-    print(context[:300])
-else:
-    print('(无相关上下文)')
-"
-```
-
-#### 8. 停止服务
-
-```bash
-# 查找并终止
-kill $(lsof -ti:8000)
-# 或: pkill -f "code_mcp_server"
+#   ...
 ```
 
 ---
@@ -173,39 +172,34 @@ kill $(lsof -ti:8000)
 ### 架构
 
 ```
-OpenCode / AI Agent
+Claude Code / Codex / OpenCode / QoderWork
   │
-  ├─ 新 session 启动
-  │   └─ on_new_session(query)
-  │       ├─ extract_session_entities(query) → ["RoPE", "位置编码"]
-  │       ├─ MCPClient.query_kg("RoPE位置编码", depth=1)
-  │       │   └─ HTTP GET /query_kg
-  │       └─ ContextInjector._format_context() → 注入 system prompt
+  ├─ MCP 协议 (stdio)
+  │   ├─ initialize → server capabilities
+  │   ├─ tools/list → 5 个工具定义 (JSON Schema)
+  │   └─ tools/call → query_kg / search_entities / ...
+  │                      └─ KGDatabase (SQLite)
   │
-  └─ MCP 工具调用
-      └─ POST /mcp/tools/call
-          └─ 分发到 query_kg / search_entities / graph_rag_search / ...
-                └─ KGDatabase (SQLite)
+  └─ 自动工具发现
+      └─ Agent 根据用户意图自动选择工具调用
+          "继续搞 XX" → query_kg(entity="XX")
+          "搜索 YY"  → search_entities(query="YY")
 ```
 
 ### 上下文压缩效果
 
-在 10 task 测试集上的效果估算：
-
 | 指标 | 无记忆 | MCP 注入 |
 |------|--------|----------|
 | 上下文大小 | 0 tokens | ~200-500 tokens (3-5 task 摘要) |
-| 跨 session 连续性 | 无 | 自动关联历史 task |
-| 首次响应延迟 | — | +50-100ms (BFS 查询) |
+| 跨 session 连续性 | 无 | Agent 自动调用 query_kg 关联历史 task |
+| 工具调用延迟 | — | ~5-10ms (BFS 查询) |
 
 当 task 数量增长到 100+，MCP 注入的上下文压缩比会更显著：从需要加载全部历史 session（~50K tokens）压缩到仅注入相关 task 摘要（~500 tokens），压缩率约 99%。
 
 ### 依赖
 
 ```
-fastapi     — HTTP 框架
-uvicorn     — ASGI 服务器
-requests    — HTTP 客户端（code_mcp_client.py）
+mcp[cli]    — MCP Python SDK (FastMCP + 传输层)
 pyyaml      — YAML 配置解析
 ```
 
