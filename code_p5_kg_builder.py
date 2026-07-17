@@ -1476,8 +1476,8 @@ class KGBuilder:
     # 保存 / 加载
     # --------------------------------------------------------
 
-    def save_graph(self, G: nx.MultiDiGraph, gpickle_path: str, json_path: str):
-        """保存图谱到 gpickle 和 JSON"""
+    def save_graph(self, G: nx.MultiDiGraph, gpickle_path: str, json_path: str, db_path: str = None, extraction_mode: str = "triple"):
+        """保存图谱到 gpickle、JSON 和 SQLite（可选）"""
         # gpickle (networkx 3.x 移除了 write_gpickle, 用 pickle 替代)
         p = Path(gpickle_path)
         p.parent.mkdir(parents=True, exist_ok=True)
@@ -1490,6 +1490,12 @@ class KGBuilder:
         with open(json_path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
         logger.info(f"图谱已保存 (JSON): {json_path}")
+
+        # SQLite 持久化
+        if db_path:
+            from code_p5e_db import KGDatabase
+            db = KGDatabase(db_path)
+            db.import_graph(G, extraction_mode=extraction_mode)
 
     def save_entities(
         self,

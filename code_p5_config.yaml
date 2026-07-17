@@ -49,6 +49,21 @@ visualization:
   max_nodes: 500
   drop_isolated_nodes: false
 
+# SQLite 持久化 (Phase 5 Extension)
+sqlite:
+  enabled: true
+  # db_path 默认为 {output_dir}/knowledge_graph.db，无需手动指定
+  # 如需覆盖，取消下行注释:
+  # db_path: "./output/knowledge_graph.db"
+
+# Graph-RAG 搜索 (Phase 5 Extension)
+graph_rag:
+  enabled: true
+  bfs_depth: 1              # BFS 扩散深度 (1=一跳邻居, 2=二跳)
+  max_expand_nodes: 30      # BFS 最大扩散节点数
+  max_graph_tasks: 50       # 图谱扩散最多引入的 task 数
+  graph_weight: 0.3         # 图谱扩散结果的权重加成
+
 logging:
   level: "INFO"
   file: "./logs/phase5.log"

@@ -198,6 +198,7 @@ def main():
     html_output = str(Path(output_dir) / "knowledge_graph.html")
     entity_extract_file = str(Path(output_dir) / "entity_extract.jsonl")
     inverted_index_file = str(Path(output_dir) / "inverted_index.json")
+    db_path = None  # SQLite db path (set in each branch below)
 
     logger.info(f"输出目录: {output_dir}")
 
@@ -248,7 +249,8 @@ def main():
         # 6. 构建共现图谱
         t2 = time.time()
         G = builder.build_cooccurrence_graph(inverted_index, canonical_map, entity_map)
-        builder.save_graph(G, graph_path, graph_json)
+        db_path = str(Path(output_dir) / "knowledge_graph.db") if config.get("sqlite.enabled", True) else None
+        builder.save_graph(G, graph_path, graph_json, db_path=db_path, extraction_mode="entity")
         t_graph = time.time() - t2
         logger.info(f"共现图谱构建耗时: {t_graph:.1f}s")
 
@@ -308,7 +310,8 @@ def main():
         # 6. 构建图谱
         t2 = time.time()
         G = builder.build_graph(triples, canonical_map, entity_map)
-        builder.save_graph(G, graph_path, graph_json)
+        db_path = str(Path(output_dir) / "knowledge_graph.db") if config.get("sqlite.enabled", True) else None
+        builder.save_graph(G, graph_path, graph_json, db_path=db_path, extraction_mode="triple")
         t_graph = time.time() - t2
         logger.info(f"图谱构建耗时: {t_graph:.1f}s")
 
@@ -366,6 +369,16 @@ def main():
             canonical = canonical_map.get(name, name)
             suffix = f" → {canonical}" if canonical != name else ""
             logger.info(f"  {name}{suffix} ({len(task_ids)} 个 task)")
+
+    # 9.5 SQLite 数据库摘要
+    if db_path and Path(db_path).exists():
+        from code_p5e_db import KGDatabase
+        kg_db = KGDatabase(db_path)
+        db_stats = kg_db.get_stats()
+        logger.info(f"\n{'=' * 40}")
+        logger.info(f"SQLite 数据库: {db_stats['db_path']}")
+        logger.info(f"  节点数: {db_stats['nodes']}, 边数: {db_stats['edges']}")
+        logger.info(f"  平均每个实体关联 task 数: {db_stats['avg_task_count_per_entity']}")
 
     # 10. 图谱摘要
     if G.number_of_nodes() > 0:
