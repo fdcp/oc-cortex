@@ -34,16 +34,15 @@ qdrant:
 
 # 知识图谱
 knowledge_graph:
+  extraction_mode: "triple"       # "triple" (三元组) | "entity" (直接实体提取+倒排索引)
   entity_alignment_threshold: 0.92
-  graph_path: "./output/knowledge_graph.gpickle"
-  graph_json: "./output/knowledge_graph.json"
-  triples_file: "./output/triples_p5.jsonl"
-  entities_file: "./output/entities_p5.jsonl"
+  # 输出目录 (两种模式互不干扰)
+  triple_output_dir: "./output/triple"    # triple 模式输出目录
+  entity_output_dir: "./output/entity"    # entity 模式输出目录
 
 # 可视化
 visualization:
   backend: "pyvis"
-  html_output: "./output/knowledge_graph.html"
   height: 800
   width: 1200
   physics_solver: "forceAtlas2Based"

@@ -120,6 +120,33 @@ BATCH_ENTITY_MERGE_PROMPT = """你是一个知识图谱实体对齐助手。请�
 重要: 不要把 JSON 放在 reasoning/思考过程中, 必须直接在 content 中输出 JSON。每对必须有一个判断。
 """
 
+ENTITY_EXTRACTION_PROMPT = """你是一个跨 session 知识关联助手。请从以下"任务摘要"中提取 5-10 个关键实体。
+
+【合格的实体类型】
+- 项目/仓库名 (如 opencode, transformers)
+- 模块/组件名 (如 认证模块, 消息队列)
+- 文件名 (如 config.py, package.json)
+- 技术概念/框架 (如 RoPE位置编码, BM25, PyTorch)
+- 工具/库 (如 Qdrant, jieba, NetworkX)
+- Bug/问题描述 (如 token过期bug, 内存泄漏问题)
+
+【排除】
+- 一次性属性值: [seq_len, dim//2], 0.95, v3.2
+- 数学公式: m·θ_i, e^(iθ)
+- Session/会话 ID: ses_0a53b68...
+- 过于通用的词: 用户, 代码, 系统, 方法, 问题
+
+【输出格式】严格 JSON:
+{{"entities": ["实体1", "实体2", "..."]}}
+
+输出 5-10 个高质量实体, 不要添加解释。
+
+重要: 你必须直接在 content 中输出上述 JSON 对象。不要把 JSON 放在 reasoning/思考过程中。
+
+【任务摘要】
+{task_summary}
+"""
+
 
 # ============================================================
 # 辅助函数
@@ -666,6 +693,189 @@ class KGBuilder:
         return all_triples
 
     # --------------------------------------------------------
+    # 直接实体提取 (entity 模式)
+    # --------------------------------------------------------
+
+    def extract_entities(self, task: Task) -> list[str]:
+        """从单个 task 的 summary 中直接提取关键实体"""
+        prompt = ENTITY_EXTRACTION_PROMPT.format(task_summary=task.task_summary)
+
+        for content_attempt in range(self.content_retries):
+            try:
+                output = self._call_llm_with_retry(prompt)
+                entities = self._parse_entities(output)
+
+                if not entities:
+                    if content_attempt < self.content_retries - 1:
+                        logger.warning(
+                            f"Task {task.task_id}: 实体为空, "
+                            f"重试 ({content_attempt + 1}/{self.content_retries})"
+                        )
+                        continue
+                    logger.warning(f"Task {task.task_id}: 未能提取到实体")
+                    return []
+
+                return entities
+
+            except Exception as e:
+                logger.error(f"Task {task.task_id}: 实体提取失败: {e}")
+                if content_attempt < self.content_retries - 1:
+                    continue
+                return []
+
+        return []
+
+    def _parse_entities(self, llm_output: str) -> list[str]:
+        """解析 LLM 输出的实体列表 JSON"""
+        json_str = _extract_json_from_response(llm_output)
+
+        try:
+            data = json.loads(json_str)
+        except json.JSONDecodeError:
+            repaired = _repair_truncated_json(json_str)
+            try:
+                data = json.loads(repaired)
+            except json.JSONDecodeError as e:
+                logger.error(f"实体 JSON 解析失败且无法修复: {e}")
+                return []
+
+        # 支持 {"entities": [...]} 和直接 [...] 两种格式
+        if isinstance(data, dict):
+            entities_data = data.get("entities", [])
+        elif isinstance(data, list):
+            entities_data = data
+        else:
+            logger.error(f"entities 应为列表或对象, 实际: {type(data)}")
+            return []
+
+        # 过滤通用词和空值
+        generic = {"用户", "代码", "系统", "问题", "方法", "方式", "过程", "结果"}
+        entities = []
+        for e in entities_data:
+            name = str(e).strip()
+            if name and name not in generic:
+                entities.append(name)
+
+        return entities
+
+    def extract_all_entities(
+        self,
+        tasks: list[Task],
+        output_file: Optional[str] = None,
+    ) -> dict[str, list[str]]:
+        """
+        批量提取所有 task 的关键实体, 构建倒排索引
+
+        Args:
+            tasks: task 列表
+            output_file: 增量输出 JSONL 路径
+
+        Returns:
+            inverted_index: {entity_name: [task_ids]}
+        """
+        inverted_index: dict[str, list[str]] = {}
+        total = len(tasks)
+
+        # 加载已有进度 (断点续传)
+        done_task_ids: set[str] = set()
+        if output_file and Path(output_file).exists():
+            with open(output_file, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line:
+                        try:
+                            record = json.loads(line)
+                            task_id = record.get("task_id", "")
+                            entities = record.get("entities", [])
+                            done_task_ids.add(task_id)
+                            for entity in entities:
+                                if entity not in inverted_index:
+                                    inverted_index[entity] = []
+                                if task_id not in inverted_index[entity]:
+                                    inverted_index[entity].append(task_id)
+                        except json.JSONDecodeError:
+                            continue
+            logger.info(
+                f"从 {output_file} 恢复倒排索引: {len(inverted_index)} 个实体, "
+                f"已完成 {len(done_task_ids)} 个 task"
+            )
+
+        # 过滤已完成的 task
+        pending_tasks = [t for t in tasks if t.task_id not in done_task_ids]
+        if not pending_tasks:
+            logger.info("所有 task 已完成, 无需重新提取")
+            return inverted_index
+
+        logger.info(
+            f"开始实体提取: {len(pending_tasks)}/{total} 个 task 待处理, "
+            f"concurrency={self.concurrency}"
+        )
+
+        def _process_task(task: Task) -> tuple[str, list[str]]:
+            entities = self.extract_entities(task)
+            return task.task_id, entities
+
+        # 并发提取
+        with ThreadPoolExecutor(max_workers=self.concurrency) as executor:
+            futures = {
+                executor.submit(_process_task, task): task
+                for task in pending_tasks
+            }
+
+            completed = 0
+            for future in as_completed(futures):
+                task = futures[future]
+                completed += 1
+
+                try:
+                    task_id, entities = future.result()
+
+                    # 更新倒排索引
+                    for entity in entities:
+                        if entity not in inverted_index:
+                            inverted_index[entity] = []
+                        if task_id not in inverted_index[entity]:
+                            inverted_index[entity].append(task_id)
+
+                    # 增量写入
+                    if output_file:
+                        with open(output_file, "a", encoding="utf-8") as f:
+                            record = {"task_id": task_id, "entities": entities}
+                            f.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+                    logger.info(
+                        f"[{completed}/{len(pending_tasks)}] {task.task_label}: "
+                        f"{len(entities)} 个实体"
+                    )
+
+                except Exception as e:
+                    logger.error(
+                        f"[{completed}/{len(pending_tasks)}] "
+                        f"{task.task_label}: 失败 - {e}"
+                    )
+
+        logger.info(
+            f"实体提取完成: {len(inverted_index)} 个唯一实体, "
+            f"覆盖 {len(done_task_ids) + completed} 个 task"
+        )
+        return inverted_index
+
+    def collect_entities_from_index(
+        self,
+        inverted_index: dict[str, list[str]],
+    ) -> dict[str, Entity]:
+        """从倒排索引构建 entity_map"""
+        entity_map: dict[str, Entity] = {}
+        for name, task_ids in inverted_index.items():
+            entity_map[name] = Entity(
+                name=name,
+                entity_type=_infer_entity_type(name),
+                source_tasks=list(task_ids),
+            )
+        logger.info(f"从倒排索引收集到 {len(entity_map)} 个唯一实体")
+        return entity_map
+
+    # --------------------------------------------------------
     # 实体对齐
     # --------------------------------------------------------
 
@@ -1171,6 +1381,97 @@ class KGBuilder:
         )
         return G
 
+    def build_cooccurrence_graph(
+        self,
+        inverted_index: dict[str, list[str]],
+        canonical_map: dict[str, str],
+        entity_map: dict[str, Entity],
+    ) -> nx.MultiDiGraph:
+        """
+        从倒排索引构建共现图谱
+
+        节点 = canonical 实体
+        边 = 两个 canonical 实体在同一 task 中共现
+
+        Args:
+            inverted_index: {entity_name: [task_ids]}
+            canonical_map: {原始名: canonical名}
+            entity_map: {原始名: Entity}
+        """
+        from itertools import combinations
+
+        G = nx.MultiDiGraph()
+
+        # 1. 添加节点 (canonical entities)
+        canonical_entities: dict[str, dict] = {}
+        for name, canonical in canonical_map.items():
+            if canonical not in canonical_entities:
+                ent = entity_map.get(name)
+                entity_type = ent.entity_type if ent else _infer_entity_type(canonical)
+                canonical_entities[canonical] = {
+                    "type": entity_type,
+                    "aliases": [],
+                    "source_tasks": [],
+                }
+            info = canonical_entities[canonical]
+            if name != canonical:
+                info["aliases"].append(name)
+            ent = entity_map.get(name)
+            if ent:
+                for tid in ent.source_tasks:
+                    if tid not in info["source_tasks"]:
+                        info["source_tasks"].append(tid)
+
+        for canonical, info in canonical_entities.items():
+            G.add_node(
+                canonical,
+                entity_type=info["type"],
+                aliases=info["aliases"],
+                source_tasks=info["source_tasks"],
+            )
+
+        # 2. 构建共现边: 同一 task 中的实体两两配对
+        # 先构建 task → [canonical entities] 映射
+        task_entities: dict[str, list[str]] = {}
+        for entity_name, task_ids in inverted_index.items():
+            canonical = canonical_map.get(entity_name, entity_name)
+            for tid in task_ids:
+                if tid not in task_entities:
+                    task_entities[tid] = []
+                if canonical not in task_entities[tid]:
+                    task_entities[tid].append(canonical)
+
+        # 统计共现次数
+        cooccurrence_count: dict[tuple[str, str], int] = {}
+        cooccurrence_last_task: dict[tuple[str, str], str] = {}
+
+        for tid, entities in task_entities.items():
+            # 限制每个 task 内最多 15 个实体, 避免 C(n,2) 爆炸
+            limited = entities[:15]
+            for e1, e2 in combinations(limited, 2):
+                pair = tuple(sorted([e1, e2]))
+                cooccurrence_count[pair] = cooccurrence_count.get(pair, 0) + 1
+                cooccurrence_last_task[pair] = tid
+
+        # 添加边
+        for (e1, e2), count in cooccurrence_count.items():
+            # 跳过自环
+            if e1 == e2:
+                continue
+            G.add_edge(
+                e1, e2,
+                relation="co-occur",
+                weight=min(count / 3.0, 1.0),  # 归一化: 3次共现 = 1.0
+                source_task=cooccurrence_last_task.get((e1, e2), ""),
+            )
+
+        logger.info(
+            f"共现图谱构建完成: {G.number_of_nodes()} 节点, "
+            f"{G.number_of_edges()} 条共现边 "
+            f"(来自 {len(task_entities)} 个 task 的共现关系)"
+        )
+        return G
+
     # --------------------------------------------------------
     # 保存 / 加载
     # --------------------------------------------------------
@@ -1212,15 +1513,74 @@ class KGBuilder:
 
         logger.info(f"已写入 {count} 个实体到 {output_file}")
 
+    def save_inverted_index(
+        self,
+        inverted_index: dict[str, list[str]],
+        canonical_map: dict[str, str],
+        output_file: str,
+    ):
+        """
+        保存倒排索引 (按 canonical name 聚合)
+
+        输出格式:
+        [
+          {
+            "canonical": "标准名",
+            "aliases": ["别名1", "别名2"],
+            "task_ids": ["task1", "task2"]
+          }
+        ]
+        """
+        p = Path(output_file)
+        p.parent.mkdir(parents=True, exist_ok=True)
+
+        # 按 canonical name 聚合
+        canonical_data: dict[str, dict] = {}
+        for name, task_ids in inverted_index.items():
+            canonical = canonical_map.get(name, name)
+            if canonical not in canonical_data:
+                canonical_data[canonical] = {"aliases": [], "task_ids": []}
+            if name != canonical:
+                canonical_data[canonical]["aliases"].append(name)
+            for tid in task_ids:
+                if tid not in canonical_data[canonical]["task_ids"]:
+                    canonical_data[canonical]["task_ids"].append(tid)
+
+        # 转换为列表并按 task 数降序排列
+        result = []
+        for canonical, data in sorted(
+            canonical_data.items(),
+            key=lambda x: len(x[1]["task_ids"]),
+            reverse=True,
+        ):
+            result.append({
+                "canonical": canonical,
+                "aliases": data["aliases"],
+                "task_count": len(data["task_ids"]),
+                "task_ids": data["task_ids"],
+            })
+
+        with open(p, "w", encoding="utf-8") as f:
+            json.dump(result, f, ensure_ascii=False, indent=2)
+
+        logger.info(
+            f"倒排索引已保存: {output_file} "
+            f"({len(result)} 个 canonical 实体)"
+        )
+
     def save_stats(self, stats: KGStats):
         """打印统计信息"""
         logger.info("=" * 60)
         logger.info("Phase 5 知识图谱统计")
+        logger.info(f"  抽取模式:         {stats.extraction_mode}")
         logger.info(f"  处理 task 数:     {stats.total_tasks}")
-        logger.info(f"  三元组总数:       {stats.total_triples}")
+        if stats.extraction_mode == "triple":
+            logger.info(f"  三元组总数:       {stats.total_triples}")
         logger.info(f"  实体总数 (原始):  {stats.total_entities}")
         logger.info(f"  唯一实体 (对齐后): {stats.unique_entities}")
         logger.info(f"  合并实体对:       {stats.merged_pairs}")
         logger.info(f"  图谱节点数:       {stats.total_nodes}")
         logger.info(f"  图谱边数:         {stats.total_edges}")
+        if stats.extraction_mode == "entity":
+            logger.info(f"  共现边数:         {stats.cooccurrence_edges}")
         logger.info("=" * 60)

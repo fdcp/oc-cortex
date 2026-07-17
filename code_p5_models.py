@@ -58,9 +58,11 @@ class Entity:
 class KGStats:
     """知识图谱统计"""
     total_tasks: int = 0          # 处理的 task 总数
-    total_triples: int = 0        # 抽取的三元组总数
+    total_triples: int = 0        # 抽取的三元组总数 (triple 模式)
     total_entities: int = 0       # 去重前的实体总数 (每个三元组贡献 head+tail)
     unique_entities: int = 0      # 对齐后的唯一实体数
     merged_pairs: int = 0         # 合并的实体对数
     total_edges: int = 0          # 图谱中的边数 (MultiDiGraph 可能有重边)
     total_nodes: int = 0          # 图谱中的节点数
+    extraction_mode: str = "triple"       # 抽取模式: triple | entity
+    cooccurrence_edges: int = 0           # 共现边数 (entity 模式)

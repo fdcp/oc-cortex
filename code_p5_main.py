@@ -1,6 +1,10 @@
 """
 Phase 5 主入口: 知识图谱构建
-流程: 加载 tasks → 三元组抽取 → 实体对齐 → 图谱构建 → 可视化
+流程: 加载 tasks → 抽取(triple/entity) → 实体对齐 → 图谱构建 → 可视化
+
+两种抽取模式:
+  triple: LLM 抽取 (head, relation, tail) 三元组 → 关系图谱
+  entity: LLM 直接抽取关键实体 → 倒排索引 + 共现图谱
 
 用法:
   export OPENCODE_ZEN_API_KEY=$(python3 -c "import json; d=json.load(open('$HOME/.local/share/opencode/auth.json')); print(d['opencode-go']['key'])")
@@ -61,6 +65,29 @@ def load_existing_triples(path: str) -> list[Triple]:
     return triples
 
 
+def load_existing_entities(path: str) -> dict[str, list[str]]:
+    """从 JSONL 加载已有实体提取结果 (断点续传), 返回倒排索引"""
+    inverted_index: dict[str, list[str]] = {}
+    if not Path(path).exists():
+        return inverted_index
+    with open(path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                try:
+                    record = json.loads(line)
+                    task_id = record.get("task_id", "")
+                    entities = record.get("entities", [])
+                    for entity in entities:
+                        if entity not in inverted_index:
+                            inverted_index[entity] = []
+                        if task_id not in inverted_index[entity]:
+                            inverted_index[entity].append(task_id)
+                except json.JSONDecodeError:
+                    continue
+    return inverted_index
+
+
 # ============================================================
 # Main
 # ============================================================
@@ -89,7 +116,7 @@ def main():
     )
     parser.add_argument(
         "--skip-extraction", action="store_true",
-        help="跳过三元组抽取, 直接加载已有 triples 文件",
+        help="跳过抽取, 直接加载已有 triples/entities 文件",
     )
     args = parser.parse_args()
 
@@ -153,67 +180,151 @@ def main():
         alignment_threshold=config.get("knowledge_graph.entity_alignment_threshold", 0.92),
     )
 
-    triples_file = config.get("knowledge_graph.triples_file", "./output/triples_p5.jsonl")
-    entities_file = config.get("knowledge_graph.entities_file", "./output/entities_p5.jsonl")
-    graph_path = config.get("knowledge_graph.graph_path", "./output/knowledge_graph.gpickle")
-    graph_json = config.get("knowledge_graph.graph_json", "./output/knowledge_graph.json")
+    # 读取抽取模式, 确定输出目录
+    extraction_mode = config.get("knowledge_graph.extraction_mode", "triple")
+    logger.info(f"抽取模式: {extraction_mode}")
 
-    # 4. 三元组抽取
+    if extraction_mode == "entity":
+        output_dir = config.get("knowledge_graph.entity_output_dir", "./output/entity")
+    else:
+        output_dir = config.get("knowledge_graph.triple_output_dir", "./output/triple")
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
+
+    # 所有输出文件从 output_dir 派生 (两种模式互不干扰)
+    triples_file = str(Path(output_dir) / "triples.jsonl")
+    entities_file = str(Path(output_dir) / "entities.jsonl")
+    graph_path = str(Path(output_dir) / "knowledge_graph.gpickle")
+    graph_json = str(Path(output_dir) / "knowledge_graph.json")
+    html_output = str(Path(output_dir) / "knowledge_graph.html")
+    entity_extract_file = str(Path(output_dir) / "entity_extract.jsonl")
+    inverted_index_file = str(Path(output_dir) / "inverted_index.json")
+
+    logger.info(f"输出目录: {output_dir}")
+
     t0 = time.time()
+    triples = []          # triple 模式使用
+    inverted_index = {}   # entity 模式使用
 
-    if args.skip_extraction:
-        logger.info("跳过三元组抽取, 加载已有文件")
-        triples = load_existing_triples(triples_file)
-        logger.info(f"加载 {len(triples)} 个已有三元组")
-    else:
-        triples = builder.extract_all_triples(
-            tasks, output_file=triples_file,
+    # ================================================================
+    # 4. 抽取 (根据模式分流)
+    # ================================================================
+    if extraction_mode == "entity":
+        # ---- entity 模式: 直接实体提取 + 倒排索引 ----
+
+        if args.skip_extraction:
+            logger.info("跳过实体提取, 加载已有文件")
+            inverted_index = load_existing_entities(entity_extract_file)
+            logger.info(f"加载 {len(inverted_index)} 个已有实体")
+        else:
+            inverted_index = builder.extract_all_entities(
+                tasks, output_file=entity_extract_file,
+            )
+
+        t_extraction = time.time() - t0
+        logger.info(f"实体提取耗时: {t_extraction:.1f}s")
+
+        if not inverted_index:
+            logger.error("没有提取到任何实体")
+            sys.exit(1)
+
+        # 5. 实体对齐
+        t1 = time.time()
+        entity_map = builder.collect_entities_from_index(inverted_index)
+
+        if args.skip_alignment:
+            logger.info("跳过实体对齐")
+            canonical_map = {name: name for name in entity_map}
+            merged_pairs = 0
+        else:
+            canonical_map = builder.align_entities(entity_map)
+            merged_pairs = sum(
+                1 for name, canon in canonical_map.items() if name != canon
+            )
+            builder.save_entities(entity_map, canonical_map, entities_file)
+
+        t_alignment = time.time() - t1
+        logger.info(f"实体对齐耗时: {t_alignment:.1f}s")
+
+        # 6. 构建共现图谱
+        t2 = time.time()
+        G = builder.build_cooccurrence_graph(inverted_index, canonical_map, entity_map)
+        builder.save_graph(G, graph_path, graph_json)
+        t_graph = time.time() - t2
+        logger.info(f"共现图谱构建耗时: {t_graph:.1f}s")
+
+        # 保存倒排索引 (按 canonical 聚合)
+        builder.save_inverted_index(inverted_index, canonical_map, inverted_index_file)
+
+        # 7. 统计
+        unique_entities = len(set(canonical_map.values()))
+        stats = KGStats(
+            total_tasks=len(tasks),
+            total_triples=0,
+            total_entities=len(entity_map),
+            unique_entities=unique_entities,
+            merged_pairs=merged_pairs if not args.skip_alignment else 0,
+            total_nodes=G.number_of_nodes(),
+            total_edges=G.number_of_edges(),
+            extraction_mode="entity",
+            cooccurrence_edges=G.number_of_edges(),
         )
 
-    t_extraction = time.time() - t0
-    logger.info(f"三元组抽取耗时: {t_extraction:.1f}s")
-
-    if not triples:
-        logger.error("没有抽取到任何三元组")
-        sys.exit(1)
-
-    # 5. 实体对齐
-    t1 = time.time()
-    entity_map = builder.collect_entities(triples)
-
-    if args.skip_alignment:
-        logger.info("跳过实体对齐")
-        canonical_map = {name: name for name in entity_map}
-        merged_pairs = 0
     else:
-        canonical_map = builder.align_entities(entity_map)
-        # 统计合并对数
-        merged_pairs = sum(
-            1 for name, canon in canonical_map.items() if name != canon
+        # ---- triple 模式: 三元组抽取 (现有流程) ----
+        if args.skip_extraction:
+            logger.info("跳过三元组抽取, 加载已有文件")
+            triples = load_existing_triples(triples_file)
+            logger.info(f"加载 {len(triples)} 个已有三元组")
+        else:
+            triples = builder.extract_all_triples(
+                tasks, output_file=triples_file,
+            )
+
+        t_extraction = time.time() - t0
+        logger.info(f"三元组抽取耗时: {t_extraction:.1f}s")
+
+        if not triples:
+            logger.error("没有抽取到任何三元组")
+            sys.exit(1)
+
+        # 5. 实体对齐
+        t1 = time.time()
+        entity_map = builder.collect_entities(triples)
+
+        if args.skip_alignment:
+            logger.info("跳过实体对齐")
+            canonical_map = {name: name for name in entity_map}
+            merged_pairs = 0
+        else:
+            canonical_map = builder.align_entities(entity_map)
+            merged_pairs = sum(
+                1 for name, canon in canonical_map.items() if name != canon
+            )
+            builder.save_entities(entity_map, canonical_map, entities_file)
+
+        t_alignment = time.time() - t1
+        logger.info(f"实体对齐耗时: {t_alignment:.1f}s")
+
+        # 6. 构建图谱
+        t2 = time.time()
+        G = builder.build_graph(triples, canonical_map, entity_map)
+        builder.save_graph(G, graph_path, graph_json)
+        t_graph = time.time() - t2
+        logger.info(f"图谱构建耗时: {t_graph:.1f}s")
+
+        # 7. 统计
+        unique_entities = len(set(canonical_map.values()))
+        stats = KGStats(
+            total_tasks=len(tasks),
+            total_triples=len(triples),
+            total_entities=len(entity_map),
+            unique_entities=unique_entities,
+            merged_pairs=merged_pairs if not args.skip_alignment else 0,
+            total_nodes=G.number_of_nodes(),
+            total_edges=G.number_of_edges(),
+            extraction_mode="triple",
         )
-        builder.save_entities(entity_map, canonical_map, entities_file)
 
-    t_alignment = time.time() - t1
-    logger.info(f"实体对齐耗时: {t_alignment:.1f}s")
-
-    # 6. 构建图谱
-    t2 = time.time()
-    G = builder.build_graph(triples, canonical_map, entity_map)
-    builder.save_graph(G, graph_path, graph_json)
-    t_graph = time.time() - t2
-    logger.info(f"图谱构建耗时: {t_graph:.1f}s")
-
-    # 7. 统计
-    unique_entities = len(set(canonical_map.values()))
-    stats = KGStats(
-        total_tasks=len(tasks),
-        total_triples=len(triples),
-        total_entities=len(entity_map),
-        unique_entities=unique_entities,
-        merged_pairs=merged_pairs if not args.skip_alignment else 0,
-        total_nodes=G.number_of_nodes(),
-        total_edges=G.number_of_edges(),
-    )
     builder.save_stats(stats)
 
     total_time = time.time() - t0
@@ -224,29 +335,37 @@ def main():
         logger.info("启动 pyvis 可视化 ...")
         try:
             from code_p5_visualize import visualize_graph
-            html_path = config.get("visualization.html_output",
-                                   "./output/knowledge_graph.html")
             visualize_graph(
                 G,
-                output_path=html_path,
+                output_path=html_output,
                 height=config.get("visualization.height", 800),
                 width=config.get("visualization.width", 1200),
                 physics=config.get("visualization.physics_solver", "forceAtlas2Based"),
                 max_nodes=config.get("visualization.max_nodes", 500),
                 drop_isolated=config.get("visualization.drop_isolated_nodes", False),
             )
-            logger.info(f"可视化已生成: {html_path}")
+            logger.info(f"可视化已生成: {html_output}")
         except ImportError as e:
             logger.error(f"pyvis 未安装, 跳过可视化: {e}")
             logger.info("请运行: pip install pyvis")
 
-    # 9. 打印示例三元组
-    if triples:
+    # 9. 打印示例
+    if extraction_mode == "triple" and triples:
         logger.info("-" * 40)
         logger.info("示例三元组 (前 5 个):")
         for t in triples[:5]:
             logger.info(f"  ({t.head}) --[{t.relation}]--> ({t.tail}) "
                        f"[conf={t.confidence:.2f}, task={t.source_task_id[-8:]}]")
+    elif extraction_mode == "entity" and inverted_index:
+        logger.info("-" * 40)
+        logger.info("高频实体 Top-10 (按出现 task 数):")
+        sorted_entities = sorted(
+            inverted_index.items(), key=lambda x: len(x[1]), reverse=True,
+        )
+        for name, task_ids in sorted_entities[:10]:
+            canonical = canonical_map.get(name, name)
+            suffix = f" → {canonical}" if canonical != name else ""
+            logger.info(f"  {name}{suffix} ({len(task_ids)} 个 task)")
 
     # 10. 图谱摘要
     if G.number_of_nodes() > 0:
