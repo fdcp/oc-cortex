@@ -1,0 +1,22 @@
+# Phase 6 配置: 跨 Session 总结
+
+# 复用 Phase 3 配置（搜索 + Embedding + Reranker）
+# 本文件仅定义 Phase 6 特有参数
+
+summarizer:
+  model: "nemotron-3-ultra-free"    # LLM 模型（同 Phase 5）
+  max_context_tokens: 12000         # LLM 输入 token 预算
+  max_tasks: 10                     # 最多纳入总结的 Task 数
+  max_output_tokens: 2000           # LLM 输出 max_tokens
+  temperature: 0.3                  # 生成温度（低 = 更聚焦）
+
+search:
+  top_k: 8                          # 默认检索 Task 数
+  use_graph_rag: false              # 默认是否启用 Graph-RAG
+  chunk_detail_level: "summary"     # summary | preview | full
+
+# 时间过滤（可通过 CLI 覆盖）
+time_filter:
+  enabled: false
+  # start: "2026-07-01"
+  # end: "2026-07-15"
