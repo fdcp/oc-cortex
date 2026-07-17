@@ -215,7 +215,7 @@ from code_p5e_db import KGDatabase
 from code_p5e_graph_rag import GraphRAGSearcher
 
 # 初始化
-searcher = SessionSearcher('code_p4_config.yaml')
+searcher = SessionSearcher('code_p3_config.yaml')
 kg_db = KGDatabase('output/triple/knowledge_graph.db')
 rag = GraphRAGSearcher(searcher, kg_db, bfs_depth=1, graph_weight=0.3)
 
@@ -314,7 +314,7 @@ from code_p4_searcher import SessionSearcher
 from code_p5e_db import KGDatabase
 from code_p5e_graph_rag import GraphRAGSearcher
 
-searcher = SessionSearcher('code_p4_config.yaml')
+searcher = SessionSearcher('code_p3_config.yaml')
 kg_db = KGDatabase('output/triple/knowledge_graph.db')
 rag = GraphRAGSearcher(searcher, kg_db, bfs_depth=1, graph_weight=0.3)
 
