@@ -67,7 +67,12 @@ def extract_query_entities(query: str, max_retries: int = 2, model: str = DEFAUL
             logger.warning(f"查询实体抽取 LLM 调用失败 (attempt {attempt + 1}): {e}")
             continue
 
-        content = output.choices[0].message.content.strip()
+        raw_content = output.choices[0].message.content
+        if not raw_content:
+            logger.warning(f"查询实体抽取 LLM 返回空内容 (attempt {attempt + 1})")
+            continue
+
+        content = raw_content.strip()
         # 去除  标签块
         content = re.sub(r"", "", content, flags=re.DOTALL).strip()
 
@@ -119,9 +124,6 @@ class GraphRAGSearcher:
         self,
         query: str,
         top_k: int = 10,
-        chunk_top_k: int = 30,
-        bm25_weight: float = 0.3,
-        chunk_per_task: int = 3,
         use_reranker: bool = True,
         use_graph_rag: bool = True,
     ) -> tuple[list[SessionSearchResult], dict]:
@@ -130,9 +132,6 @@ class GraphRAGSearcher:
         Args:
             query: 搜索查询
             top_k: 返回结果数
-            chunk_top_k: 粗排候选数
-            bm25_weight: BM25 权重
-            chunk_per_task: 每个 task 展开 chunk 数
             use_reranker: 是否用 reranker
             use_graph_rag: 是否启用图谱扩散
 
@@ -143,16 +142,12 @@ class GraphRAGSearcher:
         debug = {}
 
         # Stage 1: 向量检索
-        vector_results, vec_debug = self.searcher.search(
+        vector_results = self.searcher.search(
             query=query,
             top_k=top_k * 2,       # 多取一些给后续合并
-            chunk_top_k=chunk_top_k,
-            bm25_weight=bm25_weight,
-            chunk_per_task=chunk_per_task,
-            use_reranker=False,     # 延迟 rerank，合并后统一做
+            skip_rerank=True,       # 延迟 rerank，合并后统一做
         )
         debug["vector_results"] = len(vector_results)
-        debug["vector_time_ms"] = vec_debug.get("total_time_ms", 0)
 
         if not use_graph_rag:
             # 不启用图谱扩散，直接 rerank 返回
@@ -282,7 +277,7 @@ class GraphRAGSearcher:
             return candidates
 
         texts = [f"{c.task_label}: {c.task_summary}" for c in candidates]
-        rerank_results = self.searcher.reranker.rerank(query, texts, top_n=top_k * 2)
+        rerank_results = self.searcher.reranker.rank(query, texts, top_k=top_k * 2)
 
         reranked = []
         for rr in rerank_results:
