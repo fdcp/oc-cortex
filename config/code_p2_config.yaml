@@ -16,7 +16,7 @@ output:
 # LLM 配置 (OpenCode Zen - DeepSeek V4 Flash Free)
 llm:
   provider: "opencode_zen"
-  model: "deepseek-v4-flash-free"             # 免费模型
+  model: "hy3-free"                           # 免费模型
   api_key_env: "OPENCODE_ZEN_API_KEY"         # 环境变量名
   base_url: "https://opencode.ai/zen/v1"      # OpenCode Zen OpenAI 兼容端点
   max_retries: 3                              # LLM 调用最大重试次数
