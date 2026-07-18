@@ -2,16 +2,19 @@
 
 ## 概述
 
-Phase 2 是知识图谱系统的核心环节:利用 LLM 对 Phase 1 输出的 session chunks 进行整 session 视角的分析,提炼出 1-5 个 session 级 Task。每个 Task 包含简短标签、详细总结和关联的 chunk 列表。同时,LLM 还会为每个 chunk 生成一句话总结(task_summary),回写到 chunks.jsonl,为后续 Phase 3 的向量化嵌入和跨 session 检索提供更丰富的语义信息。
+Phase 2 是知识图谱系统的核心环节:利用 LLM 对 Phase 1 输出的 session chunks 进行整 session 视角的分析,提炼出 1-5 个 session 级 Task。每个 Task 包含简短标签、详细总结和关联的 chunk 列表。同时,LLM 还会为每个 chunk 生成一句话总结(task_summary),输出到独立的 `chunks_summary_p2.jsonl` 文件,为后续 Phase 3 的向量化嵌入和跨 session 检索提供更丰富的语义信息。
 
 ## 文件结构
 
 ```
-code_p2_models.py           # Task 数据模型 (dataclass)
-code_p2_task_extractor.py   # 核心模块: CoT Prompt + LLM 调用 + JSON 解析/修复 + 校验
-code_p2_config.yaml         # Phase 2 配置 (LLM 参数 + 并发数)
-code_p2_main.py             # 入口脚本
-code_p2_README.md           # 本文档
+src/
+  code_p2_models.py           # Task 数据模型 (dataclass)
+  code_p2_task_extractor.py   # 核心模块: CoT Prompt + LLM 调用 + JSON 解析/修复 + 校验
+  code_p2_main.py             # 入口脚本
+config/
+  code_p2_config.yaml         # Phase 2 配置 (LLM 参数 + 并发数 + 输出路径)
+doc/
+  code_p2_README.md           # 本文档
 ```
 
 ## 核心流程
@@ -29,8 +32,8 @@ Phase 1 chunks (JSONL)
         │
    [校验 + 兜底] ── 任务数量 / chunk_id 合法性 / 自动补全未覆盖 chunk
         │
-   ├─→ Task 列表 (tasks.jsonl)
-   └─→ chunk_summaries 回写 (chunks.jsonl 增加 task_summary 字段)
+   ├─→ Task 列表 (output/tasks.jsonl)
+   └─→ Chunk 总结 (output/chunks_summary_p2.jsonl)
 ```
 
 ## CoT Prompt 设计
@@ -67,58 +70,73 @@ LLM 输出格式:
 ### 1. 设置 API Key
 
 ```bash
-# 使用 OpenCode Zen (免费 deepseek-v4-flash-free)
-export OPENCODE_ZEN_API_KEY='your-api-key'
-
-# 或使用 DashScope (通义千问)
-export DASHSCOPE_API_KEY='your-api-key'
+# 使用 OpenCode Zen (推荐, 免费模型 hy3-free)
+export OPENCODE_ZEN_API_KEY=$(python3 -c \
+  "import json; d=json.load(open('$HOME/.local/share/opencode/auth.json')); print(d['opencode-go']['key'])")
 ```
 
 ### 2. 运行
 
 ```bash
 # 全量运行 (使用配置文件中的 concurrency, 默认 4 线程)
-python code_p2_main.py
+python3 src/code_p2_main.py --config config/code_p2_config.yaml
 
 # 快速验证 (只处理前 3 个 session)
-python code_p2_main.py --limit 3
+python3 src/code_p2_main.py --config config/code_p2_config.yaml --limit 3
 
 # 指定并发数 (覆盖配置文件)
-python code_p2_main.py --concurrency 8
+python3 src/code_p2_main.py --config config/code_p2_config.yaml --concurrency 8
 
 # 指定输入/输出
-python code_p2_main.py --chunks ./output/chunks.jsonl --output ./output/tasks.jsonl
-
-export OPENCODE_ZEN_API_KEY=$your_api_pw && python3 code_p2_main.py --config code_p2_config.yaml --chunks ./output/chunks.jsonl --concurrency 8 --output ./output/tasks_concurrent_test.jsonl 2>&1
+python3 src/code_p2_main.py --config config/code_p2_config.yaml \
+  --chunks ./output/chunks.jsonl --output ./output/tasks.jsonl
 ```
 
 ### 3. 输出
 
-**tasks.jsonl** — 每行一个 Task JSON 对象:
+Phase 2 产出两个文件,**不修改** Phase 1 的 `chunks.jsonl`:
+
+**output/tasks.jsonl** — 每行一个 Task JSON 对象:
 
 ```json
 {
-  "task_id": "ses_0a53b6807ffe_T1",
-  "session_id": "ses_0a53b6807ffex4xr4a0wNdi5EQ",
-  "task_label": "查询 opencode session 概览",
-  "task_summary": "通过查询 opencode.db,获取本机所有 22 个 session 的详细信息...",
-  "chunk_ids": ["ses_0a53b6807ffex4xr4a0wNdi5EQ_c1"],
-  "created_at": "2026-07-14T01:47:29.123456"
+  "task_id": "ses_0c4e0312affeUm1WYU03ISPgU2_T1",
+  "session_id": "ses_0c4e0312affeUm1WYU03ISPgU2",
+  "task_label": "RoPE预计算函数解析",
+  "task_summary": "背景与目标：理解 LLaMA 风格 RoPE 位置编码中 precompute_freqs_cis 函数的实现与张量形状。核心产出与关键决策：补全了截断代码，标准实现通过 torch.polar 生成复数旋转因子...",
+  "chunk_ids": ["ses_0c4e0312affeUm1WYU03ISPgU2_c1", "ses_0c4e0312affeUm1WYU03ISPgU2_c2"],
+  "created_at": "2026-07-19T02:20:43.283866"
 }
 ```
 
-**chunks.jsonl** — 回写,每个 chunk 新增 `task_summary` 字段:
+字段说明:
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `task_id` | string | `{session_id}_T{序号}`, 从 1 开始 |
+| `session_id` | string | 来源 session |
+| `task_label` | string | 简短中文标签 (5-15 字) |
+| `task_summary` | string | 任务总结 (50-200 字) |
+| `chunk_ids` | string[] | 关联的 chunk ID 列表 |
+| `created_at` | string | ISO 8601 时间戳 |
+
+**output/chunks_summary_p2.jsonl** — 每行一个 chunk 总结, 仅含 `chunk_id` 和 `summary` 两个字段:
 
 ```json
 {
-  "chunk_id": "ses_0a53b6807ffe_c1",
-  "session_id": "ses_0a53b6807ffex4xr4a0wNdi5EQ",
-  "turn_index": 1,
-  "user_message": "...",
-  "task_summary": "用户请求查看当前机器上的opencode session，助手通过SQLite查询返回了全部22个session的列表。",
-  "...": "..."
+  "chunk_id": "ses_0a16b26dcffewGBp0akSLB5IZG_c1",
+  "summary": "确认当前工作区不存在 session ID 为 ses_12c6bd8dfffevT51PypMW2v5Mx 的记录，仅列出本地 oc_sess_graph 项目下的唯一 session。"
 }
 ```
+
+输出路径可通过配置文件 `config/code_p2_config.yaml` 修改:
+
+```yaml
+output:
+  chunk_summaries: "./output/chunks_summary_p2.jsonl"
+```
+
+`tasks.jsonl` 的输出路径通过 `--output` 命令行参数指定, 默认 `./output/tasks.jsonl`。
 
 ## 技术细节
 
@@ -126,7 +144,7 @@ export OPENCODE_ZEN_API_KEY=$your_api_pw && python3 code_p2_main.py --config cod
 
 支持可配置的线程池并行(`concurrent.futures.ThreadPoolExecutor`):
 
-- 配置文件 `code_p2_config.yaml` 中 `llm.concurrency` 设置默认并发数
+- 配置文件 `config/code_p2_config.yaml` 中 `llm.concurrency` 设置默认并发数
 - 命令行 `--concurrency N` 可覆盖配置文件
 - `concurrency=1` 走串行路径,`>1` 走线程池并行
 - OpenAI SDK 的 client 是线程安全的,无需额外加锁
@@ -179,37 +197,38 @@ DeepSeek V4 Flash 是 reasoning 模型,会在 `reasoning_content` 中产生 thin
 
 ## 真实数据测试结果
 
-在 15 个真实 OpenCode session (86 个 chunks) 上运行:
+在 16 个真实 OpenCode session (83 个 chunks) 上运行:
 
 
-| 指标                   | 值                                    |
-| ------------------------ | --------------------------------------- |
-| 处理 session 数        | 15 (全部成功)                         |
-| 生成 task 总数         | 30                                    |
-| 平均每 session task 数 | 2.0                                   |
-| chunk 总结覆盖率       | 86/86 (100%)                          |
-| LLM 模型               | deepseek-v4-flash-free (OpenCode Zen) |
-| 并发数                 | 8                                     |
-| 总耗时                 | ~93s (并发=8)                         |
+| 指标                   | 值                          |
+| ------------------------ | ----------------------------- |
+| 处理 session 数        | 16 (全部成功)               |
+| 生成 task 总数         | 31                          |
+| 平均每 session task 数 | 1.9                         |
+| chunk 总结覆盖率       | 83/83 (100%)                |
+| LLM 模型               | hy3-free (OpenCode Zen)     |
+| 并发数                 | 4                           |
 
 ### Task 分布
 
 
 | 每 session task 数 | session 数量 |
 | -------------------- | -------------- |
-| 1                  | 4            |
-| 2                  | 7            |
-| 3                  | 2            |
-| 4                  | 2            |
+| 1                  | 6            |
+| 2                  | 6            |
+| 3                  | 3            |
+| 4                  | 1            |
 
 ## 支持的 LLM 提供商
 
-通过修改 `code_p2_config.yaml` 切换:
+通过修改 `config/code_p2_config.yaml` 切换:
 
 
 | 提供商               | model                   | base_url                                          | api_key_env          |
 | ---------------------- | ------------------------- | --------------------------------------------------- | ---------------------- |
+| OpenCode Zen (免费)  | hy3-free (默认)         | https://opencode.ai/zen/v1                        | OPENCODE_ZEN_API_KEY |
 | OpenCode Zen (免费)  | deepseek-v4-flash-free  | https://opencode.ai/zen/v1                        | OPENCODE_ZEN_API_KEY |
+| OpenCode Zen (免费)  | nemotron-3-ultra-free   | https://opencode.ai/zen/v1                        | OPENCODE_ZEN_API_KEY |
 | DashScope (通义千问) | qwen-plus               | https://dashscope.aliyuncs.com/compatible-mode/v1 | DASHSCOPE_API_KEY    |
 | SiliconFlow          | deepseek-ai/DeepSeek-V3 | https://api.siliconflow.cn/v1                     | SILICONFLOW_API_KEY  |
 | OpenAI               | gpt-4o-mini             | https://api.openai.com/v1                         | OPENAI_API_KEY       |
@@ -226,9 +245,9 @@ tiktoken>=0.5.0
 
 ## 下一步
 
-Phase 2 的 Task 输出将作为 Phase 3 的输入:
+Phase 2 的输出作为后续 Phase 的输入:
 
-- **Phase 3**: Qdrant 双 Collection (Tasks + Chunks) 向量化存储
-- Task 的 `task_label` + `task_summary` 用于 embedding 和跨 session 检索
-- Chunk 的 `task_summary` (Phase 2 新增) + `cleaned_text()` 用于细粒度检索
-- Task summary 提供高层语义, chunk summary 提供轮次级语义, 形成双层检索结构
+- **Phase 3**: 将 `tasks.jsonl` 中的 Task 向量化存入 Qdrant `tasks` 集合 (dense embedding of `task_summary`), 支持跨 session 语义检索
+- **Phase 3**: 将 `chunks_summary_p2.jsonl` 中的 chunk 总结存入 Qdrant `chunks_summary` 集合, 提供轮次级语义检索
+- **Phase 4**: 基于 `chunks.jsonl` 的 `cleaned_text()` 构建 BM25 索引, 与 Phase 3 的 dense 检索融合 (RRF), 实现混合搜索
+- Task summary 提供高层语义, chunk summary 提供轮次级语义, cleaned_text 提供全文细节, 形成三层检索结构
