@@ -1,0 +1,65 @@
+# OpenCode Session Knowledge Graph — Requirements
+# ================================================
+# 安装: pip install -r requirements.txt
+# 或按 phase 选择性安装（见下方注释）
+
+# ============================================================
+# Phase 1: Data Preprocessing (session loading, chunking, cleaning)
+# ============================================================
+loguru>=0.7.0            # 日志
+pyyaml>=6.0              # YAML 配置加载
+tiktoken>=0.5.0          # Token 计数 (OpenAI tokenizer)
+
+# ============================================================
+# Phase 2: Task Extraction (LLM-based)
+# ============================================================
+openai>=1.30.0           # OpenAI-compatible API (OpenCode Zen)
+
+# ============================================================
+# Phase 3: Vector Storage (Qdrant + Embedding + BM25)
+# ============================================================
+qdrant-client>=1.7.0     # Qdrant 向量数据库客户端
+sentence-transformers>=2.2.0  # Dense embedding (BAAI/bge-small-zh-v1.5)
+jieba>=0.42.1            # BM25 中文分词
+rank_bm25>=0.2.2         # BM25 稀疏检索
+
+# ============================================================
+# Phase 4: Cross-Session Search (Reranker)
+# ============================================================
+transformers>=4.40.0     # Qwen3-Reranker-0.6B 模型加载
+torch>=2.0.0             # PyTorch (Reranker 推理)
+
+# ============================================================
+# Phase 5: Knowledge Graph Construction
+# ============================================================
+networkx>=3.0            # 知识图谱 (NetworkX MultiDiGraph)
+pyvis>=0.3.2             # 图谱可视化 (HTML 交互式)
+
+# ============================================================
+# Phase 5e / 6 / 6b: SQLite + Graph-RAG + Summarization
+# ============================================================
+# (复用上述依赖: openai, networkx, loguru, tiktoken, qdrant-client,
+#  sentence-transformers, transformers, torch)
+
+# ============================================================
+# MCP Server (标准 MCP 协议, stdio transport)
+# ============================================================
+mcp>=1.0.0               # MCP Python SDK (FastMCP)
+
+# ============================================================
+# MCP Server HTTP (FastAPI 版本, 调试用, 可选)
+# ============================================================
+# fastapi>=0.100.0        # HTTP API 框架
+# pydantic>=2.0.0         # 数据验证
+# uvicorn>=0.23.0         # ASGI 服务器
+
+# ============================================================
+# MCP Client (Python 客户端, 可选)
+# ============================================================
+# requests>=2.28.0        # HTTP 客户端
+
+# ============================================================
+# 开发/调试 (可选)
+# ============================================================
+# jupyter>=1.0.0          # Jupyter notebook (sql_search.ipynb)
+# ipython>=8.0.0          # 交互式调试
