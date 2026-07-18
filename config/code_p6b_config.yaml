@@ -1,0 +1,24 @@
+# Phase 6b 配置: 决策溯源 + 主题总结骨架
+
+# 复用 Phase 3 配置（搜索 + Embedding + Reranker）和 Phase 5 知识图谱
+# 本文件仅定义 Phase 6b 特有参数
+
+decision_tracer:
+  max_hops: 3                   # 最大追溯跳数
+  max_visited: 50               # BFS 最大访问节点数
+  # 决策关系分类（宽泛匹配）
+  categories:
+    选用: ["使用", "集成了", "实现", "实现了", "支持", "通过兼容层加载", "保留fallback模型", "保留"]
+    选型: ["对比", "对比了", "区别于", "适用于", "适合", "支持精度"]
+    排除: ["禁用", "缺少", "阻塞于", "阉割了"]
+    替换: ["替代了", "新增了", "补充了"]
+    依赖: ["属于", "包含", "对应"]
+
+skeleton:
+  max_bfs_depth: 2              # 骨架 BFS 扩散深度
+  max_bfs_nodes: 30             # 骨架 BFS 最大节点数
+  max_tasks: 10                 # 最多纳入总结的 Task 数
+  use_decision_trace: true      # 默认是否注入决策链
+
+# 数据库路径（相对路径从项目根目录解析）
+db_path: "output/triple/knowledge_graph.db"

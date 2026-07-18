@@ -48,7 +48,7 @@ def save_chunks(chunks: list[Chunk], output_path: str):
 def main():
     parser = argparse.ArgumentParser(description="Phase 1: 数据预处理")
     parser.add_argument(
-        "--config", default="code_p1_config.yaml",
+        "--config", default="config/code_p1_config.yaml",
         help="配置文件路径"
     )
     parser.add_argument(
