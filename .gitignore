@@ -1,17 +1,36 @@
+# Logs & temp
 logs/
 tmp/
 __pycache__/
+src/__pycache__/
+
+# Output data (pipeline products)
 output/
 qdrant_data/
 qdrant_data_sample/
-test
 
+# Test artifacts
+tests/*.log
+
+# OS files
 .DS_Store
+Thumbs.db
+
+# Python
 *.pyc
 *.pyo
+*.egg-info/
+dist/
+build/
+.venv/
+
+# Editor
 *.swp
 *.swo
 *.bak
+*.orig
+
+# SQL/DB (output artifacts)
 *.log
 *.sql
 *.sql.bak
@@ -34,3 +53,7 @@ test
 *.db.sqlite3.tmp
 *.db.sqlite3-wal
 *.db.sqlite3-shm
+
+# Misc
+.omo/
+.ipynb_checkpoints/
