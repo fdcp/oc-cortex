@@ -1,8 +1,9 @@
 """
 Phase 4 搜索编排模块
 跨 session 搜索完整流程 (两阶段查询):
-  Query → Dense(tasks.task_summary) + BM25(chunks_cleaned_text→task映射) → RRF → Reranker → chunk 展开
+  Query → Dense(tasks.task_summary) + Sparse(chunks_cleaned_text→task映射) → RRF → Reranker → chunk 展开
 
+Sparse 支持 BM25 (开发) 或 BGE-M3 (上线)，由 config sparse.method 决定。
 复用 Phase 3 的 Phase3Store + Qdrant 数据
 """
 import json
@@ -136,7 +137,7 @@ class SessionSearcher:
         self.task_map: dict[str, Task] = {t.task_id: t for t in self.tasks}
         # chunk map: chunk_id -> Chunk
         self.chunk_map: dict[str, Chunk] = {c.chunk_id: c for c in self.chunks}
-        # chunk -> task mapping (用于两阶段查询: BM25 命中 chunk 后映射回 task)
+        # chunk -> task mapping (用于两阶段查询: Sparse 命中 chunk 后映射回 task)
         self.chunk_to_task: dict[str, str] = {}
         for t in self.tasks:
             for cid in t.chunk_ids:
@@ -243,7 +244,7 @@ class SessionSearcher:
         跨 session 搜索 (两阶段查询)
 
         阶段 1: Dense 搜 tasks 集合 (task_summary 语义匹配)
-        阶段 2: BM25 搜 chunks_cleaned_text 集合 (关键词匹配) → 映射回 task
+        阶段 2: Sparse 搜 chunks_cleaned_text 集合 (BM25 关键词匹配 或 BGE-M3 sparse 向量匹配) → 映射回 task
         阶段 3: RRF 融合两路结果
         阶段 4: Reranker 精排 (可选)
         阶段 5: 展开 chunk 详情
@@ -269,20 +270,29 @@ class SessionSearcher:
         )
         logger.info(f"  Dense[tasks]: {len(dense_results)} 结果")
 
-        # 阶段 2: BM25 → chunks_cleaned_text → 映射回 task
-        sparse_chunk_results = self.store.search_sparse_bm25(
-            query,
-            collection=self.store.chunks_cleaned_text_collection,
-            top_k=n_candidates * 3,  # 取更多 chunk, 映射后去重
-        )
+        # 阶段 2: Sparse → chunks_cleaned_text → 映射回 task
+        sparse_top_k = n_candidates * 3  # 取更多 chunk, 映射后去重
+        if self.store.sparse_method == "bge_m3":
+            sparse_chunk_results = self.store.search_sparse_bge_m3(
+                query,
+                collection=self.store.chunks_cleaned_text_collection,
+                top_k=sparse_top_k,
+            )
+        else:
+            sparse_chunk_results = self.store.search_sparse_bm25(
+                query,
+                collection=self.store.chunks_cleaned_text_collection,
+                top_k=sparse_top_k,
+            )
         logger.info(
-            f"  BM25[chunks_cleaned_text]: {len(sparse_chunk_results)} chunk 命中"
+            f"  Sparse[{self.store.sparse_method}][chunks_cleaned_text]: "
+            f"{len(sparse_chunk_results)} chunk 命中"
         )
 
-        # 将 chunk 级 BM25 结果聚合为 task 级 (同一 task 取最高分)
+        # 将 chunk 级 Sparse 结果聚合为 task 级 (同一 task 取最高分)
         sparse_task_results = self._aggregate_chunks_to_tasks(sparse_chunk_results)
         logger.info(
-            f"  BM25 → task 聚合: {len(sparse_task_results)} 个 task"
+            f"  Sparse → task 聚合: {len(sparse_task_results)} 个 task"
         )
 
         # 阶段 3: RRF 融合 (dense tasks + sparse tasks)
@@ -352,8 +362,8 @@ class SessionSearcher:
         self, chunk_results: list[SearchResult]
     ) -> list[SearchResult]:
         """
-        将 chunk 级 BM25 结果聚合为 task 级
-        同一 task 下多个 chunk 命中时, 取最高 BM25 score
+        将 chunk 级 Sparse 结果聚合为 task 级
+        同一 task 下多个 chunk 命中时, 取最高 score
         point_id 使用 task 级的 stable UUID, 以便 RRF 融合时正确去重
         """
         from code_p3_qdrant_store import _stable_uuid
