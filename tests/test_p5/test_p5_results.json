@@ -1,0 +1,222 @@
+[
+  {
+    "model": "nemotron-3-ultra-free",
+    "mode": "entity",
+    "tasks_count": 31,
+    "success": true,
+    "extraction": {
+      "unique_entities": 258,
+      "success": true,
+      "avg_per_task": 8.3,
+      "time": 40.0
+    },
+    "alignment": {
+      "raw_entities": 258,
+      "merged_pairs": 12,
+      "unique_entities": 246,
+      "time": 60.3
+    },
+    "graph": {
+      "nodes": 246,
+      "edges": 1216,
+      "time": 0.0,
+      "avg_degree": 9.9,
+      "max_degree": 45,
+      "top_nodes": [
+        {
+          "name": "OpenCode",
+          "degree": 45,
+          "type": "concept"
+        },
+        {
+          "name": "FlashAttention",
+          "degree": 36,
+          "type": "concept"
+        },
+        {
+          "name": "Sequence Parallel",
+          "degree": 31,
+          "type": "concept"
+        },
+        {
+          "name": "Ulysses",
+          "degree": 25,
+          "type": "concept"
+        },
+        {
+          "name": "Tensor Parallel",
+          "degree": 23,
+          "type": "concept"
+        }
+      ]
+    },
+    "errors": [],
+    "init_time": 5.4,
+    "total_time": 100.3
+  },
+  {
+    "model": "deepseek-v4-flash-free",
+    "mode": "entity",
+    "tasks_count": 31,
+    "success": true,
+    "extraction": {
+      "unique_entities": 246,
+      "success": true,
+      "avg_per_task": 7.9,
+      "time": 131.0
+    },
+    "alignment": {
+      "raw_entities": 246,
+      "merged_pairs": 9,
+      "unique_entities": 237,
+      "time": 6.8
+    },
+    "graph": {
+      "nodes": 237,
+      "edges": 1148,
+      "time": 0.0,
+      "avg_degree": 9.7,
+      "max_degree": 49,
+      "top_nodes": [
+        {
+          "name": "OpenCode",
+          "degree": 49,
+          "type": "concept"
+        },
+        {
+          "name": "FlashAttention",
+          "degree": 42,
+          "type": "concept"
+        },
+        {
+          "name": "序列并行",
+          "degree": 27,
+          "type": "concept"
+        },
+        {
+          "name": "Sequence Parallel",
+          "degree": 24,
+          "type": "concept"
+        },
+        {
+          "name": "FP16",
+          "degree": 23,
+          "type": "concept"
+        }
+      ]
+    },
+    "errors": [],
+    "init_time": 0.1,
+    "total_time": 137.8
+  },
+  {
+    "model": "mimo-v2.5-free",
+    "mode": "entity",
+    "tasks_count": 31,
+    "success": true,
+    "extraction": {
+      "unique_entities": 223,
+      "success": true,
+      "avg_per_task": 7.2,
+      "time": 134.2
+    },
+    "alignment": {
+      "raw_entities": 223,
+      "merged_pairs": 0,
+      "unique_entities": 223,
+      "time": 60.5
+    },
+    "graph": {
+      "nodes": 223,
+      "edges": 960,
+      "time": 0.0,
+      "avg_degree": 8.6,
+      "max_degree": 28,
+      "top_nodes": [
+        {
+          "name": "opencode",
+          "degree": 28,
+          "type": "concept"
+        },
+        {
+          "name": "OpenCode",
+          "degree": 23,
+          "type": "concept"
+        },
+        {
+          "name": "FlashAttention",
+          "degree": 19,
+          "type": "concept"
+        },
+        {
+          "name": "opencode.db",
+          "degree": 18,
+          "type": "concept"
+        },
+        {
+          "name": "Sequence Parallel",
+          "degree": 18,
+          "type": "concept"
+        }
+      ]
+    },
+    "errors": [],
+    "init_time": 0.1,
+    "total_time": 194.7
+  },
+  {
+    "model": "hy3-free",
+    "mode": "entity",
+    "tasks_count": 31,
+    "success": true,
+    "extraction": {
+      "unique_entities": 258,
+      "success": true,
+      "avg_per_task": 8.3,
+      "time": 10.8
+    },
+    "alignment": {
+      "raw_entities": 258,
+      "merged_pairs": 6,
+      "unique_entities": 252,
+      "time": 4.6
+    },
+    "graph": {
+      "nodes": 252,
+      "edges": 1206,
+      "time": 0.0,
+      "avg_degree": 9.6,
+      "max_degree": 50,
+      "top_nodes": [
+        {
+          "name": "OpenCode",
+          "degree": 50,
+          "type": "concept"
+        },
+        {
+          "name": "FlashAttention",
+          "degree": 35,
+          "type": "concept"
+        },
+        {
+          "name": "gpt-5-nano",
+          "degree": 20,
+          "type": "concept"
+        },
+        {
+          "name": "A100",
+          "degree": 18,
+          "type": "concept"
+        },
+        {
+          "name": "NVLink",
+          "degree": 18,
+          "type": "concept"
+        }
+      ]
+    },
+    "errors": [],
+    "init_time": 0.1,
+    "total_time": 15.3
+  }
+]

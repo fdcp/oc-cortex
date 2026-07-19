@@ -8,6 +8,10 @@ src/__pycache__/
 output/
 qdrant_data/
 qdrant_data_sample/
+test
+*.ipynb
+tests/test_p5/*__triple/
+tests/test_p5/*__entity/
 
 # Test artifacts
 tests/*.log
