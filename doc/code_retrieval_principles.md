@@ -45,6 +45,8 @@ sim(q, d) = (q · d) / (||q|| × ||d||)
 | chunks_summary | `summary` (Phase 2 LLM 生成) | 中层语义：这一轮对话的摘要 |
 | chunks_cleaned_text | `cleaned_text()` (格式化对话原文) | 底层语义：完整对话内容 |
 
+> 三个集合在 BM25 / BGE-M3 两种模式下的向量存储方式（unnamed dense vs named {dense, sparse}）详见：[Phase 3 向量存储架构图](diagram_phase3_vector_store.html)
+
 Dense 检索调用 `Phase3Store.search_dense()`，内部使用 Qdrant 的 `query_points()` 做 cosine ANN 搜索。
 
 ## 2. Sparse 检索 (稀疏检索)

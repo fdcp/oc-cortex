@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phase 3 - 向量存储架构图</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0d1117;
+    color: #e6edf3;
+    font-family: -apple-system, 'SF Mono', 'Menlo', monospace;
+    padding: 40px;
+    min-height: 100vh;
+  }
+  h1 {
+    text-align: center;
+    font-size: 22px;
+    font-weight: 600;
+    color: #58a6ff;
+    margin-bottom: 6px;
+  }
+  .subtitle {
+    text-align: center;
+    font-size: 14px;
+    color: #8b949e;
+    margin-bottom: 36px;
+  }
+  .mode-section {
+    margin-bottom: 48px;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    padding: 28px;
+    background: #161b22;
+  }
+  .mode-title {
+    font-size: 17px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .mode-title.bm25 { color: #f0883e; }
+  .mode-title.bge { color: #3fb950; }
+  .mode-desc {
+    font-size: 12px;
+    color: #8b949e;
+    margin-bottom: 24px;
+  }
+  .pipeline {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    align-items: flex-start;
+  }
+  .column {
+    flex: 1;
+    max-width: 280px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+  .box {
+    width: 100%;
+    border-radius: 8px;
+    padding: 12px 14px;
+    text-align: center;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .input-box {
+    background: #1c2333;
+    border: 1.5px solid #30363d;
+    color: #c9d1d9;
+  }
+  .input-box .label {
+    font-size: 11px;
+    color: #8b949e;
+    margin-bottom: 2px;
+  }
+  .input-box .name {
+    font-weight: 600;
+    color: #e6edf3;
+  }
+  .embed-box {
+    background: #1a1e2e;
+    border: 1.5px solid #388bfd44;
+    color: #79c0ff;
+  }
+  .embed-box.dense { border-color: #388bfd66; }
+  .embed-box.hybrid { border-color: #3fb95066; color: #7ee787; }
+  .embed-box .model { font-weight: 600; }
+  .embed-box .dim { font-size: 11px; opacity: 0.8; }
+  .arrow {
+    font-size: 20px;
+    color: #484f58;
+    padding: 4px 0;
+    text-align: center;
+  }
+  .qdrant-box {
+    border: 2px solid #58a6ff;
+    background: #0d1f3c;
+    color: #a5d6ff;
+    font-weight: 600;
+    position: relative;
+  }
+  .qdrant-box .coll-name {
+    font-size: 14px;
+    color: #58a6ff;
+  }
+  .qdrant-box .coll-detail {
+    font-size: 11px;
+    color: #8b949e;
+    margin-top: 2px;
+  }
+  .bm25-mem {
+    border: 2px dashed #f0883e;
+    background: #2a1a0a;
+    color: #f0883e;
+    font-weight: 600;
+  }
+  .bm25-mem .mem-label {
+    font-size: 11px;
+    color: #d29922;
+    margin-top: 2px;
+  }
+  .note {
+    margin-top: 8px;
+    font-size: 11px;
+    color: #6e7681;
+    text-align: center;
+    font-style: italic;
+  }
+  .output-bar {
+    margin-top: 20px;
+    text-align: center;
+    font-size: 12px;
+    color: #6e7681;
+    border-top: 1px solid #21262d;
+    padding-top: 12px;
+  }
+  .output-bar code {
+    background: #1c2333;
+    padding: 2px 8px;
+    border-radius: 4px;
+    color: #79c0ff;
+  }
+  .legend {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    margin-top: 8px;
+    margin-bottom: 24px;
+    font-size: 11px;
+    color: #8b949e;
+  }
+  .legend span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .legend .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+  }
+  .dot.blue { background: #58a6ff; }
+  .dot.orange { background: #f0883e; border: 1px dashed #f0883e; }
+  .dot.green { background: #3fb950; }
+  .sep { width: 1px; background: #30363d; margin: 0 8px; align-self: stretch; }
+</style>
+</head>
+<body>
+
+<h1>PHASE 3 - 向量存储 (code_p3_*.py)</h1>
+<p class="subtitle">职责：把 P1/P2 产物写入 Qdrant 3 集合，构建混合检索索引</p>
+
+<div class="legend">
+  <span><span class="dot blue"></span> Qdrant 持久化</span>
+  <span><span class="dot orange"></span> 内存索引 (非 Qdrant)</span>
+  <span><span class="dot green"></span> Qdrant Named Vectors</span>
+</div>
+
+<!-- ===== BM25 Mode ===== -->
+<div class="mode-section">
+  <div class="mode-title bm25">sparse.method = "bm25" (开发模式)</div>
+  <div class="mode-desc">Qdrant 仅存 unnamed dense vector (512d)，BM25 为纯内存索引，仅 chunks_cleaned_text 有 BM25</div>
+
+  <div class="pipeline">
+    <!-- Column 1: tasks -->
+    <div class="column">
+      <div class="box input-box">
+        <div class="label">输入</div>
+        <div class="name">tasks.jsonl</div>
+        <div>task_summary</div>
+      </div>
+      <div class="arrow">▼</div>
+      <div class="box embed-box dense">
+        <div class="model">Dense</div>
+        <div>BGE-small-zh (512d)</div>
+      </div>
+      <div class="arrow">▼</div>
+      <div class="box qdrant-box">
+        <div class="coll-name">Qdrant: tasks</div>
+        <div class="coll-detail">unnamed vector 512d</div>
+      </div>
+      <div class="note">无 sparse</div>
+    </div>
+
+    <!-- Column 2: chunks_summary -->
+    <div class="column">
+      <div class="box input-box">
+        <div class="label">输入</div>
+        <div class="name">chunks_summary_p2.jsonl</div>
+        <div>chunk 摘要</div>
+      </div>
+      <div class="arrow">▼</div>
+      <div class="box embed-box dense">
+        <div class="model">Dense</div>
+        <div>BGE-small-zh (512d)</div>
+      </div>
+      <div class="arrow">▼</div>
+      <div class="box qdrant-box">
+        <div class="coll-name">Qdrant: chunks_summary</div>
+        <div class="coll-detail">unnamed vector 512d</div>
+      </div>
+      <div class="note">无 sparse</div>
+    </div>
+
+    <!-- Column 3: chunks_cleaned_text -->
+    <div class="column">
+      <div class="box input-box">
+        <div class="label">输入</div>
+        <div class="name">chunks.jsonl</div>
+        <div>cleaned_text</div>
+      </div>
+      <div class="arrow">▼</div>
+      <div class="box embed-box dense">
+        <div class="model">Dense</div>
+        <div>BGE-small-zh (512d)</div>
+      </div>
+      <div class="arrow">▼</div>
+      <div class="box qdrant-box">
+        <div class="coll-name">Qdrant: chunks_cleaned_text</div>
+        <div class="coll-detail">unnamed vector 512d</div>
+      </div>
+      <div class="arrow">+</div>
+      <div class="box bm25-mem">
+        <div>BM25 内存索引</div>
+        <div class="mem-label">rank_bm25.BM25Okapi (jieba 分词)</div>
+      </div>
+      <div class="note">仅内存, 不入 Qdrant</div>
+    </div>
+  </div>
+
+  <div class="output-bar">
+    output: <code>qdrant_data/</code> — 嵌入式 Qdrant 持久化, 3 个 collection (均为 unnamed 512d dense vector)
+  </div>
+</div>
+
+<!-- ===== BGE-M3 Mode ===== -->
+<div class="mode-section">
+  <div class="mode-title bge">sparse.method = "bge_m3" (上线模式)</div>
+  <div class="mode-desc">Qdrant 全部 3 个 collection 存储 named vectors {dense, sparse}，sparse 通过 Qdrant 原生检索</div>
+
+  <div class="pipeline">
+    <!-- Column 1: tasks -->
+    <div class="column">
+      <div class="box input-box">
+        <div class="label">输入</div>
+        <div class="name">tasks.jsonl</div>
+        <div>task_summary</div>
+      </div>
+      <div class="arrow">▼</div>
+      <div class="box embed-box hybrid">
+        <div class="model">Dense + Sparse</div>
+        <div>BGE-small-zh (512d)</div>
+        <div>+ BGE-M3 sparse</div>
+      </div>
+      <div class="arrow">▼</div>
+      <div class="box qdrant-box" style="border-color: #3fb950;">
+        <div class="coll-name">Qdrant: tasks</div>
+        <div class="coll-detail">{dense: 512d, sparse}</div>
+      </div>
+      <div class="note">named vectors</div>
+    </div>
+
+    <!-- Column 2: chunks_summary -->
+    <div class="column">
+      <div class="box input-box">
+        <div class="label">输入</div>
+        <div class="name">chunks_summary_p2.jsonl</div>
+        <div>chunk 摘要</div>
+      </div>
+      <div class="arrow">▼</div>
+      <div class="box embed-box hybrid">
+        <div class="model">Dense + Sparse</div>
+        <div>BGE-small-zh (512d)</div>
+        <div>+ BGE-M3 sparse</div>
+      </div>
+      <div class="arrow">▼</div>
+      <div class="box qdrant-box" style="border-color: #3fb950;">
+        <div class="coll-name">Qdrant: chunks_summary</div>
+        <div class="coll-detail">{dense: 512d, sparse}</div>
+      </div>
+      <div class="note">named vectors</div>
+    </div>
+
+    <!-- Column 3: chunks_cleaned_text -->
+    <div class="column">
+      <div class="box input-box">
+        <div class="label">输入</div>
+        <div class="name">chunks.jsonl</div>
+        <div>cleaned_text</div>
+      </div>
+      <div class="arrow">▼</div>
+      <div class="box embed-box hybrid">
+        <div class="model">Dense + Sparse</div>
+        <div>BGE-small-zh (512d)</div>
+        <div>+ BGE-M3 sparse</div>
+      </div>
+      <div class="arrow">▼</div>
+      <div class="box qdrant-box" style="border-color: #3fb950;">
+        <div class="coll-name">Qdrant: chunks_cleaned_text</div>
+        <div class="coll-detail">{dense: 512d, sparse}</div>
+      </div>
+      <div class="note">named vectors</div>
+    </div>
+  </div>
+
+  <div class="output-bar">
+    output: <code>qdrant_data/</code> — 嵌入式 Qdrant 持久化, 3 个 collection (均为 named vectors: dense 512d + sparse)
+  </div>
+</div>
+
+<!-- ===== Retrieval Pattern ===== -->
+<div class="mode-section" style="border-color: #388bfd44;">
+  <div class="mode-title" style="color: #58a6ff;">检索模式 (P4 Cross-Collection Hybrid)</div>
+  <div class="mode-desc">不论哪种 sparse 方法，检索路径一致：dense 搜 chunks_summary，sparse 搜 chunks_cleaned_text，RRF 融合</div>
+
+  <div style="display: flex; gap: 40px; justify-content: center; align-items: center; margin-top: 16px;">
+    <div style="text-align: center;">
+      <div class="box" style="background: #1c2333; border: 1.5px solid #58a6ff44; color: #79c0ff; max-width: 220px;">
+        <div style="font-weight: 600;">Dense 检索</div>
+        <div style="font-size: 12px; color: #8b949e; margin-top: 4px;">BGE-small-zh query →</div>
+        <div style="font-size: 13px; color: #58a6ff; font-weight: 600; margin-top: 2px;">chunks_summary</div>
+      </div>
+    </div>
+
+    <div style="font-size: 24px; color: #484f58;">+</div>
+
+    <div style="text-align: center;">
+      <div class="box" style="background: #1c2333; border: 1.5px solid #f0883e44; color: #f0883e; max-width: 220px;">
+        <div style="font-weight: 600;">Sparse 检索</div>
+        <div style="font-size: 12px; color: #8b949e; margin-top: 4px;">BM25 内存 / BGE-M3 Qdrant →</div>
+        <div style="font-size: 13px; color: #f0883e; font-weight: 600; margin-top: 2px;">chunks_cleaned_text</div>
+      </div>
+    </div>
+
+    <div style="font-size: 24px; color: #484f58;">→</div>
+
+    <div style="text-align: center;">
+      <div class="box" style="background: #1a2e1a; border: 1.5px solid #3fb95066; color: #7ee787; max-width: 180px;">
+        <div style="font-weight: 600;">RRF 融合</div>
+        <div style="font-size: 12px; color: #8b949e; margin-top: 4px;">k=60</div>
+        <div style="font-size: 11px; color: #6e7681; margin-top: 2px;">chunk→task 映射</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
