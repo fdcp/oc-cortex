@@ -6,7 +6,7 @@ phase2:
 
 # LLM (同 Phase 2, OpenCode Zen)
 llm:
-  model: "nemotron-3-ultra-free"
+  model: "nemotron-3-ultra-free"    # nemotron-3-ultra-free for Triple Extraction; hy3-free for Entity Extraction
   api_key_env: "OPENCODE_ZEN_API_KEY"
   base_url: "https://opencode.ai/zen/v1"
   max_retries: 3
