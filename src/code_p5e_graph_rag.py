@@ -39,8 +39,8 @@ def _get_client() -> OpenAI:
     )
 
 
-# 默认模型 (同 code_p5_config.yaml)
-DEFAULT_MODEL = "nemotron-3-ultra-free"
+# 默认模型 (entity 模式使用 hy3-free，与 code_p5_config.yaml 一致)
+DEFAULT_MODEL = "hy3-free"
 
 
 def extract_query_entities(query: str, max_retries: int = 2, model: str = DEFAULT_MODEL) -> list[str]:
