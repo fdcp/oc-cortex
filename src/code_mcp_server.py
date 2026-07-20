@@ -264,6 +264,9 @@ def graph_rag_search(query: str, top_k: int = 5, use_graph: bool = True) -> dict
         return {"error": f"Graph-RAG 依赖缺失: {e}"}
 
     def _init_rag():
+        # 如果预热已完成（排队期间 _rag 已被设置），直接复用
+        if hasattr(graph_rag_search, "_rag"):
+            return graph_rag_search._rag
         os.chdir(_project_root)
         searcher = SessionSearcher(str(_project_root / "config" / "code_p3_config.yaml"))
         kg_db = get_db()
