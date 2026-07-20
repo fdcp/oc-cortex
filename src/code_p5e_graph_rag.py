@@ -35,7 +35,7 @@ def _get_client() -> OpenAI:
     return OpenAI(
         api_key=api_key,
         base_url="https://opencode.ai/zen/v1",
-        timeout=15,
+        timeout=30,
     )
 
 
@@ -43,7 +43,7 @@ def _get_client() -> OpenAI:
 DEFAULT_MODEL = "hy3-free"
 
 
-def extract_query_entities(query: str, max_retries: int = 1, model: str = DEFAULT_MODEL) -> list[str]:
+def extract_query_entities(query: str, max_retries: int = 2, model: str = DEFAULT_MODEL) -> list[str]:
     """从用户查询中提取关键实体名称，用于图谱扩散。
 
     Args:
