@@ -28,8 +28,8 @@ from typing import Optional
 # 根因：在 ThreadPoolExecutor 线程中，huggingface_hub 内部共享的 httpx.Client
 # 会因 GC 被提前关闭，导致 "Cannot send a request, as the client has been closed"。
 # 模型已在本地缓存，无需联网检查更新。
-os.environ.setdefault("HF_HUB_OFFLINE", "1")
-os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+os.environ["HF_HUB_OFFLINE"] = "1"
+os.environ["TRANSFORMERS_OFFLINE"] = "1"
 
 from loguru import logger
 from mcp.server.fastmcp import FastMCP
