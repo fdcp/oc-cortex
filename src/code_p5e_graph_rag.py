@@ -149,12 +149,14 @@ class GraphRAGSearcher:
         debug = {}
 
         # Stage 1: 向量检索
+        t_vec = time.time()
         vector_results = self.searcher.search(
             query=query,
             top_k=top_k * 2,       # 多取一些给后续合并
             skip_rerank=True,       # 延迟 rerank，合并后统一做
         )
         debug["vector_results"] = len(vector_results)
+        debug["vector_time_ms"] = int((time.time() - t_vec) * 1000)
 
         if not use_graph_rag:
             # 不启用图谱扩散，直接 rerank 返回
@@ -228,8 +230,10 @@ class GraphRAGSearcher:
         debug["merged_candidates"] = len(merged)
 
         # Stage 4: Reranker
+        t_rerank = time.time()
         if use_reranker and merged:
             merged = self._rerank(merged, query, top_k)
+        debug["rerank_time_ms"] = int((time.time() - t_rerank) * 1000)
 
         results = merged[:top_k]
 

@@ -299,6 +299,16 @@ def graph_rag_search(query: str, top_k: int = 5, use_graph: bool = True) -> dict
             for r in results
         ],
         "source_distribution": debug.get("source_distribution", {}),
+        "debug": {
+            "vector_results": debug.get("vector_results"),
+            "vector_time_ms": debug.get("vector_time_ms"),
+            "query_entities": debug.get("query_entities"),
+            "graph_candidates": debug.get("graph_candidates"),
+            "graph_time_ms": debug.get("graph_time_ms"),
+            "merged_candidates": debug.get("merged_candidates"),
+            "rerank_time_ms": debug.get("rerank_time_ms"),
+            "total_time_ms": debug.get("total_time_ms"),
+        },
         "elapsed_ms": int((time.time() - t0) * 1000),
     }
 
