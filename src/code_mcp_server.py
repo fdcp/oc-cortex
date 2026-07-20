@@ -24,6 +24,13 @@ import time
 from pathlib import Path
 from typing import Optional
 
+# 强制离线模式：阻止 huggingface_hub / transformers 发起任何 HTTP 请求。
+# 根因：在 ThreadPoolExecutor 线程中，huggingface_hub 内部共享的 httpx.Client
+# 会因 GC 被提前关闭，导致 "Cannot send a request, as the client has been closed"。
+# 模型已在本地缓存，无需联网检查更新。
+os.environ.setdefault("HF_HUB_OFFLINE", "1")
+os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+
 from loguru import logger
 from mcp.server.fastmcp import FastMCP
 
@@ -63,6 +70,12 @@ _tasks_file = str(_project_root / _raw_tasks_file) if not Path(_raw_tasks_file).
 # 延迟初始化的全局实例
 _db: Optional[KGDatabase] = None
 _task_cache: Optional[dict] = None
+
+# 持久化线程池：将重型初始化（embedding 模型 + Qdrant + BM25）和搜索
+# 放到独立线程执行，避免阻塞 FastMCP 的 asyncio 事件循环。
+# 同时保证 Qdrant SQLite 的 check_same_thread 约束（同一线程内操作）。
+import concurrent.futures
+_rag_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
 
 
 def get_db() -> KGDatabase:
@@ -250,14 +263,26 @@ def graph_rag_search(query: str, top_k: int = 5, use_graph: bool = True) -> dict
     except ImportError as e:
         return {"error": f"Graph-RAG 依赖缺失: {e}"}
 
-    if not hasattr(graph_rag_search, "_rag"):
-        searcher = SessionSearcher("config/code_p3_config.yaml")
+    def _init_rag():
+        os.chdir(_project_root)
+        searcher = SessionSearcher(str(_project_root / "config" / "code_p3_config.yaml"))
         kg_db = get_db()
-        graph_rag_search._rag = GraphRAGSearcher(searcher, kg_db)
-        logger.info("GraphRAGSearcher 初始化完成")
+        return GraphRAGSearcher(searcher, kg_db)
 
-    rag = graph_rag_search._rag
-    results, debug = rag.search(query, top_k=top_k, use_graph_rag=use_graph)
+    def _do_search(rag, q, k, use_g):
+        return rag.search(q, top_k=k, use_graph_rag=use_g)
+
+    try:
+        if not hasattr(graph_rag_search, "_rag"):
+            graph_rag_search._rag = _rag_executor.submit(_init_rag).result()
+            logger.info("GraphRAGSearcher 初始化完成")
+
+        results, debug = _rag_executor.submit(
+            _do_search, graph_rag_search._rag, query, top_k, use_graph
+        ).result()
+    except Exception as e:
+        logger.error(f"graph_rag_search 异常: {e}")
+        return {"error": f"{type(e).__name__}: {e}", "elapsed_ms": int((time.time() - t0) * 1000)}
 
     return {
         "query": query,
@@ -300,5 +325,20 @@ if __name__ == "__main__":
     elif "--sse" in sys.argv:
         transport = "sse"
         logger.info("以 SSE 模式启动")
+
+    # 后台预热 GraphRAGSearcher（加载 embedding + Qdrant + BM25，约 30-50s）
+    def _preheat_rag():
+        try:
+            os.chdir(_project_root)
+            from code_p4_searcher import SessionSearcher
+            from code_p5e_graph_rag import GraphRAGSearcher
+            searcher = SessionSearcher(str(_project_root / "config" / "code_p3_config.yaml"))
+            kg_db = get_db()
+            graph_rag_search._rag = GraphRAGSearcher(searcher, kg_db)
+            logger.info("GraphRAGSearcher 预热完成")
+        except Exception as e:
+            logger.warning(f"GraphRAGSearcher 预热失败: {e}")
+
+    _rag_executor.submit(_preheat_rag)
 
     mcp.run(transport=transport)
