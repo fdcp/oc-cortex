@@ -67,7 +67,12 @@ def extract_query_entities(query: str, max_retries: int = 2, model: str = DEFAUL
             logger.warning(f"查询实体抽取 LLM 调用失败 (attempt {attempt + 1}): {e}")
             continue
 
-        raw_content = output.choices[0].message.content
+        if not output.choices:
+            logger.warning(f"查询实体抽取 LLM 返回空 choices (attempt {attempt + 1})")
+            continue
+
+        message = output.choices[0].message
+        raw_content = message.content if message else None
         if not raw_content:
             logger.warning(f"查询实体抽取 LLM 返回空内容 (attempt {attempt + 1})")
             continue
