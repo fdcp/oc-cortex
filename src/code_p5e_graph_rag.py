@@ -65,17 +65,18 @@ def extract_query_entities(query: str, max_retries: int = 2, model: str = DEFAUL
             )
         except Exception as e:
             logger.warning(f"查询实体抽取 LLM 调用失败 (attempt {attempt + 1}): {e}")
-            continue
+            continue  # 网络错误可重试
 
+        # 以下情况不重试（模型本身返回异常，重试无意义）
         if not output.choices:
-            logger.warning(f"查询实体抽取 LLM 返回空 choices (attempt {attempt + 1})")
-            continue
+            logger.warning(f"查询实体抽取 LLM 返回空 choices，跳过图谱扩散")
+            break
 
         message = output.choices[0].message
         raw_content = message.content if message else None
         if not raw_content:
-            logger.warning(f"查询实体抽取 LLM 返回空内容 (attempt {attempt + 1})")
-            continue
+            logger.warning(f"查询实体抽取 LLM 返回空内容，跳过图谱扩散")
+            break
 
         content = raw_content.strip()
         # 去除  标签块
@@ -87,9 +88,10 @@ def extract_query_entities(query: str, max_retries: int = 2, model: str = DEFAUL
             if isinstance(entities, list):
                 return [e.strip() for e in entities if isinstance(e, str) and len(e.strip()) >= 2]
         except (json.JSONDecodeError, AttributeError):
-            logger.warning(f"查询实体抽取解析失败 (attempt {attempt + 1}): {content[:100]}")
+            logger.warning(f"查询实体抽取解析失败: {content[:100]}")
+            break  # 解析失败不重试
 
-    logger.warning("查询实体抽取全部重试失败，返回空列表")
+    logger.warning("查询实体抽取未成功，返回空列表（退化为纯向量搜索）")
     return []
 
 
