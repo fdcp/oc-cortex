@@ -193,7 +193,14 @@ DeepSeek V4 Flash 是 reasoning 模型,会在 `reasoning_content` 中产生 thin
 
 ### 失败重试
 
-指数退避重试: 2s → 4s → 8s,最多 3 次。
+分为两层重试机制:
+
+- **网络层重试** (`llm.max_retries`, 默认 3): 针对网络/API 调用异常 (超时、连接失败等),指数退避 2s → 4s → 8s
+- **内容校验重试** (`llm.content_retries`, 默认 3): 针对 LLM 返回内容不完整 (chunk_summaries 覆盖不全或 tasks 为空),会清除上一次残留的 `task_summary` 后重新请求;达到最大重试次数后使用最后一次的不完整结果 (标记为 `incomplete`),不会阻断整体流程
+
+### 生成参数
+
+- `llm.temperature` (默认 0.2~0.3): 控制生成的随机性,数值越低输出越稳定/确定,适合结构化 JSON 提取任务
 
 ## 真实数据测试结果
 

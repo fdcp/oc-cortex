@@ -246,6 +246,7 @@ class TaskExtractor:
         max_tokens_per_chunk: int = 2000,
         max_total_prompt_tokens: int = 30000,
         concurrency: int = 1,
+        temperature: float = 0.3,
     ):
         self.model = model
         self.max_retries = max_retries
@@ -254,6 +255,7 @@ class TaskExtractor:
         self.max_tokens_per_chunk = max_tokens_per_chunk
         self.max_total_prompt_tokens = max_total_prompt_tokens
         self.concurrency = max(1, concurrency)  # 至少为 1
+        self.temperature = temperature
 
         # 获取 API Key
         self.api_key = api_key or os.environ.get(api_key_env, "")
@@ -275,7 +277,8 @@ class TaskExtractor:
         logger.info(
             f"TaskExtractor 初始化: model={self.model}, "
             f"base_url={self.base_url}, concurrency={self.concurrency}, "
-            f"network_retries={self.max_retries}, content_retries={self.content_retries}"
+            f"network_retries={self.max_retries}, content_retries={self.content_retries}, "
+            f"temperature={self.temperature}"
         )
 
     # --------------------------------------------------------
@@ -294,7 +297,7 @@ class TaskExtractor:
             messages=[
                 {"role": "user", "content": prompt},
             ],
-            temperature=0.3,
+            temperature=self.temperature,
             max_tokens=16000,  # CoT prompt 含 chunk_summaries, 需要更多 token
         )
 

@@ -169,6 +169,7 @@ def main():
             "llm.max_total_prompt_tokens", 30000
         ),
         concurrency=concurrency,
+        temperature=config.get("llm.temperature", 0.3),
     )
 
     # 6. 执行 task 提取
