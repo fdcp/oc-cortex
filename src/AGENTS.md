@@ -52,6 +52,7 @@
 - P3 configuration is shared by P4, P6, and P6b. Changes to embedding, reranker, Qdrant, or file paths have cross-phase effects.
 - LLM calls use `OPENCODE_ZEN_API_KEY`; do not embed credentials in code or YAML.
 - `code_p3_main.py` and `code_p4_search_cli.py` pre-parse `--config` at module level (before `main()`) to set `TRANSFORMERS_OFFLINE` before HuggingFace imports — preserve this pattern when editing those entry points.
+- P1 phase-specific YAML (`code_p1_config.yaml`) mixes wired and advisory keys (tagged inline as `[wired]`/`[advisory]`): `project.mock_data`, `opencode.session_source`, `opencode.session_filter.*`, and `logging.*` are read via `Config`; `chunking.*` and `content_cleaning.*` (except the unused `max_error_length` default) are hardcoded in `code_p1_chunker.py`/`code_p1_content_cleaner.py` and not read from YAML.
 - P6/P6b phase-specific YAML (`code_p6_config.yaml`, `code_p6b_config.yaml`) is advisory only; the settings are hardcoded in `code_p6_summarizer.py` and `code_p6b_skeleton.py`. Wiring these to `Config.load()` is an open improvement, not the current behavior.
 
 ## ANTI-PATTERNS

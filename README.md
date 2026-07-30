@@ -101,18 +101,25 @@ export TRANSFORMERS_OFFLINE=1 && export HF_HUB_OFFLINE=1
 ```bash
 export TRANSFORMERS_OFFLINE=1 && export HF_HUB_OFFLINE=1
 
-# 默认配置
+# 默认配置（不带任何数据源参数时，按 --sqlite > --mock > --source >
+# config.project.mock_data > config.opencode.session_source 的优先级选择数据源）
 python3 src/code_p1_main.py 2>&1 | tee logs/phase1.log
 
-# 自定义配置
+# 自定义配置文件
 python3 src/code_p1_main.py --config config/code_p1_config.yaml 2>&1 | tee logs/phase1.log
 
-# 从 SQLite 加载（替代 JSONL）
-python3 src/code_p1_main.py --source sqlite 2>&1 | tee logs/phase1.log
+# 从 OpenCode SQLite 数据库加载（推荐，直接读 opencode.db）
+python3 src/code_p1_main.py --sqlite ~/.local/share/opencode/opencode.db 2>&1 | tee logs/phase1.log
+
+# 只跑前 N 个 session（快速验证）
+python3 src/code_p1_main.py --sqlite ~/.local/share/opencode/opencode.db --limit 3
+
+# 用 mock 数据（无需真实 session）
+python3 src/code_p1_main.py --mock
 ```
 
 **输出**:
-- `output/chunks.jsonl` — 清洗后的 chunk 数据（每行一个 JSON，包含 session_id, chunk_id, turns, cleaned_text）
+- `output/chunks.jsonl` — 清洗后的 chunk 数据（每行一个 JSON，字段见 `Chunk` 模型：`chunk_id`, `session_id`, `turn_index`, `user_message`, `assistant_messages`, `tool_calls`, `mcp_calls`, `raw_size_tokens`, `cleaned_size_tokens`, `created_at`, `task_summary`；`task_summary` 在 P1 阶段恒为 `null`，由 Phase 2 填充）
 
 **配置** (`config/code_p1_config.yaml`，仅列代码实际读取的项；其余 see `doc/code_p1_README.md` 中的 wired/advisory 对照):
 - `opencode.session_filter.type` — session 类型过滤（默认 `root`，对应 SQLite `parent_id IS NULL`）
@@ -517,7 +524,7 @@ export TRANSFORMERS_OFFLINE=1 && export HF_HUB_OFFLINE=1
 # ============================================================
 # Step 1: Phase 1 — 数据预处理
 # ============================================================
-python3 src/code_p1_main.py --config config/code_p1_config.yaml 2>&1 | tee logs/phase1.log
+python3 src/code_p1_main.py --sqlite ~/.local/share/opencode/opencode.db --config config/code_p1_config.yaml 2>&1 | tee logs/phase1.log
 
 # 验证
 wc -l output/chunks.jsonl  # 应输出 chunk 数量
