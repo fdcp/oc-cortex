@@ -1,32 +1,40 @@
 # Phase 1 配置
-# 用法: 在 main.py 中通过 config.py 加载
+# 用法: 在 code_p1_main.py 中通过 code_p1_utils.Config.load() 加载
+#
+# 配置项分类说明(与当前 code_p1_*.py 实现一致):
+#   [wired]    代码实际读取
+#   [advisory] 当前未被代码读取,仅作文档/占位;行为已在源码中 hardcode
+# 参见 src/AGENTS.md 关于 advisory YAML 的约定(P6/P6b 同样遵循)。
 
 project:
-  data_dir: "./data"
-  output_dir: "./output"
-  mock_data: true  # 是否使用 mock 数据(无 OpenCode session 时用于演示)
+  data_dir: "./data"        # [advisory] 数据目录占位;P1 main 不读取,实际路径由 --source/--sqlite 给出
+  output_dir: "./output"    # [advisory] 输出目录占位;P1 main 不读取,实际路径由 --output 决定
+  mock_data: true           # [wired] 无 --sqlite/--source/--mock 时,main.py 据此决定是否用 mock 数据
 
 opencode:
-  # 数据源: JSONL 文件(每行一个 session JSON)
+  # [wired] 数据源: JSONL/JSON 文件(每行一个 session JSON 或整个文件一个 list[session])
+  # 仅在没有 --sqlite / --mock / --source 命令行参数时使用
   session_source: "./data/opencode_sessions.jsonl"
-  # 或 API 拉取(Phase 1 不实现,占位)
+  # API 拉取(Phase 1 不实现,占位)
   # session_api: "https://api.opencode.example/v1/sessions"
   session_filter:
-    type: "root"             # 只处理 root session
-    min_user_messages: 2     # 至少 2 个 user 输入
+    type: "root"             # [wired] 只处理 root session(对 SQLite 即 parent_id IS NULL;对 JSONL 按 session.type 字段)
+    min_user_messages: 2     # [wired] 至少 N 个 user 输入,main.py 与 sqlite_loader 均按此过滤
 
 chunking:
-  boundary: "user_message"   # 轮次边界
-  max_tokens_per_chunk: 30000
+  # [advisory] code_p1_chunker.py 当前 hardcode 按 user 消息边界切分,不读这些字段
+  boundary: "user_message"   # 轮次边界(文档占位)
+  max_tokens_per_chunk: 30000  # [advisory] chunker 不强制 token 上限;token 截断发生在 Phase 2 (llm.max_tokens_per_chunk)
 
 content_cleaning:
-  preserve_full: ["user", "assistant"]
+  # [advisory] code_p1_content_cleaner.py 当前 hardcode 行为,不读这些字段
+  preserve_full: ["user", "assistant"]   # 文本完整保留(已在代码中 hardcode)
   summarize:
     - "bash"
     - "tool_call"
-    - "mcp_call"
-  max_error_length: 200      # 错误日志最大长度
+    - "mcp_call"             # 工具调用摘要化(已在代码中 hardcode)
+  max_error_length: 200      # [advisory] cleaner 默认 200;main.py 调用 clean_chunks() 未传该参数,用默认值
 
 logging:
-  level: "INFO"              # DEBUG / INFO / WARNING / ERROR
-  file: "./logs/phase1.log"
+  level: "INFO"              # [wired] DEBUG / INFO / WARNING / ERROR
+  file: "./logs/phase1.log"  # [wired] 日志文件路径

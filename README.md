@@ -114,10 +114,14 @@ python3 src/code_p1_main.py --source sqlite 2>&1 | tee logs/phase1.log
 **输出**:
 - `output/chunks.jsonl` — 清洗后的 chunk 数据（每行一个 JSON，包含 session_id, chunk_id, turns, cleaned_text）
 
-**配置** (`config/code_p1_config.yaml`):
-- `data.session_dir` — 会话数据目录
+**配置** (`config/code_p1_config.yaml`，仅列代码实际读取的项；其余 see `doc/code_p1_README.md` 中的 wired/advisory 对照):
+- `opencode.session_filter.type` — session 类型过滤（默认 `root`，对应 SQLite `parent_id IS NULL`）
 - `opencode.session_filter.min_user_messages` — 最少 user 消息数（默认 2）
-- `chunking.max_tokens_per_chunk` — 每个 chunk 最大 token 数（默认 30000）
+- `opencode.session_source` — 无 `--sqlite`/`--source`/`--mock` 时的默认 JSONL/JSON 路径
+- `project.mock_data` — 无命令行数据源时是否回退 mock 数据
+- `logging.level` / `logging.file` — 日志配置
+
+> 注: YAML 中的 `chunking.*` 与 `content_cleaning.*` 段当前为 advisory,chunker 与 cleaner 已在源码中 hardcode 行为,改 YAML 不会生效。详见 `doc/code_p1_README.md`。
 
 ---
 

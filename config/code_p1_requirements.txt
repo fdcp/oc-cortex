@@ -1,13 +1,18 @@
 # Phase 1 依赖
-loguru>=0.7.0
-pyyaml>=6.0
-tiktoken>=0.5.0
+# 仅列出 code_p1_*.py 实际 import 的第三方包。
+# P1 代码不调用任何 LLM API;LLM 相关依赖(openai 等)属于 Phase 2+,
+# 由根目录 requirements.txt 统一管理,不在此重复声明。
 
-# Phase 2+ 需要(本版本不用,先列上)
-# qdrant-client>=1.7.0
-# sentence-transformers>=2.7.0
-# networkx>=3.2
-# openai>=1.30.0
+loguru>=0.7.0       # 所有 code_p1_*.py 的日志
+pyyaml>=6.0         # code_p1_utils.Config 加载 YAML 配置
+tiktoken>=0.5.0     # code_p1_utils.count_tokens / safe_truncate(用 cl100k_base 编码)
 
-# Phase 2+ dependencies
-openai>=1.30.0
+# 下面是被注释掉的曾被列出的 Phase 2+ 依赖,本文件不再保留,
+# 改由根目录 requirements.txt 管理,避免与 P1 真正需要的依赖混淆:
+# qdrant-client>=1.7.0        # Phase 3+
+# sentence-transformers>=2.7.0 # Phase 3+
+# networkx>=3.2               # Phase 5
+# openai>=1.30.0              # Phase 2+ (P1 不需要)
+
+# 注:tiktoken>=0.5 已含 cl100k_base 编码,
+# 与 code_p1_utils._get_tokenizer() 实际使用的编码名一致。
