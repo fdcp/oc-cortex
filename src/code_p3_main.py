@@ -1,6 +1,7 @@
 """
 Phase 3 主入口
-流程: 加载 Phase 1/2 输出 -> Embedding -> Qdrant 双集合 upsert
+流程: 加载 Phase 1/2 输出 -> Embedding -> Qdrant 三集合 upsert
+      (tasks / chunks_summary / chunks_cleaned_text)
 
 用法:
   python code_p3_main.py
@@ -195,10 +196,10 @@ def main():
     t0 = time.time()
 
     store = Phase3Store(
-        model_name=config.get("embedding.model", "Qwen/Qwen3-Embedding-0.6B"),
-        dim=config.get("embedding.dim", 1024),
-        batch_size=config.get("embedding.batch_size", 16),
-        device=config.get("embedding.device", "auto"),
+        model_name=config.get("embedding.model", "BAAI/bge-small-zh-v1.5"),
+        dim=config.get("embedding.dim", 512),
+        batch_size=config.get("embedding.batch_size", 32),
+        device=config.get("embedding.device", "cpu"),
         qdrant_path=config.get("qdrant.path", "./qdrant_data"),
         tasks_collection=config.get("qdrant.collections.tasks", "tasks"),
         chunks_summary_collection=config.get("qdrant.collections.chunks_summary", "chunks_summary"),

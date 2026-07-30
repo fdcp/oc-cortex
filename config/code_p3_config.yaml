@@ -1,5 +1,5 @@
 # Phase 3 配置
-# Qdrant 双集合向量存储
+# Qdrant 三集合向量存储 (tasks / chunks_summary / chunks_cleaned_text)
 
 # Phase 2 输出
 phase2:

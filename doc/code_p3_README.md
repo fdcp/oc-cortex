@@ -30,10 +30,11 @@ export HF_ENDPOINT=https://hf-mirror.com
 ## 文件结构
 
 ```
-code_p3_config.yaml        # 配置 (dense/sparse 模型、Qdrant 路径)
-code_p3_qdrant_store.py    # 核心模块: Phase3Store 类 (存储 + 检索)
-code_p3_main.py            # 写入入口: 加载数据 -> embedding -> upsert
-code_p3_search_demo.py     # 检索演示: dense / sparse / hybrid 对比
+config/code_p3_config.yaml   # 配置 (dense/sparse 模型、Qdrant 路径、离线/缓存)
+code_p3_hf_config.py         # HuggingFace 环境配置 (离线模式 + 缓存目录)
+code_p3_qdrant_store.py      # 核心模块: Phase3Store 类 (存储 + 检索)
+code_p3_main.py              # 写入入口: 加载数据 -> embedding -> upsert
+code_p3_search_demo.py       # 检索演示: dense / sparse / hybrid 对比
 ```
 
 ## 运行
@@ -43,7 +44,7 @@ code_p3_search_demo.py     # 检索演示: dense / sparse / hybrid 对比
 ```bash
 export HF_ENDPOINT=https://hf-mirror.com
 python code_p3_main.py
-python code_p3_main.py --config code_p3_config.yaml
+python code_p3_main.py --config config/code_p3_config.yaml
 ```
 
 ### 检索演示
