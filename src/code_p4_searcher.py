@@ -9,16 +9,14 @@ Sparse 支持 BM25 (开发) 或 BGE-M3 (上线)，由 config sparse.method 决�
 import json
 import time
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Optional
 
 from loguru import logger
 
 from code_p1_utils import Config
 from code_p1_models import Chunk, CleanedToolCall
 from code_p2_models import Task
-from code_p3_qdrant_store import Phase3Store, HybridResult, SearchResult
-from code_p4_reranker import Qwen3Reranker, RerankResult
+from code_p3_qdrant_store import Phase3Store, SearchResult
+from code_p4_reranker import Qwen3Reranker
 
 
 # ============================================================

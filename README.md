@@ -196,7 +196,7 @@ python3 src/code_p3_search_demo.py --query "序列并行" --top-k 5
 
 ### Phase 4: 跨 Session 搜索
 
-**做什么**: 两阶段搜索：Dense + BM25 → RRF 融合 → Qwen3-Reranker 重排序 → Chunk-to-Task 聚合。
+**做什么**: 两阶段查询：Dense 搜 `tasks` 集合（task_summary 语义匹配） + Sparse（BM25/BGE-M3）搜 `chunks_cleaned_text` 集合并映射回 task → RRF 融合 → Qwen3-Reranker 精排 → Chunk 详情展开。
 
 **前置条件**:
 - Phase 3 产物（Qdrant 三个集合已填充）
@@ -208,16 +208,22 @@ export TRANSFORMERS_OFFLINE=1 && export HF_HUB_OFFLINE=1
 # 单次查询
 python3 src/code_p4_search_cli.py --query "FlashAttention 实现原理" --top-k 5
 
+# 跳过 Reranker（仅看粗排 RRF 效果）
+python3 src/code_p4_search_cli.py --query "FlashAttention 实现原理" --no-rerank
+
 # 交互式模式
-python3 src/code_p4_search_cli.py
+python3 src/code_p4_search_cli.py --interactive
 ```
 
-**输出**: 终端打印搜索结果（task_label, score, summary 摘要）
+**输出**: 终端打印搜索结果（task_label、rerank_score、hybrid_score、task_summary 及关联 chunk 摘要/预览）
 
-**配置** (`config/code_p3_config.yaml` 的 reranker 段):
+**配置** (`config/code_p3_config.yaml` 的 `reranker` 段，复用 `sparse.*`/`embedding.*`/`qdrant.*`):
 - `reranker.model` — Reranker 模型（默认 `Qwen/Qwen3-Reranker-0.6B`）
-- `reranker.device` — 推理设备（默认 `cpu`，可改 `mps`）
-- `search.rrf_k` — RRF 融合常数（默认 60）
+- `reranker.device` — 推理设备（默认 `cpu`，可改 `mps`/`cuda`）
+- `sparse.method` — 稀疏检索方法（`bm25` 或 `bge_m3`）
+- `sparse.fuse_k` — RRF 融合常数（默认 60）
+
+详见 `doc/code_p4_README.md`。
 
 ---
 
