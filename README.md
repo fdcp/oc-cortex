@@ -242,11 +242,12 @@ export OPENCODE_ZEN_API_KEY=$(python3 -c \
   "import json; d=json.load(open('$HOME/.local/share/opencode/auth.json')); print(d['opencode-go']['key'])")
 export TRANSFORMERS_OFFLINE=1 && export HF_HUB_OFFLINE=1
 
-# Triple 模式（默认，推荐）
+# Triple 模式（默认，推荐；由 config/code_p5_config.yaml 的 knowledge_graph.extraction_mode 决定）
 python3 src/code_p5_main.py 2>&1 | tee logs/phase5.log
 
-# Entity 模式（共现图谱）
-python3 src/code_p5_main.py --config config/code_p5_config.yaml --mode entity 2>&1 | tee logs/phase5_entity.log
+# Entity 模式（共现图谱；无 --mode 参数，需将配置文件 knowledge_graph.extraction_mode 改为 "entity"，
+# 或另存一份 config/code_p5_config_entity.yaml 并通过 --config 指定）
+python3 src/code_p5_main.py --config config/code_p5_config_entity.yaml 2>&1 | tee logs/phase5_entity.log
 
 # 跳过对齐 + 可视化
 python3 src/code_p5_main.py --skip-alignment --visualize
@@ -504,8 +505,9 @@ python3 src/code_p3_main.py 2>&1 | tee logs/phase3.log
 echo "=== Phase 5: 知识图谱 (triple) ==="
 python3 src/code_p5_main.py 2>&1 | tee logs/phase5.log
 
-echo "=== Phase 5: 知识图谱 (entity) ==="
-python3 src/code_p5_main.py --mode entity 2>&1 | tee logs/phase5_entity.log
+# Entity 模式无独立 --mode 参数，需要单独的配置文件（knowledge_graph.extraction_mode: entity）
+# echo "=== Phase 5: 知识图谱 (entity) ==="
+# python3 src/code_p5_main.py --config config/code_p5_config_entity.yaml 2>&1 | tee logs/phase5_entity.log
 
 echo ""
 echo "=== 完成! ==="
@@ -566,8 +568,10 @@ ls -la output/triple/knowledge_graph.db
 
 # ============================================================
 # Step 6: Phase 5 — 知识图谱 (Entity 模式, 可选)
+# 无独立 --mode 参数，需将 config/code_p5_config.yaml 的
+# knowledge_graph.extraction_mode 改为 "entity"（或另存一份指定 --config）
 # ============================================================
-python3 src/code_p5_main.py --config config/code_p5_config.yaml --mode entity 2>&1 | tee logs/phase5_entity.log
+python3 src/code_p5_main.py --config config/code_p5_config_entity.yaml 2>&1 | tee logs/phase5_entity.log
 
 # ============================================================
 # Step 7: Phase 6 — 跨 Session 总结
