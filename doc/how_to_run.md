@@ -335,7 +335,11 @@ Phase 1-3 已完成，Qdrant 数据已写入 `./qdrant_data/`。
 
 ```bash
 cd /path/to/oc_sess_graph
-python3 code_MS_inspect.py
+# 默认读取 config/code_p3_config.yaml (集合名/路径/模型均从配置读取)
+python3 src/code_MS_inspect.py
+
+# 可指定配置或调整样本数, 相对路径会回退到仓库根目录, 可从任意 CWD 运行
+python3 src/code_MS_inspect.py --config config/code_p3_config.yaml --samples 8
 ```
 
 ### 检视内容

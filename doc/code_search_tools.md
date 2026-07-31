@@ -48,7 +48,7 @@ python src/code_p3_search_demo.py --mode all --query "分布式训练通信优�
 
 ### 2. `code_MS_inspect.py` — 数据质检
 
-这是一个里程碑检视工具，包含 6 大功能模块，检索只是其中之一。它直接操作 `QdrantClient`，不依赖 `Phase3Store`，目的是验证数据和 embedding 的质量，而非提供日常搜索能力。
+这是一个里程碑检视工具，包含 6 大功能模块，检索只是其中之一。它直接操作 `QdrantClient`，不依赖 `Phase3Store`，目的是验证数据和 embedding 的质量，而非提供日常搜索能力。集合名、Qdrant 路径、embedding 模型以及输入文件路径全部从 Phase 3 配置（`config/code_p3_config.yaml`）读取，与流水线保持一致；相对路径会回退到仓库根目录解析，因此可从任意目录运行。
 
 **6 大功能模块：**
 
@@ -66,7 +66,11 @@ python src/code_p3_search_demo.py --mode all --query "分布式训练通信优�
 **典型用法：**
 
 ```bash
+# 默认读取 config/code_p3_config.yaml
 python src/code_MS_inspect.py
+
+# 指定配置 / 调整样本数
+python src/code_MS_inspect.py --config config/code_p3_config.yaml --samples 8
 ```
 
 ### 3. `code_p4_search_cli.py` — 检索产品
@@ -112,7 +116,7 @@ python src/code_p4_search_cli.py --query "优化器学习率" --no-rerank
 |------|---------|------------|--------|
 | 目标集合 | chunks_summary | tasks | tasks |
 | 检索对象 | chunk summary 文本 | task_summary 文本 | task_summary 文本 |
-| 模型 | 可切换 (bge-small-zh / Qwen3) | bge-small-zh (硬编码) | 由 config 决定 |
+| 模型 | 可切换 (bge-small-zh / Qwen3) | 由 config 决定 (embedding.model) | 由 config 决定 |
 | 用途 | 对比展示 | 命中率验证 | 生产检索 |
 
 ### Sparse 检索

@@ -76,3 +76,17 @@ session ses_10772d114... (omo 插件安装) 共 13 个 chunk，其中 5 个 (c3-
    - 修改 Phase 2 prompt，增加弹性模板
    - 修改 Phase 3 embedding 策略，减少冗余
 3. **检索质量回归测试**: 每次 prompt 修改后用 `code_MS_inspect.py` 的检索测试验证命中率不降
+
+### 检视工具本身的改进（已实施）
+
+原 `code_MS_inspect.py` 存在与项目规范不一致的问题，已修复：
+
+| 问题 | 原状 | 修复 |
+|------|------|------|
+| 硬编码相对路径 | `./qdrant_data`、`./output/*.jsonl` 写死，从 `src/` 运行会找不到文件 | 统一经 `Config`（`config/code_p3_config.yaml`）读取，相对路径回退到仓库根目录，可从任意 CWD 运行 |
+| 硬编码集合名 | `"tasks"`、`"chunks_summary"` 等字符串散落各函数 | 从 `qdrant.collections.*` 配置读取并逐层传参 |
+| 硬编码 embedding 模型 | 检索测试写死 `BAAI/bge-small-zh-v1.5` / `cpu` | 从 `embedding.model` / `embedding.device` / `embedding.cache_folder` 读取，与 Phase 3 保持一致 |
+| 缺少命令行参数 | 无 `argparse` | 新增 `--config` / `--samples`，符合项目 CLI 约定 |
+
+修复后行为等价（默认配置下输出不变），但避免了模型/集合名漂移，并可跨目录运行。
+

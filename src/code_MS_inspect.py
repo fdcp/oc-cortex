@@ -15,6 +15,7 @@ import json
 import sys
 import random
 import hashlib
+import argparse
 from pathlib import Path
 from collections import Counter
 
@@ -28,6 +29,18 @@ logger.remove()
 logger.add(sys.stderr, level="WARNING")
 
 from qdrant_client import QdrantClient
+
+# 复用 Phase 1 的全局配置加载器 (点号路径 + 脚本同目录回退)
+from code_p1_utils import Config
+
+# 仓库根目录 (src/ 的上一级), 用于解析相对路径, 使脚本可从任意 CWD 运行
+REPO_ROOT = Path(__file__).resolve().parent.parent
+
+
+def _resolve_path(p: str) -> Path:
+    """将配置中的相对路径解析为相对仓库根目录的绝对路径。"""
+    path = Path(p)
+    return path if path.is_absolute() else (REPO_ROOT / path)
 
 
 # ============================================================
@@ -82,9 +95,11 @@ def show_collection_stats(client: QdrantClient) -> None:
 # 2. 样本浏览
 # ============================================================
 
-def show_sample_payloads(client: QdrantClient, n: int = 5) -> None:
+def show_sample_payloads(client: QdrantClient, collections: dict, n: int = 5) -> None:
     section("2. 样本浏览")
-    for cname in ["tasks", "chunks_summary", "chunks_cleaned_text"]:
+    tasks_col = collections["tasks"]
+    summary_col = collections["chunks_summary"]
+    for cname in [tasks_col, summary_col, collections["chunks_cleaned_text"]]:
         subsection(f"集合: {cname}")
         try:
             info = client.get_collection(cname)
@@ -108,7 +123,7 @@ def show_sample_payloads(client: QdrantClient, n: int = 5) -> None:
         for i, pt in enumerate(samples, 1):
             pl = pt.payload or {}
             print(f"\n  [{i}] id={pt.id}")
-            if cname == "tasks":
+            if cname == tasks_col:
                 print(f"      task_id:    {pl.get('task_id', '?')}")
                 print(f"      session_id: {pl.get('session_id', '?')}")
                 print(f"      task_label: {pl.get('task_label', '?')}")
@@ -122,9 +137,8 @@ def show_sample_payloads(client: QdrantClient, n: int = 5) -> None:
                 print(f"      session_id: {pl.get('session_id', '?')}")
                 print(f"      turn_index: {pl.get('turn_index', '?')}")
                 print(f"      task_id:    {pl.get('task_id', '?')}")
-                if cname == "chunks_summary":
+                if cname == summary_col:
                     summary = pl.get("summary", "")
-                    print(f"      summary:    {summary[:120]}{'...' if len(summary) > 120 else ''}")
                 raw = pl.get("raw_size_tokens", 0)
                 cleaned = pl.get("cleaned_size_tokens", 0)
                 ratio = f"{cleaned/raw:.1%}" if raw > 0 else "N/A"
@@ -135,12 +149,15 @@ def show_sample_payloads(client: QdrantClient, n: int = 5) -> None:
 # 3. 数据分析
 # ============================================================
 
-def show_data_analysis(client: QdrantClient) -> None:
+def show_data_analysis(client: QdrantClient, collections: dict) -> None:
     section("3. 数据分析")
+
+    tasks_col = collections["tasks"]
+    summary_col = collections["chunks_summary"]
 
     # --- Tasks 分析 ---
     subsection("Tasks 分布")
-    task_points, _ = client.scroll("tasks", limit=1000, with_payload=True, with_vectors=False)
+    task_points, _ = client.scroll(tasks_col, limit=1000, with_payload=True, with_vectors=False)
     tasks_data = [p.payload for p in task_points if p.payload]
 
     session_counts = Counter(t.get("session_id", "?") for t in tasks_data)
@@ -173,10 +190,10 @@ def show_data_analysis(client: QdrantClient) -> None:
 
     # --- Chunks 分析 ---
     subsection("Chunks 分布")
-    chunk_points, _ = client.scroll("chunks_summary", limit=1000, with_payload=True, with_vectors=False)
+    chunk_points, _ = client.scroll(summary_col, limit=1000, with_payload=True, with_vectors=False)
     chunks_data = [p.payload for p in chunk_points if p.payload]
 
-    print(f"  总 chunk 数: {len(chunks_data)} (来源: chunks_summary)")
+    print(f"  总 chunk 数: {len(chunks_data)} (来源: {summary_col})")
 
     raws = [c.get("raw_size_tokens", 0) for c in chunks_data]
     cleans = [c.get("cleaned_size_tokens", 0) for c in chunks_data]
@@ -198,10 +215,11 @@ def show_data_analysis(client: QdrantClient) -> None:
 # 4. 向量近邻分析 (检查 embedding 质量)
 # ============================================================
 
-def show_neighbor_analysis(client: QdrantClient) -> None:
+def show_neighbor_analysis(client: QdrantClient, collections: dict) -> None:
     section("4. 向量近邻分析 (检查 embedding 语义聚类)")
 
-    task_points, _ = client.scroll("tasks", limit=1000, with_payload=True, with_vectors=True)
+    tasks_col = collections["tasks"]
+    task_points, _ = client.scroll(tasks_col, limit=1000, with_payload=True, with_vectors=True)
     if len(task_points) < 3:
         print("  Task 数量不足, 跳过")
         return
@@ -218,7 +236,7 @@ def show_neighbor_analysis(client: QdrantClient) -> None:
             vec = vec.get("dense", vec)
 
         hits = client.query_points(
-            collection_name="tasks",
+            collection_name=tasks_col,
             query=vec,
             limit=4,
             with_payload=True,
@@ -259,17 +277,20 @@ TEST_QUERIES = [
 ]
 
 
-def show_search_quality(client: QdrantClient) -> None:
+def show_search_quality(client: QdrantClient, collections: dict,
+                        model_name: str, device: str,
+                        cache_folder: str | None) -> None:
     section("5. 检索质量测试")
-    print("  使用 Dense 检索 (Cosine) 对 tasks 集合执行测试查询")
-    print("  (基于关键词匹配, 适应 LLM 标签变化)\n")
+    tasks_col = collections["tasks"]
+    print(f"  使用 Dense 检索 (Cosine) 对 {tasks_col} 集合执行测试查询")
+    print(f"  (模型: {model_name}, 基于关键词匹配, 适应 LLM 标签变化)\n")
 
     try:
         from sentence_transformers import SentenceTransformer
         encoder = SentenceTransformer(
-            "BAAI/bge-small-zh-v1.5",
-            device="cpu",
-            cache_folder=os.path.expanduser("~/.cache/huggingface/hub"),
+            model_name,
+            device=device,
+            cache_folder=cache_folder or os.path.expanduser("~/.cache/huggingface/hub"),
         )
     except Exception as e:
         print(f"  无法加载 embedding 模型: {e}")
@@ -281,7 +302,7 @@ def show_search_quality(client: QdrantClient) -> None:
     for query, keywords in TEST_QUERIES:
         qvec = encoder.encode([query], normalize_embeddings=True)[0].tolist()
         hits = client.query_points(
-            collection_name="tasks",
+            collection_name=tasks_col,
             query=qvec,
             limit=5,
             with_payload=True,
@@ -324,15 +345,11 @@ def show_search_quality(client: QdrantClient) -> None:
 # 6. Chunk Summary 质量抽样
 # ============================================================
 
-def show_summary_quality() -> None:
+def show_summary_quality(summaries_file: Path, chunks_file: Path, tasks_file: Path) -> None:
     section("6. Chunk Summary 质量抽样")
 
-    summaries_file = Path("./output/chunks_summary_p2.jsonl")
-    chunks_file = Path("./output/chunks.jsonl")
-    tasks_file = Path("./output/tasks.jsonl")
-
     if not summaries_file.exists():
-        print("  chunks_summary_p2.jsonl 不存在, 跳过")
+        print(f"  {summaries_file} 不存在, 跳过")
         return
 
     summaries = {}
@@ -392,25 +409,62 @@ def show_summary_quality() -> None:
 # ============================================================
 
 def main():
+    parser = argparse.ArgumentParser(
+        description="Qdrant 数据检视 / 检索质量评估 (里程碑工具)"
+    )
+    parser.add_argument(
+        "--config", default="config/code_p3_config.yaml",
+        help="Phase 3 配置文件 (默认 config/code_p3_config.yaml, 复用集合/模型/路径设置)",
+    )
+    parser.add_argument(
+        "-n", "--samples", type=int, default=5,
+        help="样本浏览每个集合抽取的点数 (默认 5)",
+    )
+    args = parser.parse_args()
+
+    # 解析配置路径: 支持从任意 CWD 运行 (相对路径回退到仓库根目录)
+    config_path = Path(args.config)
+    if not config_path.exists() and not config_path.is_absolute():
+        config_path = REPO_ROOT / args.config
+    config = Config.load(str(config_path))
+
+    # 从配置读取集合名 / 路径 / 模型, 不再硬编码
+    collections = {
+        "tasks": config.get("qdrant.collections.tasks", "tasks"),
+        "chunks_summary": config.get("qdrant.collections.chunks_summary", "chunks_summary"),
+        "chunks_cleaned_text": config.get(
+            "qdrant.collections.chunks_cleaned_text", "chunks_cleaned_text"
+        ),
+    }
+    qdrant_path = _resolve_path(config.get("qdrant.path", "./qdrant_data"))
+    model_name = config.get("embedding.model", "BAAI/bge-small-zh-v1.5")
+    device = config.get("embedding.device", "cpu")
+    cache_folder = config.get("embedding.cache_folder", None)
+
+    summaries_file = _resolve_path(
+        config.get("phase2.chunk_summaries_file", "./output/chunks_summary_p2.jsonl")
+    )
+    chunks_file = _resolve_path(config.get("phase1.chunks_file", "./output/chunks.jsonl"))
+    tasks_file = _resolve_path(config.get("phase2.tasks_file", "./output/tasks.jsonl"))
+
     print("+" + "-"*54 + "+")
-    print("|  Qdrant 数据检视 -- 里程碑第5步                    |")
-    print("|  嵌入式 Qdrant (./qdrant_data)                     |")
+    print("|  Qdrant 数据检视 -- 里程碑检视工具                 |")
+    print(f"|  嵌入式 Qdrant ({qdrant_path})")
     print("+" + "-"*54 + "+")
 
-    qdrant_path = "./qdrant_data"
-    if not Path(qdrant_path).exists():
+    if not qdrant_path.exists():
         print(f"\nQdrant 数据目录不存在: {qdrant_path}")
         print("请先运行 code_p3_main.py 写入数据")
         sys.exit(1)
 
-    client = QdrantClient(path=qdrant_path)
+    client = QdrantClient(path=str(qdrant_path))
 
     show_collection_stats(client)
-    show_sample_payloads(client, n=5)
-    show_data_analysis(client)
-    show_neighbor_analysis(client)
-    show_search_quality(client)
-    show_summary_quality()
+    show_sample_payloads(client, collections, n=args.samples)
+    show_data_analysis(client, collections)
+    show_neighbor_analysis(client, collections)
+    show_search_quality(client, collections, model_name, device, cache_folder)
+    show_summary_quality(summaries_file, chunks_file, tasks_file)
 
     section("检视完成")
     print("  后续建议:")
