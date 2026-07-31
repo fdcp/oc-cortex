@@ -16,12 +16,12 @@ context:
 
 # --- Claude Code ---
 # 方法 1: 命令行添加
-#   claude mcp add knowledge-graph python3 /path/to/code_mcp_server.py
+#   claude mcp add knowledge-graph python3 /path/to/src/code_mcp_server.py
 # 方法 2: 手动编辑 ~/.claude/claude_desktop_config.json
 #   "mcpServers": {
 #     "knowledge-graph": {
 #       "command": "python3",
-#       "args": ["/Users/zhaoxiuwei/Desktop/oc_sess_graph/code_mcp_server.py"],
+#       "args": ["/Users/zhaoxiuwei/Desktop/oc_sess_graph/src/code_mcp_server.py"],
 #       "env": {
 #         "OPENCODE_ZEN_API_KEY": "<your-key>"
 #       }
@@ -33,7 +33,7 @@ context:
 #   "mcpServers": {
 #     "knowledge-graph": {
 #       "command": "python3",
-#       "args": ["/Users/zhaoxiuwei/Desktop/oc_sess_graph/code_mcp_server.py"],
+#       "args": ["/Users/zhaoxiuwei/Desktop/oc_sess_graph/src/code_mcp_server.py"],
 #       "env": {
 #         "OPENCODE_ZEN_API_KEY": "<your-key>"
 #       }
@@ -46,7 +46,7 @@ context:
 #     "mcpServers": {
 #       "knowledge-graph": {
 #         "command": "python3",
-#         "args": ["/Users/zhaoxiuwei/Desktop/oc_sess_graph/code_mcp_server.py"],
+#         "args": ["/Users/zhaoxiuwei/Desktop/oc_sess_graph/src/code_mcp_server.py"],
 #         "env": {
 #           "OPENCODE_ZEN_API_KEY": "<your-key>"
 #         }
@@ -58,5 +58,5 @@ context:
 # 在 QoderWork 设置 → MCP Servers 中添加:
 #   名称: knowledge-graph
 #   命令: python3
-#   参数: /Users/zhaoxiuwei/Desktop/oc_sess_graph/code_mcp_server.py
+#   参数: /Users/zhaoxiuwei/Desktop/oc_sess_graph/src/code_mcp_server.py
 #   环境变量: OPENCODE_ZEN_API_KEY=<your-key>

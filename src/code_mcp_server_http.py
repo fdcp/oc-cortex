@@ -37,8 +37,8 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# 默认数据库路径 (Phase 5 triple 模式产出)
-DEFAULT_DB_PATH = "output/triple/knowledge_graph.db"
+# 默认数据库路径（仅在 config/code_mcp_config.yaml 缺失时使用，与该配置文件的默认值保持一致）
+DEFAULT_DB_PATH = "output/entity/knowledge_graph.db"
 
 
 def _load_config() -> dict:

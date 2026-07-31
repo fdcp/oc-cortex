@@ -9,10 +9,10 @@
 
 | 文件 | 说明 |
 |------|------|
-| `code_mcp_server.py` | 标准 MCP Server（stdio/SSE/streamable-http 三种传输可选） |
-| `code_mcp_server_http.py` | HTTP REST 版本（调试/备用，非标准 MCP） |
-| `code_mcp_client.py` | Python 客户端：实体抽取 + `ContextInjector` 上下文注入器 |
-| `code_mcp_config.yaml` | 服务配置 + 各客户端 MCP 配置示例 |
+| `src/code_mcp_server.py` | 标准 MCP Server（stdio/SSE/streamable-http 三种传输可选） |
+| `src/code_mcp_server_http.py` | HTTP REST 版本（调试/备用，非标准 MCP） |
+| `src/code_mcp_client.py` | Python 客户端：实体抽取 + `ContextInjector` 上下文注入器 |
+| `config/code_mcp_config.yaml` | 服务配置 + 各客户端 MCP 配置示例 |
 
 ### MCP 工具
 
@@ -37,9 +37,9 @@ pip3 install mcp[cli] pyyaml --quiet
 # 进入项目目录
 cd ~/Desktop/oc_sess_graph
 
-# 确保 Phase 5 数据已生成
-ls output/triple/knowledge_graph.db
-# 如果不存在: python3 code_p5_main.py --limit 10
+# 确保 Phase 5 数据已生成（MCP 默认使用 entity 模式的图谱，见 config/code_mcp_config.yaml）
+ls output/entity/knowledge_graph.db
+# 如果不存在: python3 src/code_p5_main.py --mode entity --limit 10
 ```
 
 #### 1. Claude Code 接入
@@ -47,7 +47,7 @@ ls output/triple/knowledge_graph.db
 ```bash
 # 方法 1: 命令行添加（推荐）
 claude mcp add knowledge-graph \
-  python3 /Users/zhaoxiuwei/Desktop/oc_sess_graph/code_mcp_server.py \
+  python3 /Users/zhaoxiuwei/Desktop/oc_sess_graph/src/code_mcp_server.py \
   -e OPENCODE_ZEN_API_KEY "$(python3 -c \
     "import json; d=json.load(open('$HOME/.local/share/opencode/auth.json')); print(d['opencode-go']['key'])")"
 
@@ -66,7 +66,7 @@ claude mcp list
   "mcpServers": {
     "knowledge-graph": {
       "command": "python3",
-      "args": ["/Users/zhaoxiuwei/Desktop/oc_sess_graph/code_mcp_server.py"],
+      "args": ["/Users/zhaoxiuwei/Desktop/oc_sess_graph/src/code_mcp_server.py"],
       "env": {
         "OPENCODE_ZEN_API_KEY": "<your-key>"
       }
@@ -83,7 +83,7 @@ claude mcp list
   "mcpServers": {
     "knowledge-graph": {
       "command": "python3",
-      "args": ["/Users/zhaoxiuwei/Desktop/oc_sess_graph/code_mcp_server.py"],
+      "args": ["/Users/zhaoxiuwei/Desktop/oc_sess_graph/src/code_mcp_server.py"],
       "env": {
         "OPENCODE_ZEN_API_KEY": "<your-key>"
       }
@@ -100,7 +100,7 @@ claude mcp list
   "mcpServers": {
     "knowledge-graph": {
       "command": "python3",
-      "args": ["/Users/zhaoxiuwei/Desktop/oc_sess_graph/code_mcp_server.py"],
+      "args": ["/Users/zhaoxiuwei/Desktop/oc_sess_graph/src/code_mcp_server.py"],
       "env": {
         "OPENCODE_ZEN_API_KEY": "<your-key>"
       }
@@ -118,7 +118,7 @@ claude mcp list
   "mcpServers": {
     "knowledge-graph": {
       "command": "python3",
-      "args": ["/Users/zhaoxiuwei/Desktop/oc_sess_graph/code_mcp_server.py"],
+      "args": ["/Users/zhaoxiuwei/Desktop/oc_sess_graph/src/code_mcp_server.py"],
       "cwd": "/Users/zhaoxiuwei/Desktop/oc_sess_graph",
       "env": {
         "OPENCODE_ZEN_API_KEY": "<your-key>"
@@ -134,7 +134,7 @@ claude mcp list
 
 ```bash
 # 使用 MCP Inspector 交互式测试工具
-npx @modelcontextprotocol/inspector python3 code_mcp_server.py
+npx @modelcontextprotocol/inspector python3 src/code_mcp_server.py
 
 # 浏览器打开后：
 # 1. 点击 "Tools" 标签查看 5 个工具定义
@@ -146,26 +146,29 @@ npx @modelcontextprotocol/inspector python3 code_mcp_server.py
 
 ```bash
 # 以 streamable-http 模式启动（适合 curl 调试）
-python3 code_mcp_server.py --http &
+python3 src/code_mcp_server.py --http &
 # 服务运行在 http://127.0.0.1:8000/mcp
 
 # 或以 SSE 模式启动
-python3 code_mcp_server.py --sse &
+python3 src/code_mcp_server.py --sse &
 # SSE 端点: http://127.0.0.1:8000/sse
 ```
 
 #### 7. Client CLI 验证
 
 ```bash
+# 前置：先启动 HTTP 版本 Server（code_mcp_client.py 通过 HTTP 调用）
+python3 src/code_mcp_server_http.py &
+
 # 设置 API Key（context 命令需要 LLM 抽取实体）
 export OPENCODE_ZEN_API_KEY=$(python3 -c \
   "import json; d=json.load(open('$HOME/.local/share/opencode/auth.json')); print(d['opencode-go']['key'])")
 
-# BFS 查询（通过 code_mcp_client.py，调用 HTTP 版本）
-python3 code_mcp_client.py query OpenCode 2
+# BFS 查询（通过 src/code_mcp_client.py，调用 HTTP 版本）
+python3 src/code_mcp_client.py query OpenCode 2
 
 # 上下文注入演示
-python3 code_mcp_client.py context "继续搞 RoPE 位置编码的优化"
+python3 src/code_mcp_client.py context "继续搞 RoPE 位置编码的优化"
 # 预期:
 #   查询: 继续搞 RoPE 位置编码的优化
 #   实体: ['RoPE', '位置编码'] → 命中: ['RoPE位置编码']

@@ -390,7 +390,7 @@ python3 src/code_p6b_cli.py summary "FlashAttention" --max-tasks 5 --hops 2 --js
 **做什么**: 将知识图谱封装为标准 MCP Server（JSON-RPC 2.0 over stdio），提供 5 个工具供 Claude Code / Codex / OpenCode / QoderWork 直接加载。
 
 **前置条件**:
-- Phase 5e: `output/triple/knowledge_graph.db`
+- Phase 5: `output/entity/knowledge_graph.db`（默认配置，见 `config/code_mcp_config.yaml` 的 `server.db_path`）
 - `pip install mcp` 已安装
 
 **工具列表**:

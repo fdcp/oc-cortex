@@ -44,8 +44,8 @@ from code_p5e_db import KGDatabase
 logger.remove()
 logger.add(sys.stderr, level="INFO", format="{time:HH:mm:ss} | {level} | {message}")
 
-# 默认数据库路径
-DEFAULT_DB_PATH = "output/triple/knowledge_graph.db"
+# 默认数据库路径（仅在 config/code_mcp_config.yaml 缺失时使用，与该配置文件的默认值保持一致）
+DEFAULT_DB_PATH = "output/entity/knowledge_graph.db"
 
 
 def _load_config() -> dict:
