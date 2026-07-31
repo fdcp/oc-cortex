@@ -8,47 +8,61 @@ version: 1.0.0
 
 Run multi-model comparison tests for Phase 2 task extraction (CoT 3-step: per-turn summarize → task identify → turn-to-task assign). Reuses `tests/test_p2/test_p2.py` from the project.
 
+Model / endpoint / auth settings are centralized in `tests/test_p2/config.yaml` and loaded **in order**. Results are written to a dated subfolder under `tests/test_p2/`.
+
 ## Prerequisites
 
 - Project at `~/Desktop/oc_sess_graph` with `output/chunks.jsonl` (Phase 1 output)
-- OpenCode Zen API key available at `~/.local/share/opencode/auth.json`
+- OpenCode API key available at `~/.local/share/opencode/auth.json` (managed by the opencode client)
+
+## Endpoints & models (2026-07 status)
+
+| Endpoint key | base_url | auth provider | Example models |
+|--------------|----------|---------------|----------------|
+| `zen` | `https://opencode.ai/zen/v1` | `opencode-go` | `deepseek-v4-flash-free`, `mimo-v2.5-free`, `nemotron-3-ultra-free` |
+| `go` | `https://opencode.ai/zen/go/v1` | `opencode-go` | `hy3`, `glm-5.2`, `kimi-k3` |
+
+> **Note**: `hy3-free` was removed from the Zen free tier. `hy3` is now only available via the **OpenCode Go** subscription endpoint (`.../zen/go/v1`, model ID `hy3`). The test config already routes it correctly.
 
 ## Workflow
 
-### Step 1: Set up API key
+### Step 1: Review / edit the config
 
-```bash
-export OPENCODE_ZEN_API_KEY=$(python3 -c \
-  "import json; d=json.load(open('$HOME/.local/share/opencode/auth.json')); print(d['opencode-go']['key'])")
+`tests/test_p2/config.yaml` holds the auth file path, endpoint definitions, the ordered `models` list (each with a `name` + `endpoint`), and extractor params. No env-var export is needed — the script reads keys directly from `auth.json`.
+
+To add/reorder/swap models, edit the `models:` list. Each entry:
+
+```yaml
+models:
+  - name: "hy3"
+    endpoint: "go"
+  - name: "nemotron-3-ultra-free"
+    endpoint: "zen"
 ```
 
-### Step 2: Determine models
-
-- If the user specified models → use those
-- Otherwise → use defaults: `nemotron-3-ultra-free`, `deepseek-v4-flash-free`, `mimo-v2.5-free`, `hy3-free`
-- All models must be OpenCode Zen compatible (endpoint: `https://opencode.ai/zen/v1`)
-
-### Step 3: Run the test
+### Step 2: Run the test
 
 ```bash
 cd ~/Desktop/oc_sess_graph
 
-# With user-specified models
-python3 tests/test_p2/test_p2.py \
-  --models <model1> <model2> ... \
-  --sessions 100 \
-  --concurrency 8
-
-# With defaults (omit --models)
+# All models from config.yaml (in order), all sessions, 8 threads
 python3 tests/test_p2/test_p2.py --sessions 100 --concurrency 8
+
+# Override the model list (endpoint/auth still resolved from config.yaml)
+python3 tests/test_p2/test_p2.py --models hy3 nemotron-3-ultra-free --sessions 100
+
+# Quick smoke test (3 representative sessions)
+python3 tests/test_p2/test_p2.py --sessions 3
 ```
 
 **Parameter guidance:**
 - `--sessions 100` → use all sessions (the script picks all if >= total count)
 - `--sessions 3` → quick smoke test with 3 representative sessions
 - `--concurrency 8` → 8 parallel threads per model (free tier may rate-limit; reduce to 1~4 if errors occur)
+- `--config <path>` → use an alternate config file
+- `--models ...` → override the config model list (order preserved; unknown models fall back to the first endpoint)
 
-### Step 4: Analyze results
+### Step 3: Analyze results
 
 The script outputs a comparison table to stdout covering:
 
@@ -63,30 +77,31 @@ The script outputs a comparison table to stdout covering:
 | Chunk覆盖 | % of chunks assigned to at least one task |
 | Summary覆盖 | % of chunks that got a chunk_summary |
 
-### Step 5: Write report
+### Step 4: Results output
 
-Save a markdown report to `tests/test_p2/test_p2_models.md` including:
-1. Test config (models, sessions, concurrency, date)
-2. The comparison table from stdout
-3. Per-session latency breakdown (from `tests/test_p2/results.json`)
-4. Quality sample: pick one 5-chunk session, show each model's task output side-by-side
-5. Analysis: speed ranking, quality ranking, stability, chunk_id accuracy
-6. Recommendation table by use case
+The script **automatically** writes to a dated subfolder `tests/test_p2/run_<YYYY-MM-DD_HH-MM>/`:
+
+- `test_p2_results.json` — full per-session detailed results (config, model specs, stats, per-task output)
+- `test_p2_models.md` — auto-generated Markdown report (same format as the reference `test_p2_models.md`): test config, comparison table, and analysis conclusions
+
+You may further enrich the generated `test_p2_models.md` by hand (e.g. per-session latency breakdown, side-by-side quality samples for one 5-chunk session, chunk_id accuracy notes) using data from `test_p2_results.json`.
 
 ## Key source files
 
 | File | Role |
 |------|------|
-| `tests/test_p2/test_p2.py` | Main test script (accepts `--models`, `--sessions`, `--concurrency`, `--output`) |
+| `tests/test_p2/config.yaml` | Model / endpoint / auth config, loaded in order |
+| `tests/test_p2/test_p2.py` | Main test script (accepts `--config`, `--models`, `--sessions`, `--concurrency`, `--output-dir`) |
 | `src/code_p2_task_extractor.py` | Phase 2 extractor with `SESSION_TASK_PROMPT` and `TaskExtractor` class |
 | `src/code_p2_models.py` | `Task` dataclass |
 | `output/chunks.jsonl` | Phase 1 output — test input data |
-| `tests/test_p2/results.json` | Detailed per-session results (JSON) |
-| `tests/test_p2/test_p2_models.md` | Test report (overwrite with fresh results) |
+| `tests/test_p2/run_<date>/test_p2_results.json` | Detailed per-session results (JSON) |
+| `tests/test_p2/run_<date>/test_p2_models.md` | Auto-generated test report |
 
 ## Pitfalls
 
 - Free-tier models may rate-limit at high concurrency. If `429 Too Many Requests` errors appear, reduce `--concurrency` to 1~4.
-- DeepSeek reasoning models may produce truncated JSON (reasoning tokens consume output budget). The test script has automatic JSON repair and content-retry built in.
+- `hy3` (Go endpoint) is a reasoning model — thinking tokens consume output budget and may truncate JSON. The extractor has automatic JSON repair, `reasoning_content` fallback, and content-retry built in. It is also slower per session (~45-50s) than the Zen free models.
 - Always use `--sessions 100` (or a number >= total sessions) for a full benchmark. Small samples (3~5) are only for smoke testing.
-- The test is slow: 16 sessions × 4 models serially takes ~30-40 minutes. With `--concurrency 8` it drops to ~15 minutes per model.
+- If a key can't be resolved, check that the `auth_provider` in `config.yaml` matches an entry in `auth.json` (currently `opencode-go`).
+- The test is slow: 16 sessions × 4 models serially can take ~30-40 minutes. With `--concurrency 8` it drops to ~15 minutes per model.

@@ -8,21 +8,24 @@ Phase 2 多模型对比测试
   - 完整性: chunk_summary 覆盖率 + chunk 任务归属覆盖率
   - 质量: task label 平均长度, task summary 平均长度, task 数量合理性
 
-用法:
-  # 设置 API key
-  export OPENCODE_ZEN_API_KEY=$(python3 -c "import json; d=json.load(open('$HOME/.local/share/opencode/auth.json')); print(d['opencode-go']['key'])")
+模型 / 端点 / 认证配置集中在 tests/test_p2/config.yaml 中,
+按 models 列表顺序依次加载测试。
 
-  # 运行测试 (默认 4 个模型, 5 个 session)
+用法:
+  # 直接运行 (读取 tests/test_p2/config.yaml, 全部模型, 5 个 session)
   python3 tests/test_p2/test_p2.py
 
-  # 指定模型
-  python3 tests/test_p2/test_p2.py --models hy3-free nemotron-3-ultra-free
+  # 只测指定模型 (覆盖 config.yaml 的 models 列表, 端点/认证仍从 config 解析)
+  python3 tests/test_p2/test_p2.py --models hy3 nemotron-3-ultra-free
 
   # 全量 session + 8 并发
   python3 tests/test_p2/test_p2.py --sessions 100 --concurrency 8
 
-  # 指定输出文件
-  python3 tests/test_p2/test_p2.py --output tests/test_p2/my_results.json
+  # 指定配置文件
+  python3 tests/test_p2/test_p2.py --config tests/test_p2/config.yaml
+
+  # 指定输出根目录 (默认 tests/test_p2/, 实际结果写入带日期的子文件夹)
+  python3 tests/test_p2/test_p2.py --output-dir tests/test_p2
 """
 
 import argparse
@@ -34,6 +37,8 @@ import time
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
+
+import yaml
 
 # 添加 src 到路径 (tests/test_p2/ -> tests/ -> project root)
 _project_root = Path(__file__).resolve().parent.parent.parent
@@ -50,16 +55,77 @@ from code_p2_models import Task
 # 配置
 # ============================================================
 
-DEFAULT_MODELS = [
-    "nemotron-3-ultra-free",
-    "deepseek-v4-flash-free",
-    "mimo-v2.5-free",
-    "hy3-free",
-]
-
+DEFAULT_CONFIG_FILE = str(Path(__file__).resolve().parent / "config.yaml")
 CHUNKS_FILE = str(_project_root / "output" / "chunks.jsonl")
-BASE_URL = "https://opencode.ai/zen/v1"
-API_KEY_ENV = "OPENCODE_ZEN_API_KEY"
+
+
+def load_test_config(config_path: str) -> dict:
+    """加载测试配置 (模型 / 端点 / 认证)"""
+    with open(config_path, "r", encoding="utf-8") as f:
+        cfg = yaml.safe_load(f)
+    return cfg
+
+
+def resolve_api_key(auth_file: str, provider: str) -> str:
+    """从 opencode auth.json 中解析指定 provider 的 API Key"""
+    path = Path(os.path.expanduser(auth_file))
+    if not path.exists():
+        logger.error(f"认证文件不存在: {path}")
+        return ""
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data.get(provider, {}).get("key", "")
+    except (json.JSONDecodeError, KeyError) as e:
+        logger.error(f"解析认证文件失败 ({provider}): {e}")
+        return ""
+
+
+def build_model_specs(cfg: dict, override_models: list[str] | None) -> list[dict]:
+    """
+    根据配置构建待测模型规格列表, 每项含:
+      {name, base_url, api_key, auth_provider, endpoint}
+    按 config.yaml models 顺序; 若 --models 覆盖, 则用覆盖列表的顺序,
+    端点/认证从 config.endpoints 中按模型的 endpoint 字段解析
+    (覆盖模型若不在 config 中, 默认走第一个端点)。
+    """
+    endpoints = cfg.get("endpoints", {})
+    auth_file = cfg.get("auth_file", "~/.local/share/opencode/auth.json")
+    configured = {m["name"]: m for m in cfg.get("models", [])}
+
+    if override_models:
+        default_ep = next(iter(endpoints), None)
+        model_entries = []
+        for name in override_models:
+            if name in configured:
+                model_entries.append(configured[name])
+            else:
+                logger.warning(
+                    f"模型 {name} 不在 config.yaml 中, 默认使用端点 '{default_ep}'"
+                )
+                model_entries.append({"name": name, "endpoint": default_ep})
+    else:
+        model_entries = cfg.get("models", [])
+
+    # 缓存每个 provider 的 key, 避免重复读盘
+    key_cache: dict[str, str] = {}
+    specs = []
+    for entry in model_entries:
+        name = entry["name"]
+        ep_name = entry.get("endpoint")
+        ep = endpoints.get(ep_name, {})
+        base_url = ep.get("base_url", "")
+        provider = ep.get("auth_provider", "")
+        if provider not in key_cache:
+            key_cache[provider] = resolve_api_key(auth_file, provider)
+        specs.append({
+            "name": name,
+            "endpoint": ep_name,
+            "base_url": base_url,
+            "auth_provider": provider,
+            "api_key": key_cache[provider],
+        })
+    return specs
 
 
 # ============================================================
@@ -190,25 +256,36 @@ def evaluate_quality(tasks: list[Task], chunks: list[Chunk]) -> dict:
 
 def run_test(
     num_sessions: int = 5,
-    output_file: str = "tests/test_p2/results.json",
+    output_dir: str = "tests/test_p2",
     concurrency: int = 1,
-    models: list[str] | None = None,
+    config_path: str = DEFAULT_CONFIG_FILE,
+    override_models: list[str] | None = None,
 ):
     """运行多模型对比测试"""
 
-    # 0. 确定测试模型列表
-    models = models or DEFAULT_MODELS
+    # 0. 加载测试配置 (模型 / 端点 / 认证)
+    logger.info(f"加载测试配置: {config_path}")
+    cfg = load_test_config(config_path)
+    model_specs = build_model_specs(cfg, override_models)
+    ext_cfg = cfg.get("extractor", {})
 
-    # 1. 检查 API key
-    api_key = os.environ.get(API_KEY_ENV, "")
-    if not api_key:
-        logger.error(f"请设置环境变量 {API_KEY_ENV}")
-        logger.info(
-            f"  export {API_KEY_ENV}=$(python3 -c "
-            f"\"import json; d=json.load(open('$HOME/.local/share/opencode/auth.json')); "
-            f"print(d['opencode-go']['key'])\")"
-        )
+    if not model_specs:
+        logger.error("没有可测试的模型, 请检查 config.yaml 的 models 列表")
         sys.exit(1)
+
+    # 1. 校验每个模型的 API key
+    for spec in model_specs:
+        if not spec["api_key"]:
+            logger.error(
+                f"模型 {spec['name']} (provider={spec['auth_provider']}) "
+                f"未能从认证文件解析到 API Key, 请检查 "
+                f"{cfg.get('auth_file')}"
+            )
+            sys.exit(1)
+    logger.info(
+        "待测模型: "
+        + ", ".join(f"{s['name']}@{s['endpoint']}" for s in model_specs)
+    )
 
     # 2. 加载数据
     logger.info(f"加载 chunks: {CHUNKS_FILE}")
@@ -224,10 +301,12 @@ def run_test(
     # 4. 逐模型测试
     results = {}  # model -> {session_id -> result}
     model_stats = {}  # model -> aggregate stats
+    models = [s["name"] for s in model_specs]
 
-    for model in models:
+    for spec in model_specs:
+        model = spec["name"]
         logger.info("=" * 60)
-        logger.info(f"测试模型: {model}")
+        logger.info(f"测试模型: {model}  (端点={spec['endpoint']}: {spec['base_url']})")
         logger.info("=" * 60)
 
         model_results = {}
@@ -240,14 +319,15 @@ def run_test(
 
         extractor = TaskExtractor(
             model=model,
-            api_key=api_key,
-            base_url=BASE_URL,
-            max_retries=2,
-            content_retries=2,
-            timeout=120,
-            max_tokens_per_chunk=2000,
-            max_total_prompt_tokens=30000,
+            api_key=spec["api_key"],
+            base_url=spec["base_url"],
+            max_retries=ext_cfg.get("max_retries", 2),
+            content_retries=ext_cfg.get("content_retries", 2),
+            timeout=ext_cfg.get("timeout", 120),
+            max_tokens_per_chunk=ext_cfg.get("max_tokens_per_chunk", 2000),
+            max_total_prompt_tokens=ext_cfg.get("max_total_prompt_tokens", 30000),
             concurrency=concurrency,
+            temperature=ext_cfg.get("temperature", 0.3),
         )
 
         for sid, chunks in sessions_chunks.items():
@@ -348,9 +428,12 @@ def run_test(
     # 5. 输出对比表
     print_comparison_table(model_stats)
 
-    # 6. 保存详细结果
-    output_path = Path(output_file)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
+    # 6. 保存详细结果到带日期的子文件夹
+    #    tests/test_p2/run_<YYYY-MM-DD_HH-MM>/
+    run_ts = datetime.now()
+    run_dir = Path(output_dir) / f"run_{run_ts.strftime('%Y-%m-%d_%H-%M')}"
+    run_dir.mkdir(parents=True, exist_ok=True)
+    output_path = run_dir / "test_p2_results.json"
 
     # 序列化 results (Task 对象转 dict)
     serializable_results = {}
@@ -362,9 +445,15 @@ def run_test(
             serializable_results[model][sid] = r
 
     output_data = {
-        "test_time": datetime.now().isoformat(),
+        "test_time": run_ts.isoformat(),
+        "config_file": str(config_path),
         "models": models,
+        "model_specs": [
+            {"name": s["name"], "endpoint": s["endpoint"], "base_url": s["base_url"]}
+            for s in model_specs
+        ],
         "num_sessions": num_sessions,
+        "concurrency": concurrency,
         "sessions": {sid: len(chunks) for sid, chunks in sessions_chunks.items()},
         "model_stats": model_stats,
         "detailed_results": serializable_results,
@@ -375,7 +464,87 @@ def run_test(
 
     logger.info(f"\n详细结果已保存到: {output_path}")
 
+    # 7. 生成 Markdown 报告 (与 test_p2_models.md 同格式/位置)
+    report_path = run_dir / "test_p2_models.md"
+    write_markdown_report(report_path, output_data, model_specs, config_path)
+    logger.info(f"测试报告已生成: {report_path}")
+
     return model_stats
+
+
+def write_markdown_report(
+    report_path: Path,
+    output_data: dict,
+    model_specs: list[dict],
+    config_path: str,
+):
+    """生成 Markdown 对比报告 (结构对齐 test_p2_models.md)"""
+    stats = output_data["model_stats"]
+    models = output_data["models"]
+    sessions = output_data["sessions"]
+    run_time = output_data["test_time"]
+
+    lines: list[str] = []
+    lines.append("# Phase 2 多模型对比测试报告\n")
+    lines.append("## 测试概要\n")
+    lines.append(f"- **测试时间**: {run_time}")
+    lines.append(f"- **配置文件**: `{config_path}`")
+    lines.append(f"- **测试样本**: {output_data['num_sessions']} 个 session（实测 {len(sessions)} 个）")
+    lines.append(f"- **并发数**: {output_data['concurrency']}")
+    lines.append("- **测试模型 / 端点**:")
+    for s in model_specs:
+        lines.append(f"  - `{s['name']}` @ {s['endpoint']} (`{s['base_url']}`)")
+    lines.append("- **测试脚本**: `tests/test_p2/test_p2.py`\n")
+
+    lines.append("## 复现方法\n")
+    lines.append("```bash")
+    lines.append("cd ~/Desktop/oc_sess_graph")
+    lines.append("# 模型 / 端点 / 认证配置见 tests/test_p2/config.yaml")
+    lines.append(
+        f"python3 tests/test_p2/test_p2.py --sessions {output_data['num_sessions']} "
+        f"--concurrency {output_data['concurrency']}"
+    )
+    lines.append("```\n")
+
+    # 汇总对比表
+    lines.append("## 汇总对比表\n")
+    header = "| 指标 | " + " | ".join(models) + " |"
+    sep = "|------|" + "|".join(["------"] * len(models)) + "|"
+    lines.append(header)
+    lines.append(sep)
+
+    def row(label: str, fmt):
+        cells = " | ".join(fmt(stats[m]) for m in models)
+        return f"| **{label}** | {cells} |"
+
+    lines.append(row("成功率", lambda s: f"{s['success_rate']:.0%} ({s['success']}/{s['total_sessions']})"))
+    lines.append(row("平均耗时(s)", lambda s: f"{s['avg_latency_s']:.1f}"))
+    lines.append(row("总耗时(s)", lambda s: f"{s['total_latency_s']:.1f}"))
+    lines.append(row("总 Task 数", lambda s: f"{s['total_tasks']}"))
+    lines.append(row("平均 Task/session", lambda s: f"{s['avg_tasks_per_session']:.1f}"))
+    lines.append(row("Label 均长(字)", lambda s: f"{s['avg_label_len']:.0f}"))
+    lines.append(row("Summary 均长(字)", lambda s: f"{s['avg_summary_len']:.0f}"))
+    lines.append(row("Chunk 覆盖率", lambda s: f"{s['avg_chunk_coverage']:.0%}"))
+    lines.append(row("Summary 覆盖率", lambda s: f"{s['avg_summary_coverage']:.0%}"))
+    lines.append(row("不完整", lambda s: f"{s['incomplete']}"))
+    lines.append(row("失败", lambda s: f"{s['failed']}"))
+    lines.append("")
+
+    # 分析结论
+    lines.append("## 分析结论\n")
+    best_speed = min(stats.items(), key=lambda x: x[1]["avg_latency_s"])
+    best_quality = max(stats.items(), key=lambda x: x[1]["avg_summary_len"])
+    best_cov = max(stats.items(), key=lambda x: x[1]["avg_summary_coverage"])
+    best_success = max(stats.items(), key=lambda x: x[1]["success_rate"])
+    lines.append(f"- **最快**: `{best_speed[0]}` (平均 {best_speed[1]['avg_latency_s']:.1f}s/session)")
+    lines.append(f"- **Summary 最详细**: `{best_quality[0]}` (平均 {best_quality[1]['avg_summary_len']:.0f} 字)")
+    lines.append(f"- **Summary 覆盖最高**: `{best_cov[0]}` ({best_cov[1]['avg_summary_coverage']:.0%})")
+    lines.append(f"- **成功率最高**: `{best_success[0]}` ({best_success[1]['success_rate']:.0%})\n")
+
+    lines.append("## 附录\n")
+    lines.append("- 详细 JSON 结果: `test_p2_results.json` (同目录)")
+
+    report_path.write_text("\n".join(lines), encoding="utf-8")
 
 
 def print_comparison_table(model_stats: dict):
@@ -442,8 +611,12 @@ if __name__ == "__main__":
         help="测试的 session 数量 (默认 5, 从不同大小中采样)",
     )
     parser.add_argument(
-        "--output", default="tests/test_p2/results.json",
-        help="详细结果输出路径",
+        "--config", default=DEFAULT_CONFIG_FILE,
+        help="测试配置文件路径 (模型/端点/认证), 默认 tests/test_p2/config.yaml",
+    )
+    parser.add_argument(
+        "--output-dir", default=str(Path(__file__).resolve().parent),
+        help="结果输出根目录 (实际写入其下带日期的 run_ 子文件夹)",
     )
     parser.add_argument(
         "--concurrency", type=int, default=1,
@@ -451,7 +624,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--models", nargs="+", default=None,
-        help="要测试的模型列表 (空格分隔, 不指定则使用默认 4 个模型)",
+        help="覆盖 config.yaml 的模型列表 (端点/认证仍从 config 解析)",
     )
     args = parser.parse_args()
 
@@ -461,7 +634,8 @@ if __name__ == "__main__":
 
     run_test(
         num_sessions=args.sessions,
-        output_file=args.output,
+        output_dir=args.output_dir,
         concurrency=args.concurrency,
-        models=args.models,
+        config_path=args.config,
+        override_models=args.models,
     )

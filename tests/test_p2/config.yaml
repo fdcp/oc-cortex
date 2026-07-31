@@ -1,0 +1,46 @@
+# Phase 2 多模型对比测试配置
+# ============================================================
+# 本文件集中管理测试所需的「模型 / API Key / URL」配置。
+# test_p2.py 会按 models 列表的顺序依次加载并测试每个模型。
+#
+# 认证说明:
+#   OpenCode 的 API Key 存放在本地 auth.json 中 (由 opencode 客户端管理)。
+#   每个 endpoint 通过 auth_provider 指定使用 auth.json 里的哪个 provider key。
+#
+# 端点说明 (2026-07 现状):
+#   - zen: OpenCode Zen 免费模型端点 (deepseek-v4-flash-free / mimo-v2.5-free / nemotron-3-ultra-free 等)
+#   - go:  OpenCode Go 订阅端点 (hy3 / glm-5.2 / kimi-k3 等), 端点为 .../zen/go/v1
+#          注意: hy3 已从 Zen 免费层下线, 现仅在 Go 订阅端点提供, 模型 ID 为 "hy3"
+# ============================================================
+
+# 认证文件路径 (opencode 客户端维护, 支持 ~ 展开)
+auth_file: "~/.local/share/opencode/auth.json"
+
+# 端点定义: base_url + 使用哪个 auth provider 的 key
+endpoints:
+  zen:
+    base_url: "https://opencode.ai/zen/v1"
+    auth_provider: "opencode-go"      # auth.json 中的 provider key
+  go:
+    base_url: "https://opencode.ai/zen/go/v1"
+    auth_provider: "opencode-go"
+
+# 待测模型列表 (顺序加载, 顺序即测试顺序)
+models:
+  - name: "hy3"                        # 原 hy3-free 已下线, 改用 Go 端点的 hy3
+    endpoint: "go"
+  - name: "nemotron-3-ultra-free"
+    endpoint: "zen"
+  - name: "mimo-v2.5-free"
+    endpoint: "zen"
+  - name: "deepseek-v4-flash-free"
+    endpoint: "zen"
+
+# 提取参数 (透传给 TaskExtractor)
+extractor:
+  max_retries: 2                       # 网络层重试
+  content_retries: 2                   # 内容校验重试
+  timeout: 120
+  temperature: 0.2
+  max_tokens_per_chunk: 2000
+  max_total_prompt_tokens: 30000

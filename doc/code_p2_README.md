@@ -233,13 +233,16 @@ DeepSeek V4 Flash 是 reasoning 模型,会在 `reasoning_content` 中产生 thin
 
 | 提供商               | model                   | base_url                                          | api_key_env          |
 | ---------------------- | ------------------------- | --------------------------------------------------- | ---------------------- |
-| OpenCode Zen (免费)  | hy3-free (默认)         | https://opencode.ai/zen/v1                        | OPENCODE_ZEN_API_KEY |
+| OpenCode Go (订阅)   | hy3 (默认)              | https://opencode.ai/zen/go/v1                     | OPENCODE_ZEN_API_KEY |
 | OpenCode Zen (免费)  | deepseek-v4-flash-free  | https://opencode.ai/zen/v1                        | OPENCODE_ZEN_API_KEY |
+| OpenCode Zen (免费)  | mimo-v2.5-free          | https://opencode.ai/zen/v1                        | OPENCODE_ZEN_API_KEY |
 | OpenCode Zen (免费)  | nemotron-3-ultra-free   | https://opencode.ai/zen/v1                        | OPENCODE_ZEN_API_KEY |
 | DashScope (通义千问) | qwen-plus               | https://dashscope.aliyuncs.com/compatible-mode/v1 | DASHSCOPE_API_KEY    |
 | SiliconFlow          | deepseek-ai/DeepSeek-V3 | https://api.siliconflow.cn/v1                     | SILICONFLOW_API_KEY  |
 | OpenAI               | gpt-4o-mini             | https://api.openai.com/v1                         | OPENAI_API_KEY       |
 | Ollama (本地)        | qwen2.5:7b              | http://localhost:11434/v1                         | (不需要)             |
+
+> **注意**: `hy3-free` 已从 OpenCode Zen 免费层下线。`hy3` 现仅通过 OpenCode Go 订阅端点 (`https://opencode.ai/zen/go/v1`, 模型 ID `hy3`) 提供, API Key 仍取自 `auth.json` 的 `opencode-go` provider。多模型对比测试的端点/认证配置见 `tests/test_p2/config.yaml`。
 
 ## 依赖
 

@@ -1,5 +1,12 @@
 # Phase 2 多模型对比测试报告
 
+> **注意 (2026-07 更新)**: 本报告为历史基线, 使用的 `hy3-free` 已从 OpenCode Zen 免费层下线,
+> 现应使用 OpenCode Go 端点的 `hy3` (见 `tests/test_p2/config.yaml`)。
+> 新版测试脚本会将结果写入带日期的子文件夹 `tests/test_p2/run_<YYYY-MM-DD_HH-MM>/`,
+> 内含 `test_p2_results.json` 与自动生成的 `test_p2_models.md`。
+> 复现命令: `python3 tests/test_p2/test_p2.py --sessions 100 --concurrency 8`
+> (模型 / 端点 / 认证均由 `config.yaml` 顺序加载, 无需再手动 export API Key)。
+
 ## 测试概要
 
 - **测试日期**: 2026-07-19
