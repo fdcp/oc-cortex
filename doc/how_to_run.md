@@ -68,7 +68,7 @@ qdrant:
 
 ```bash
 cd /path/to/oc_sess_graph
-python3 code_p3_main.py --config code_p3_config.yaml
+python3 src/code_p3_main.py --config config/code_p3_config.yaml
 ```
 
 全量数据 (27 tasks + 86 chunks) 预计耗时 ~5 秒。
@@ -77,13 +77,13 @@ python3 code_p3_main.py --config code_p3_config.yaml
 
 ```bash
 # 使用内置示例查询
-python3 code_p3_search_demo.py --mode all
+python3 src/code_p3_search_demo.py --mode all
 
 # 自定义查询
-python3 code_p3_search_demo.py --mode all --query "GPU对比分析"
+python3 src/code_p3_search_demo.py --mode all --query "GPU对比分析"
 
 # 调整返回数量
-python3 code_p3_search_demo.py --mode all --query "优化器学习率" --top-k 10
+python3 src/code_p3_search_demo.py --mode all --query "优化器学习率" --top-k 10
 ```
 
 输出会依次展示 Dense 检索、Sparse 检索 (BM25)、Hybrid 检索 (RRF 融合) 三组结果。
@@ -123,7 +123,7 @@ qdrant:
 
 ```bash
 cd /path/to/oc_sess_graph
-python3 code_p3_main.py --config code_p3_config.yaml
+python3 src/code_p3_main.py --config config/code_p3_config.yaml
 ```
 
 GPU 环境 (如 A100) 全量数据预计 10-30 秒。CPU 环境需要数分钟到数十分钟。
@@ -132,10 +132,10 @@ GPU 环境 (如 A100) 全量数据预计 10-30 秒。CPU 环境需要数分钟�
 
 ```bash
 # 1/5 数据采样演示 (自动使用 Qwen3 + BGE-M3, 写入 ./qdrant_data_sample)
-python3 code_p3_search_demo.py --mode sample
+python3 src/code_p3_search_demo.py --mode sample
 
 # 自定义查询
-python3 code_p3_search_demo.py --mode sample --query "GPU对比"
+python3 src/code_p3_search_demo.py --mode sample --query "GPU对比"
 ```
 
 > **注意：** `--mode sample` 会自动切换到 Qwen3 + BGE-M3 组合，采样 1/5 数据，使用独立的 `./qdrant_data_sample` 目录，不会影响全量数据。
@@ -263,19 +263,19 @@ reranker:
 cd /path/to/oc_sess_graph
 
 # 单次查询 (带 Reranker 精排)
-python3 code_p4_search_cli.py --query "GPU对比分析"
+python3 src/code_p4_search_cli.py --query "GPU对比分析"
 
 # 跳过 Reranker (仅粗排, 毫秒级)
-python3 code_p4_search_cli.py --query "GPU对比分析" --no-rerank
+python3 src/code_p4_search_cli.py --query "GPU对比分析" --no-rerank
 
 # 调整返回数量
-python3 code_p4_search_cli.py --query "优化器学习率" --top-k 10
+python3 src/code_p4_search_cli.py --query "优化器学习率" --top-k 10
 
 # 交互模式 (循环查询)
-python3 code_p4_search_cli.py --interactive
+python3 src/code_p4_search_cli.py --interactive
 
 # 指定配置文件
-python3 code_p4_search_cli.py --config code_p3_config.yaml --query "session管理"
+python3 src/code_p4_search_cli.py --config config/code_p3_config.yaml --query "session管理"
 ```
 
 ### 搜索流程

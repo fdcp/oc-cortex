@@ -8,7 +8,7 @@
 ### 安装依赖
 
 ```bash
-pip install -r code_p1_requirements.txt
+pip install -r config/code_p1_requirements.txt
 # 或者手动安装
 pip install loguru pyyaml tiktoken openai
 ```
@@ -53,19 +53,19 @@ logging:
 cd /path/to/oc_sess_graph
 
 # 使用内置 mock 数据 (无需真实 session)
-python3 code_p1_main.py --mock
+python3 src/code_p1_main.py --mock
 
 # 从 SQLite DB 读取
-python3 code_p1_main.py --sqlite ~/.local/share/opencode/opencode.db
+python3 src/code_p1_main.py --sqlite ~/.local/share/opencode/opencode.db
 
 # 快速验证 (只处理 3 个 session)
-python3 code_p1_main.py --sqlite ~/.local/share/opencode/opencode.db --limit 3
+python3 src/code_p1_main.py --sqlite ~/.local/share/opencode/opencode.db --limit 3
 
 # 从 JSONL 文件读取
-python3 code_p1_main.py --source ./data/my_sessions.jsonl
+python3 src/code_p1_main.py --source ./data/my_sessions.jsonl
 
 # 自定义输出路径（test）
-python3 code_p1_main.py --sqlite ~/.local/share/opencode/opencode.db --output ./output/chunks_real.jsonl
+python3 src/code_p1_main.py --sqlite ~/.local/share/opencode/opencode.db --output ./output/chunks_real.jsonl
 ```
 
 **命令行参数：**
@@ -73,7 +73,7 @@ python3 code_p1_main.py --sqlite ~/.local/share/opencode/opencode.db --output ./
 
 | 参数       | 默认值                  | 说明                        |
 | ------------ | ------------------------- | ----------------------------- |
-| `--config` | `code_p1_config.yaml`   | 配置文件路径                |
+| `--config` | `config/code_p1_config.yaml`   | 配置文件路径                |
 | `--source` | 无                      | Session JSONL/JSON 文件路径 |
 | `--sqlite` | 无                      | OpenCode SQLite DB 路径     |
 | `--limit`  | 无                      | 最多处理 N 个 session       |
@@ -146,19 +146,19 @@ cd /path/to/oc_sess_graph
 export OPENCODE_ZEN_API_KEY='your-api-key'
 
 # 快速验证 (3 个 session)
-python3 code_p2_main.py --limit 3
+python3 src/code_p2_main.py --limit 3
 
 # 全量运行
-python3 code_p2_main.py
+python3 src/code_p2_main.py
 
 # 高并发
-python3 code_p2_main.py --concurrency 8
+python3 src/code_p2_main.py --concurrency 8
 
 # 自定义输入输出
-python3 code_p2_main.py --chunks ./output/chunks.jsonl --output ./output/tasks.jsonl
+python3 src/code_p2_main.py --chunks ./output/chunks.jsonl --output ./output/tasks.jsonl
 
 # test
-export OPENCODE_ZEN_API_KEY=$(python3 -c "import json; d=json.load(open('/Users/zhaoxiuwei/.local/share/opencode/auth.json')); print(d['opencode-go']['key'])") && python3 code_p2_main.py --chunks ./output/chunks_real.jsonl --output ./output/tasks_real.jsonl --concurrency 8  2>&1 | tail -30
+export OPENCODE_ZEN_API_KEY=$(python3 -c "import json; d=json.load(open('/Users/zhaoxiuwei/.local/share/opencode/auth.json')); print(d['opencode-go']['key'])") && python3 src/code_p2_main.py --chunks ./output/chunks_real.jsonl --output ./output/tasks_real.jsonl --concurrency 8  2>&1 | tail -30
 ```
 
 **命令行参数：**
@@ -166,7 +166,7 @@ export OPENCODE_ZEN_API_KEY=$(python3 -c "import json; d=json.load(open('/Users/
 
 | 参数            | 默认值                 | 说明                                 |
 | ----------------- | ------------------------ | -------------------------------------- |
-| `--config`      | `code_p2_config.yaml`  | 配置文件路径                         |
+| `--config`      | `config/code_p2_config.yaml`  | 配置文件路径                         |
 | `--chunks`      | 无                     | Phase 1 chunks JSONL 路径 (覆盖配置) |
 | `--output`      | `./output/tasks.jsonl` | Task 输出路径                        |
 | `--limit`       | 无                     | 只处理前 N 个 session                |
@@ -188,15 +188,15 @@ cd /Users/zhaoxiuwei/Desktop/oc_sess_graph
 pip install loguru pyyaml tiktoken openai
 
 # 2. Phase 1: mock 数据验证流程
-python3 code_p1_main.py --mock
+python3 src/code_p1_main.py --mock
 
 # 3. Phase 1: 真实数据
-python3 code_p1_main.py --sqlite ~/.local/share/opencode/opencode.db
+python3 src/code_p1_main.py --sqlite ~/.local/share/opencode/opencode.db
 
 # 4. Phase 2: 设置 API Key 并运行
 export OPENCODE_ZEN_API_KEY='your-api-key'
-python3 code_p2_main.py --limit 3    # 先快速验证
-python3 code_p2_main.py               # 全量运行
+python3 src/code_p2_main.py --limit 3    # 先快速验证
+python3 src/code_p2_main.py               # 全量运行
 ```
 
 **实际性能参考** (15 sessions, 86 chunks)：Phase 2 产出 30 tasks (平均 2.0/session)，chunk summary 100% 覆盖，concurrency=8 时约 93 秒 (deepseek-v4-flash-free)。

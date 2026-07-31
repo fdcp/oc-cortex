@@ -14,16 +14,16 @@
 cd /Users/zhaoxiuwei/Desktop/oc_sess_graph
 
 # (1) 安装依赖（一次性）
-pip install -r code_p1_requirements.txt
+pip install -r config/code_p1_requirements.txt
 
 # (2) Phase 1: 从 OpenCode SQLite 抽 chunks
-python3 code_p1_main.py \
+python3 src/code_p1_main.py \
     --sqlite ~/.local/share/opencode/opencode.db \
     --output ./output/chunks.jsonl
 
 # (3) Phase 2: 配好 API Key 后, 用 LLM 抽 task + chunk 总结
 export OPENCODE_ZEN_API_KEY='your-key-here'
-python3 code_p2_main.py \
+python3 src/code_p2_main.py \
     --chunks ./output/chunks.jsonl \
     --output ./output/tasks.jsonl \
     --concurrency 8
@@ -47,12 +47,12 @@ python3 code_p2_main.py \
 ### 1.1 入口
 
 ```bash
-python3 code_p1_main.py [选项]
+python3 src/code_p1_main.py [选项]
 ```
 
 | 参数 | 默认 | 说明 |
 |---|---|---|
-| `--config` | `code_p1_config.yaml` | 配置文件路径 |
+| `--config` | `config/code_p1_config.yaml` | 配置文件路径 |
 | `--source` | — | JSONL/JSON 数据源（覆盖 config） |
 | `--sqlite` | — | OpenCode SQLite db 路径（推荐） |
 | `--limit` | — | 最多加载 N 个 session（快速验证用） |
@@ -72,7 +72,7 @@ python3 code_p1_main.py [选项]
 最快验证方式，3 个内置 session 覆盖过滤/切分/整理全流程：
 
 ```bash
-python3 code_p1_main.py --mock
+python3 src/code_p1_main.py --mock
 ```
 
 预期输出：
@@ -90,12 +90,12 @@ OpenCode 在 `~/.local/share/opencode/opencode.db` 存了所有 session。直接
 
 ```bash
 # 全量
-python3 code_p1_main.py \
+python3 src/code_p1_main.py \
     --sqlite ~/.local/share/opencode/opencode.db \
     --output ./output/chunks.jsonl
 
 # 快速验证（只跑前 3 个 session）
-python3 code_p1_main.py \
+python3 src/code_p1_main.py \
     --sqlite ~/.local/share/opencode/opencode.db \
     --limit 3
 ```
@@ -119,7 +119,7 @@ ls -la ~/.local/share/opencode/opencode.db
 把 session 导出为 JSONL（每行一个 session JSON）：
 
 ```bash
-python3 code_p1_main.py \
+python3 src/code_p1_main.py \
     --source /path/to/opencode_sessions.jsonl \
     --output ./output/chunks.jsonl
 ```
@@ -171,7 +171,7 @@ logging:
 ### 1.7 依赖
 
 ```bash
-pip install -r code_p1_requirements.txt
+pip install -r config/code_p1_requirements.txt
 ```
 
 内容：
@@ -189,7 +189,7 @@ openai>=1.30.0     # p2 用的, 提前装
 | 现象 | 原因 | 处理 |
 |---|---|---|
 | 跑完说"加载 0 个 session" | db 路径错 / OpenCode 还没在本机产生过数据 | 跑 `ls ~/.local/share/opencode/` 确认；先 `--mock` 验证流程 |
-| 报 `ModuleNotFoundError: No module named 'tiktoken'` | 没装依赖 | `pip install -r code_p1_requirements.txt` |
+| 报 `ModuleNotFoundError: No module named 'tiktoken'` | 没装依赖 | `pip install -r config/code_p1_requirements.txt` |
 | SQLite 里所有 session 都被跳过 | `min_user_messages: 2` 过滤掉了短 session | 改 `code_p1_config.yaml` 里 `min_user_messages: 1`，或 `--limit N` 拿前 N 个 |
 | 想看更详细日志 | 调日志级别 | config 里 `logging.level: "DEBUG"` |
 ---
@@ -205,12 +205,12 @@ openai>=1.30.0     # p2 用的, 提前装
 ### 2.1 入口
 
 ```bash
-python3 code_p2_main.py [选项]
+python3 src/code_p2_main.py [选项]
 ```
 
 | 参数 | 默认 | 说明 |
 |---|---|---|
-| `--config` | `code_p2_config.yaml` | 配置文件路径 |
+| `--config` | `config/code_p2_config.yaml` | 配置文件路径 |
 | `--chunks` | config 里 `phase1.chunks_file` | Phase 1 输出的 chunks JSONL |
 | `--output` | `./output/tasks.jsonl` | task 输出路径 |
 | `--limit` | — | 只处理前 N 个 session（快速验证） |
@@ -243,7 +243,7 @@ cd /Users/zhaoxiuwei/Desktop/oc_sess_graph
 
 export OPENCODE_ZEN_API_KEY='your-key-here'
 
-python3 code_p2_main.py
+python3 src/code_p2_main.py
 ```
 
 读完 `code_p2_config.yaml` 的默认配置，从 `./output/chunks.jsonl` 读入，输出到 `./output/tasks.jsonl`。
@@ -253,8 +253,8 @@ python3 code_p2_main.py
 ```bash
 export OPENCODE_ZEN_API_KEY='your-key-here'
 
-python3 code_p2_main.py \
-    --config code_p2_config.yaml \
+python3 src/code_p2_main.py \
+    --config config/code_p2_config.yaml \
     --chunks ./output/chunks.jsonl \
     --output ./output/tasks.jsonl \
     --concurrency 8
@@ -266,7 +266,7 @@ python3 code_p2_main.py \
 
 ```bash
 # 只处理前 3 个 session, 不开并发
-python3 code_p2_main.py --limit 3 --concurrency 1
+python3 src/code_p2_main.py --limit 3 --concurrency 1
 ```
 
 ### 2.6 配置文件（`code_p2_config.yaml`）
@@ -316,7 +316,7 @@ logging:
 ```bash
 export DASHSCOPE_API_KEY='your-key'
 # 临时改用 DashScope
-python3 code_p2_main.py --chunks ./output/chunks.jsonl --output ./output/tasks_ds.jsonl \
+python3 src/code_p2_main.py --chunks ./output/chunks.jsonl --output ./output/tasks_ds.jsonl \
   --concurrency 4
 
 # 注: 想长期用就改 code_p2_config.yaml 里的 llm.* 几行
@@ -378,17 +378,17 @@ python3 code_p2_main.py --chunks ./output/chunks.jsonl --output ./output/tasks_d
 cd /Users/zhaoxiuwei/Desktop/oc_sess_graph
 
 # 1. 装依赖
-pip install -r code_p1_requirements.txt
+pip install -r config/code_p1_requirements.txt
 
 # 2. Phase 1: SQLite → chunks.jsonl
-python3 code_p1_main.py \
+python3 src/code_p1_main.py \
     --sqlite ~/.local/share/opencode/opencode.db \
     --output ./output/chunks.jsonl
 # 预期: 15 个 session (跳过 5 个 < 2 user) → 86 个 chunk
 
 # 3. Phase 2: chunks.jsonl → tasks.jsonl + chunk summaries
 export OPENCODE_ZEN_API_KEY='your-key-here'
-python3 code_p2_main.py \
+python3 src/code_p2_main.py \
     --chunks ./output/chunks.jsonl \
     --output ./output/tasks.jsonl \
     --concurrency 8
@@ -408,21 +408,21 @@ head -1 output/tasks.jsonl | python3 -m json.tool
 
 | 文件 | 角色 |
 |---|---|
-| `code_p1_config.yaml` | Phase 1 配置 |
-| `code_p1_main.py` | Phase 1 入口 |
-| `code_p1_models.py` | `Session` / `Turn` / `Chunk` / `ToolCall` dataclass |
-| `code_p1_session_loader.py` | JSONL/JSON 加载 + mock 数据 |
-| `code_p1_sqlite_loader.py` | OpenCode SQLite 加载（推荐入口） |
-| `code_p1_chunker.py` | 按 user 切轮次 |
-| `code_p1_content_cleaner.py` | 工具调用降噪 |
-| `code_p1_utils.py` | `Config` / logger / token 计数 / 截断 |
-| `code_p1_requirements.txt` | 依赖 |
-| `code_p1_README.md` | Phase 1 详细设计文档 |
-| `code_p2_config.yaml` | Phase 2 配置 |
-| `code_p2_main.py` | Phase 2 入口 |
-| `code_p2_task_extractor.py` | CoT prompt + LLM 调用 + 解析校验 |
-| `code_p2_models.py` | `Task` dataclass |
-| `code_p2_README.md` | Phase 2 详细设计文档 |
+| `config/code_p1_config.yaml` | Phase 1 配置 |
+| `src/code_p1_main.py` | Phase 1 入口 |
+| `src/code_p1_models.py` | `Session` / `Turn` / `Chunk` / `ToolCall` dataclass |
+| `src/code_p1_session_loader.py` | JSONL/JSON 加载 + mock 数据 |
+| `src/code_p1_sqlite_loader.py` | OpenCode SQLite 加载（推荐入口） |
+| `src/code_p1_chunker.py` | 按 user 切轮次 |
+| `src/code_p1_content_cleaner.py` | 工具调用降噪 |
+| `src/code_p1_utils.py` | `Config` / logger / token 计数 / 截断 |
+| `config/code_p1_requirements.txt` | 依赖 |
+| `doc/code_p1_README.md` | Phase 1 详细设计文档 |
+| `config/code_p2_config.yaml` | Phase 2 配置 |
+| `src/code_p2_main.py` | Phase 2 入口 |
+| `src/code_p2_task_extractor.py` | CoT prompt + LLM 调用 + 解析校验 |
+| `src/code_p2_models.py` | `Task` dataclass |
+| `doc/code_p2_README.md` | Phase 2 详细设计文档 |
 
 ---
 
