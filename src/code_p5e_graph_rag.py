@@ -79,8 +79,10 @@ def extract_query_entities(query: str, max_retries: int = 2, model: str = DEFAUL
             break
 
         content = raw_content.strip()
-        # 去除  标签块
-        content = re.sub(r"", "", content, flags=re.DOTALL).strip()
+        # 去除 <think>...</think> 标签块 (部分模型会输出思考过程)
+        content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
+        # 去除可能包裹的 markdown 代码块标记 (```json ... ```)
+        content = re.sub(r"^```(?:json)?\s*|\s*```$", "", content, flags=re.DOTALL).strip()
 
         try:
             data = json.loads(content)
