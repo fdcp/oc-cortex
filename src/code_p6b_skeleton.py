@@ -617,5 +617,5 @@ class SummarySkeleton:
             return "[LLM 返回空内容]"
 
         import re
-        content = re.sub(r"", "", raw, flags=re.DOTALL).strip()
+        content = re.sub(r"<think>.*?</think>", "", raw, flags=re.DOTALL).strip()
         return content

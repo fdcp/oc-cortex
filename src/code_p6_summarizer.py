@@ -375,6 +375,6 @@ class SessionSummarizer:
         if not raw:
             return "[LLM 返回空内容]"
 
-        # 去除 think 标签
-        content = re.sub(r"", "", raw, flags=re.DOTALL).strip()
+        # 去除 <think>...</think> 标签块 (部分模型会输出思考过程)
+        content = re.sub(r"<think>.*?</think>", "", raw, flags=re.DOTALL).strip()
         return content

@@ -176,6 +176,10 @@ for s in result.sources:
 
 输出质量：LLM 生成了结构化的中文主题总结，按"序列并行原理 → FlashAttention 实现 → 两者协同关系"组织，包含具体 task_id 引用，覆盖了关键技术决策和实现细节。
 
+### 已知问题修复
+
+- `_call_llm` 中用于剥离模型 `<think>...</think>` 思考过程标签的正则表达式此前为空字符串（`r""`），未生效导致部分模型（如带思考链的 reasoning 模型）返回的思考过程混入最终总结。已修正为 `r"<think>.*?</think>"`（与 `code_p5e_graph_rag.py` 保持一致）。
+
 ### 架构
 
 ```
