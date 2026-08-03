@@ -13,6 +13,12 @@ test
 tests/test_p5/*__triple/
 tests/test_p5/*__entity/
 
+*.docx
+专利交底书*
+交底书*
+fig*.svg
+tools
+Phase_1_code_skeleton_complete_2026-07-19_03-37.md
 # Test artifacts
 tests/*.log
 
