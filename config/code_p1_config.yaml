@@ -38,3 +38,7 @@ content_cleaning:
 logging:
   level: "INFO"              # [wired] DEBUG / INFO / WARNING / ERROR
   file: "./logs/phase1.log"  # [wired] 日志文件路径
+
+incremental:
+  # 增量运行开关由命令行 --incremental / --force 控制, 此段仅提供 checkpoint 路径
+  checkpoint: "./output/.p1_checkpoint.json"  # [wired] code_p1_main.py 未传 --checkpoint 时回退到此值

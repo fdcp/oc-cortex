@@ -5,10 +5,12 @@ Chunker: 按 user 消息切分轮次
 后处理:
      1a) 无 assistant 回复的 chunk 合并到下一个 chunk
      1b) 连续相同 user_message (无 assistant 间隔) 只保留最后一个
+     1c) 切分+后处理完成后,为每个 chunk 填充 SHA-256 content_hash (Phase 1 专属字段)
 """
 from loguru import logger
 
 from code_p1_models import Session, Chunk, Turn
+from code_p1_utils import chunk_content_hash
 
 
 def _new_chunk(session_id: str, index: int, first_turn: Turn) -> Chunk:
@@ -133,6 +135,10 @@ def chunk_session(session: Session) -> list[Chunk]:
     for i, chunk in enumerate(chunks, 1):
         chunk.chunk_id = f"{session.id}_c{i}"
         chunk.turn_index = i
+
+    # 填充 content_hash (chunk_id/turn_index 此刻已确定, 可参与哈希)
+    for chunk in chunks:
+        chunk.content_hash = chunk_content_hash(chunk)
 
     logger.info(
         f"Session {session.id}: 切分出 {len(chunks)} 个 chunk"

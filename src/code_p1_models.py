@@ -76,6 +76,7 @@ class Chunk:
     cleaned_size_tokens: int = 0
     created_at: Optional[str] = None
     task_summary: Optional[str] = None  # Phase 2 CoT 生成的 chunk 总结
+    content_hash: Optional[str] = None  # Phase 1 生成的 SHA-256 内容指纹 (排除 task_summary)
 
     def add_raw_tool_call(self, tc) -> None:
         """chunker 阶段: 添加原始工具调用"""

@@ -1,13 +1,19 @@
 """
-工具模块: 配置加载 + 日志 + token 计数
+工具模块: 配置加载 + 日志 + token 计数 + chunk 指纹
 """
+import hashlib
+import json
 import os
 import sys
+from dataclasses import asdict
 import yaml
 import tiktoken
 from pathlib import Path
 from loguru import logger
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from code_p1_models import Chunk, Turn
 
 
 # ============================================================
@@ -120,4 +126,70 @@ def safe_truncate(text: str, max_tokens: int, head_ratio: float = 0.7) -> str:
     tail_len = max_tokens - head_len - 20  # 留 token 给省略号标记
     head = enc.decode(tokens[:head_len])
     tail = enc.decode(tokens[-tail_len:]) if tail_len > 0 else ""
-    return f"{head}\n\n[...TRUNCATED, original {len(tokens)} tokens...]\n\n{tail}"
+    # ============================================================
+# 指纹 / 哈希
+# ============================================================
+
+CHUNKER_VERSION = 1
+
+
+def _safe_asdict(obj) -> dict:
+    if isinstance(obj, dict):
+        return obj
+    return asdict(obj)
+
+
+def chunk_content_hash(c: "Chunk") -> str:
+    """SHA-256 over Phase-1-defined fields (excludes task_summary,
+    content_hash itself: 前者 P2 产物,后者由本函数生成 -> 自反馈)。"""
+    payload = {
+        "chunk_id": c.chunk_id,
+        "session_id": c.session_id,
+        "turn_index": c.turn_index,
+        "user_message": c.user_message,
+        "assistant_messages": c.assistant_messages,
+        "tool_calls": [_safe_asdict(tc) for tc in c.tool_calls],
+        "mcp_calls": [_safe_asdict(mc) for mc in c.mcp_calls],
+        "raw_size_tokens": c.raw_size_tokens,
+        "cleaned_size_tokens": c.cleaned_size_tokens,
+        "created_at": c.created_at,
+    }
+    blob = json.dumps(payload, ensure_ascii=False, sort_keys=True,
+                      separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(blob).hexdigest()
+
+
+def session_fingerprint(chunks: "list[Chunk]") -> str:
+    """session 级 SHA-256: 链式哈希 chunk_id 排序后的 per-chunk hashes,
+    保证同 session 内 chunk 输入顺序变化不影响指纹。
+
+    优先使用 chunk.content_hash (P1 chunker 已填), 缺失时回退重算 -
+    兼容旧 chunks.jsonl 无 content_hash 字段的样本。
+    """
+    pairs = sorted(
+        (c.chunk_id, c.content_hash or chunk_content_hash(c))
+        for c in chunks
+    )
+    acc = hashlib.sha256()
+    for _cid, h in pairs:
+        acc.update(h.encode("utf-8"))
+        acc.update(b"|")
+    return acc.hexdigest()
+
+
+def raw_turns_hash(turns: "list[Turn]") -> str:
+    """对 session.turns 整体算 SHA-256, 用作 P1 增量短路信号:
+    hash 不变 → 跳过 chunker, 复用旧 chunks.jsonl 的对应行。"""
+    payload = []
+    for t in turns:
+        payload.append({
+            "role": t.role,
+            "content": t.content,
+            "timestamp": t.timestamp,
+            "tool_calls": [_safe_asdict(tc) for tc in t.tool_calls],
+            "tool_call_id": t.tool_call_id,
+            "output": t.output,
+        })
+    blob = json.dumps(payload, ensure_ascii=False, sort_keys=True,
+                      separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(blob).hexdigest()
