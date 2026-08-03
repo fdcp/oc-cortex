@@ -1,0 +1,175 @@
+"""
+输出清理工具: 按 phase 选择性清理 output/ qdrant_data/ logs/ 下的 pipeline 产物
+
+用法:
+  python3 src/code_cleanup.py list                  # 列出所有 phase 产物
+  python3 src/code_cleanup.py clean --p2            # 默认 dry-run, 只打印删除计划
+  python3 src/code_cleanup.py clean --p2 --dry-run  # 显式 dry-run (干跑不删)
+  python3 src/code_cleanup.py clean --p2 --yes      # 真删 (跳过确认)
+  python3 src/code_cleanup.py clean --p1 --cascade --yes  # 级联删除下游产物
+
+安全机制:
+  - clean 默认 dry-run, 不加 --yes 不删任何文件
+  - checkpoint 与 phase 强绑: 清 P1/P2 必带对应 checkpoint
+  - --cascade 默认关闭, 关闭时仅 WARNING 列出下游孤儿产物
+  - 不触碰 tests/ 下的 benchmark 副产物, 无 backup/undo
+"""
+import argparse
+import os
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+
+from loguru import logger
+
+from code_p1_utils import Config
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+
+_PHASE_ORDER = ["p1", "p2", "p3", "p5", "logs"]
+
+# phase -> 上游依赖 (p2 运行依赖 p1 产物, 以此类推)
+_PHASE_DEPS = {
+    "p1": [],
+    "p2": ["p1"],
+    "p3": ["p1", "p2"],
+    "p5": ["p2"],
+    "logs": [],
+}
+
+
+@dataclass
+class OutputTarget:
+    phase: str
+    kind: str  # "file" | "dir"
+    path: Path
+    description: str
+
+
+def _load_phase_config(name: str):
+    cfg_path = REPO_ROOT / "config" / name
+    if not cfg_path.exists():
+        logger.warning(f"配置文件不存在, 使用内置默认路径: {cfg_path}")
+        return None
+    return Config(str(cfg_path))
+
+
+def _resolve(raw, default: str) -> Path:
+    p = Path(raw or default)
+    if not p.is_absolute():
+        p = REPO_ROOT / p
+    return p
+
+
+def _build_target_registry() -> list:
+    c1 = _load_phase_config("code_p1_config.yaml")
+    c2 = _load_phase_config("code_p2_config.yaml")
+    c3 = _load_phase_config("code_p3_config.yaml")
+    c5 = _load_phase_config("code_p5_config.yaml")
+
+    def g(cfg, key: str, default: str):
+        return cfg.get(key, default) if cfg else default
+
+    return [
+        OutputTarget("p1", "file",
+                     _resolve(g(c2, "phase1.chunks_file", "./output/chunks.jsonl"), "./output/chunks.jsonl"),
+                     "P1 chunks 产物"),
+        OutputTarget("p1", "file",
+                     _resolve(g(c1, "incremental.checkpoint", "./output/.p1_checkpoint.json"), "./output/.p1_checkpoint.json"),
+                     "P1 增量 checkpoint"),
+        OutputTarget("p2", "file",
+                     _resolve(g(c3, "phase2.tasks_file", "./output/tasks.jsonl"), "./output/tasks.jsonl"),
+                     "P2 task 产物"),
+        OutputTarget("p2", "file",
+                     _resolve(g(c2, "output.chunk_summaries", "./output/chunks_summary_p2.jsonl"), "./output/chunks_summary_p2.jsonl"),
+                     "P2 chunk 总结"),
+        OutputTarget("p2", "file",
+                     _resolve(g(c2, "output.checkpoint", "./output/.p2_checkpoint.json"), "./output/.p2_checkpoint.json"),
+                     "P2 增量 checkpoint"),
+        OutputTarget("p3", "dir",
+                     _resolve(g(c3, "qdrant.path", "./qdrant_data"), "./qdrant_data"),
+                     "P3 Qdrant 向量库"),
+        OutputTarget("p5", "dir",
+                     _resolve(g(c5, "knowledge_graph.triple_output_dir", "./output/triple"), "./output/triple"),
+                     "P5 triple 模式产物"),
+        OutputTarget("p5", "dir",
+                     _resolve(g(c5, "knowledge_graph.entity_output_dir", "./output/entity"), "./output/entity"),
+                     "P5 entity 模式产物"),
+        OutputTarget("logs", "file",
+                     _resolve(g(c1, "logging.file", "./logs/phase1.log"), "./logs/phase1.log"),
+                     "P1 日志"),
+        OutputTarget("logs", "file",
+                     _resolve(g(c2, "logging.file", "./logs/phase2.log"), "./logs/phase2.log"),
+                     "P2 日志"),
+        OutputTarget("logs", "file",
+                     _resolve(g(c3, "logging.file", "./logs/phase3.log"), "./logs/phase3.log"),
+                     "P3 日志"),
+        OutputTarget("logs", "file",
+                     _resolve(g(c5, "logging.file", "./logs/phase5.log"), "./logs/phase5.log"),
+                     "P5 日志"),
+        OutputTarget("logs", "file",
+                     _resolve(None, "./logs/phase5_entity.log"),
+                     "P5 entity 模式日志"),
+    ]
+
+
+def _format_size(n: float) -> str:
+    for unit in ("B", "KB", "MB", "GB"):
+        if n < 1024:
+            return f"{int(n)} B" if unit == "B" else f"{n:.1f} {unit}"
+        n /= 1024
+    return f"{n:.1f} TB"
+
+
+def _target_size(t: OutputTarget) -> int:
+    if not t.path.exists():
+        return 0
+    if t.kind == "file":
+        return t.path.stat().st_size
+    # 跨平台递归统计 (macOS BSD du 无 -b, 不依赖外部命令)
+    total = 0
+    for root, _dirs, files in os.walk(t.path):
+        for f in files:
+            try:
+                total += (Path(root) / f).stat().st_size
+            except OSError:
+                pass
+    return total
+
+
+def _display_path(p: Path) -> str:
+    try:
+        return str(p.relative_to(REPO_ROOT))
+    except ValueError:
+        return str(p)
+
+
+def cmd_list(args, registry: list) -> int:
+    print(f"{'PHASE':<6} {'EXISTS':<7} {'SIZE':>9}  PATH")
+    print("-" * 72)
+    for phase in _PHASE_ORDER:
+        for t in registry:
+            if t.phase != phase:
+                continue
+            exists = t.path.exists()
+            size = _format_size(_target_size(t)) if exists else "-"
+            print(f"{t.phase:<6} {'yes' if exists else 'no':<7} {size:>9}  {_display_path(t.path)}")
+    return 0
+
+
+def main(argv=None) -> int:
+    parser = argparse.ArgumentParser(
+        description="按 phase 清理 pipeline 输出产物 (output/ qdrant_data/ logs/)"
+    )
+    sub = parser.add_subparsers(dest="command", required=True)
+    sub.add_parser("list", help="列出所有 phase 产物 (path/exists/size)")
+    args = parser.parse_args(argv)
+
+    registry = _build_target_registry()
+    if args.command == "list":
+        return cmd_list(args, registry)
+    return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main())
