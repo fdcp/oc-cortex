@@ -64,17 +64,19 @@ if [ "${1:-}" = "--light" ]; then
 fi
 
 # 基础依赖 (Phase 1-3, 5, MCP)
+# 注:含 `>=` 的包名必须加引号,否则 shell 把 `>` 当重定向,
+#   会把版本号当成空文件名并丢掉版本约束(见已修复的回退 bug)。
 pip install --quiet \
-    loguru>=0.7.0 \
-    pyyaml>=6.0 \
-    tiktoken>=0.5.0 \
-    openai>=1.30.0 \
-    qdrant-client>=1.7.0 \
-    sentence-transformers>=2.2.0 \
-    jieba>=0.42.1 \
-    rank_bm25>=0.2.2 \
-    networkx>=3.0 \
-    pyvis>=0.3.2 \
+    "loguru>=0.7.0" \
+    "pyyaml>=6.0" \
+    "tiktoken>=0.5.0" \
+    "openai>=1.30.0" \
+    "qdrant-client>=1.7.0" \
+    "sentence-transformers>=2.2.0" \
+    "jieba>=0.42.1" \
+    "rank_bm25>=0.2.2" \
+    "networkx>=3.0" \
+    "pyvis>=0.3.2" \
     "mcp>=1.0.0"
 echo "  ✓ 基础依赖已安装"
 
@@ -82,8 +84,8 @@ echo "  ✓ 基础依赖已安装"
 if [ "$LIGHT_MODE" = false ]; then
     echo "  安装 Reranker 依赖 (torch + transformers, 约 2GB)..."
     pip install --quiet \
-        transformers>=4.40.0 \
-        torch>=2.0.0
+        "transformers>=4.40.0" \
+        "torch>=2.0.0"
     echo "  ✓ Reranker 依赖已安装"
 else
     echo "  ⚠ 跳过 Reranker (torch + transformers)"
