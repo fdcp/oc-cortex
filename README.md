@@ -597,6 +597,35 @@ python3 src/code_mcp_server.py  # stdio 模式，由客户端启动
 
 ---
 
+### 输出清理（code_cleanup）
+
+按 phase 选择性清理 `output/`、`qdrant_data/`、`logs/` 下的 pipeline 产物。默认 dry-run，不加 `--yes` 不删任何文件。
+
+```bash
+# 1. 列出所有 phase 产物 (path/exists/size)
+python3 src/code_cleanup.py list
+
+# 2. 预览删除计划 (dry-run, 只打印不删)
+python3 src/code_cleanup.py clean --p2
+
+# 3. 真删 Phase 2 产物 (tasks.jsonl + chunks_summary_p2.jsonl + .p2_checkpoint.json)
+python3 src/code_cleanup.py clean --p2 --yes
+
+# 4. 级联删除: 清 Phase 1 并连带删除依赖它的 P2/P3/P5 产物
+python3 src/code_cleanup.py clean --p1 --cascade --yes
+
+# 5. 清空所有 phase 产物 (含 checkpoint 与 Qdrant 向量库)
+python3 src/code_cleanup.py clean --all --yes
+```
+
+说明：
+- checkpoint 与 phase 强绑：清 P1/P2 必带对应 checkpoint，`--all` 一并清。
+- `--cascade` 默认关闭；关闭时真删后会 WARNING 列出下游孤儿产物。
+- 不触碰 `tests/` 下的 benchmark 副产物，不提供 backup/undo（删除不可逆，先 dry-run 确认）。
+- 详见 `doc/code_cleanup_README.md`。
+
+---
+
 ## 配置参考
 
 | 配置文件 | Phase | 主要配置项 |

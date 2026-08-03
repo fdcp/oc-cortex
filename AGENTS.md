@@ -55,6 +55,7 @@ oc_sess_graph/
 | `DecisionTracer` | class | `src/code_p6b_skeleton.py` | Multi-hop decision-chain tracing |
 | `SummarySkeleton` | class | `src/code_p6b_skeleton.py` | Topic→skeleton→LLM structured summary pipeline |
 | `ContextInjector` | class | `src/code_mcp_client.py` | Auto-inject cross-session memory into new sessions |
+| `code_cleanup` | CLI | `src/code_cleanup.py` | Phase-selective output cleanup (list/clean, dry-run default, cascade) |
 
 ## CONVENTIONS
 - Run scripts from the repository root with `python3 src/<script>.py`; this is not an installed Python package.

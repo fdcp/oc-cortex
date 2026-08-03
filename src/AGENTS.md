@@ -32,6 +32,7 @@
 - `code_mcp_server_http.py`: FastAPI HTTP MCP server; thin wrappers over `KGDatabase`.
 - `code_mcp_client.py`: HTTP client + `ContextInjector` for cross-session memory injection.
 - `code_MS_inspect.py`: Qdrant quality/stats inspection (direct `QdrantClient`, `argparse --config/--samples`; reads collections/paths/model from the Phase 3 YAML, resolving relative paths against the repo root so it runs from any CWD).
+- `code_cleanup.py`: phase-selective output cleanup CLI (`list` / `clean`); dry-run by default unless `--yes`, `--cascade` deletes downstream phases, resolves target paths from the phase YAMLs against the repo root so it runs from any CWD.
 
 ## CONVENTIONS
 - Keep imports compatible with direct execution from the repository root; sibling imports use names such as `from code_p1_models import Chunk`.
