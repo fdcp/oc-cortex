@@ -173,6 +173,29 @@ def _build_delete_plan(registry: list, selected: set) -> list:
     return [t for t in registry if t.phase in selected]
 
 
+def _downstream_closure(phases: set) -> set:
+    # 反向依赖图: phase -> 依赖它的下游 phase; 沿下游传递闭包 (不向上)
+    dependents = {p: set() for p in _PHASE_ORDER}
+    for phase, deps in _PHASE_DEPS.items():
+        for up in deps:
+            if up in dependents:
+                dependents[up].add(phase)
+    closure = set(phases)
+    frontier = set(phases)
+    while frontier:
+        nxt = set()
+        for p in frontier:
+            nxt |= {q for q in dependents.get(p, ()) if q not in closure}
+        closure |= nxt
+        frontier = nxt
+    return closure
+
+
+def _find_orphans(registry: list, deleted_phases: set) -> list:
+    downstream = _downstream_closure(deleted_phases) - deleted_phases
+    return [t for t in registry if t.phase in downstream and t.path.exists()]
+
+
 def _assert_within_repo(plan: list):
     # 安全兜底: 拒绝删除 repo 之外的路径 (防止配置被改成外部绝对路径)
     for t in plan:
@@ -225,6 +248,12 @@ def cmd_clean(args, registry: list) -> int:
     if not selected:
         logger.error("请至少选择一个 phase: --p1/--p2/--p3/--p5/--logs/--all")
         return 2
+    if args.cascade:
+        expanded = _downstream_closure(selected)
+        added = expanded - selected
+        if added:
+            logger.info(f"cascade: 扩展删除下游 phase: {', '.join(sorted(added))}")
+        selected = expanded
     plan = _build_delete_plan(registry, selected)
     _assert_within_repo(plan)
     dry_run = not args.yes
@@ -233,6 +262,12 @@ def cmd_clean(args, registry: list) -> int:
         print("[dry-run] 未删除任何文件; 加 --yes 真实删除", flush=True)
         return 0
     deleted = _execute_delete(plan)
+    orphans = _find_orphans(registry, selected)
+    for t in orphans:
+        logger.warning(
+            f"orphan detected: {_display_path(t.path)} "
+            f"(上游 phase 已删, 产物仍存在; 加 --cascade 一并清理)"
+        )
     logger.info(f"完成: 删除 {len(deleted)}/{len(plan)} 个目标, 释放 {_format_size(total)}")
     return 0
 
@@ -254,6 +289,8 @@ def main(argv=None) -> int:
                          help="显式干跑: 只打印删除计划, 不删除 (与默认行为一致)")
     p_clean.add_argument("-y", "--yes", action="store_true",
                          help="真实删除 (跳过确认); 不加此 flag 一律 dry-run")
+    p_clean.add_argument("--cascade", action="store_true",
+                         help="级联删除下游依赖产物 (默认关闭; 关闭时仅 WARNING 列出孤儿)")
     args = parser.parse_args(argv)
 
     registry = _build_target_registry()
