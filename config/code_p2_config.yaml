@@ -12,6 +12,7 @@ phase1:
 # Phase 2 输出
 output:
   chunk_summaries: "./output/chunks_summary_p2.jsonl"  # chunk 总结 (chunk_id + summary)
+  checkpoint: "./output/.p2_checkpoint.json"            # [wired] 增量 checkpoint 路径; 命令行 --checkpoint 优先
 
 # LLM 配置 (OpenCode Go - Hy3)
 # 注意: hy3-free 已从 OpenCode Zen 免费层下线, hy3 现仅在 OpenCode Go 订阅端点提供

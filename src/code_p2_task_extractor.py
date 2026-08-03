@@ -671,7 +671,8 @@ class TaskExtractor:
         return empty_result
 
     def extract_tasks_batch(
-        self, sessions_chunks: dict[str, list[Chunk]]
+        self, sessions_chunks: dict[str, list[Chunk]],
+        on_session_done=None,
     ) -> tuple[list[Task], list[dict]]:
         """
         批量处理多个 session
@@ -682,16 +683,21 @@ class TaskExtractor:
 
         当 concurrency > 1 时使用线程池并行调用 LLM,加速处理。
         OpenAI SDK 的 client 是线程安全的,可以安全地在多线程中使用。
+
+        on_session_done(session_id, result, chunks): 每跑完一个 session 在
+        主线程同步调用一次 (串行写入主线程), 适合增量落盘。result['status']
+        与 coverage 同字段集。chunks 是该 session 的 Chunk 列表 (含被 worker
+        写入的 task_summary)。
         """
         total = len(sessions_chunks)
 
         if self.concurrency == 1 or total <= 1:
-            return self._extract_tasks_serial(sessions_chunks)
+            return self._extract_tasks_serial(sessions_chunks, on_session_done)
 
-        return self._extract_tasks_parallel(sessions_chunks)
+        return self._extract_tasks_parallel(sessions_chunks, on_session_done)
 
     def _extract_tasks_serial(
-        self, sessions_chunks: dict[str, list[Chunk]]
+        self, sessions_chunks: dict[str, list[Chunk]], on_session_done=None,
     ) -> tuple[list[Task], list[dict]]:
         """串行处理所有 session"""
         all_tasks: list[Task] = []
@@ -705,14 +711,17 @@ class TaskExtractor:
             try:
                 result = self.extract_tasks(session_id, chunks)
                 all_tasks.extend(result["tasks"])
-                session_coverage.append({
+                cov = {
                     "session_id": session_id,
                     "total_chunks": result["total_chunks"],
                     "summaries_written": result["summaries_written"],
                     "total_attempts": result["total_attempts"],
                     "status": result["status"],
                     "error": result["error"],
-                })
+                }
+                session_coverage.append(cov)
+                if on_session_done:
+                    on_session_done(session_id, result, chunks)
             except Exception as e:
                 # extract_tasks 内部已 catch 所有异常, 这里兜底意外错误
                 logger.error(f"Session {session_id} 意外错误: {e}")
@@ -729,7 +738,7 @@ class TaskExtractor:
         return all_tasks, session_coverage
 
     def _extract_tasks_parallel(
-        self, sessions_chunks: dict[str, list[Chunk]]
+        self, sessions_chunks: dict[str, list[Chunk]], on_session_done=None,
     ) -> tuple[list[Task], list[dict]]:
         """并行处理所有 session (线程池)"""
         all_tasks: list[Task] = []
@@ -786,14 +795,19 @@ class TaskExtractor:
                 try:
                     sid, result = future.result()
                     all_tasks.extend(result["tasks"])
-                    session_coverage.append({
+                    cov = {
                         "session_id": sid,
                         "total_chunks": result["total_chunks"],
                         "summaries_written": result["summaries_written"],
                         "total_attempts": result["total_attempts"],
                         "status": result["status"],
                         "error": result["error"],
-                    })
+                    }
+                    session_coverage.append(cov)
+                    if on_session_done:
+                        on_session_done(
+                            sid, result, sessions_chunks.get(sid, [])
+                        )
                 except Exception as e:
                     logger.error(f"Session {session_id} 线程异常: {e}")
                     session_coverage.append({
