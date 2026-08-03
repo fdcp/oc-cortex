@@ -153,16 +153,17 @@ def save_checkpoint(path: str, done: dict) -> None:
     logger.info(f"checkpoint 已更新: {path} (已完成 {len(done)} session)")
 
 
-def load_existing_tasks_by_session(path: str) -> dict[str, list]:
+def load_existing_tasks_by_session(path: str) -> dict[str, list[Task]]:
     """读取磁盘上已有的 tasks.jsonl,按 session_id 分组。
 
     用于增量场景: 已完成 session 的旧 task 直接复用, 不再调 LLM。
+    反序列化为 Task 对象, 以便 save_tasks / merged_tasks 的属性访问一致。
     """
-    by_session: dict[str, list] = defaultdict(list)
+    by_session: dict[str, list[Task]] = defaultdict(list)
     if not os.path.exists(path):
         return by_session
     with open(path, "r", encoding="utf-8") as f:
-        for line in f:
+        for line_num, line in enumerate(f, 1):
             line = line.strip()
             if not line:
                 continue
@@ -171,8 +172,14 @@ def load_existing_tasks_by_session(path: str) -> dict[str, list]:
             except json.JSONDecodeError:
                 continue
             sid = t.get("session_id")
-            if sid:
-                by_session[sid].append(t)
+            if not sid:
+                continue
+            try:
+                by_session[sid].append(Task.from_dict(t))
+            except (KeyError, TypeError) as e:
+                logger.warning(
+                    f"task 反序列化失败 (行 {line_num}, session={sid}): {e}"
+                )
     return by_session
 
 

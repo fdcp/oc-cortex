@@ -26,8 +26,8 @@ llm:
   content_retries: 3                          # 内容校验重试次数 (chunk_summaries 缺失或 tasks 为空时)
   timeout: 120                                # 单次请求超时(秒)
   temperature: 0.2                            # 生成温度 (低=更确定)
-  max_tokens_per_chunk: 2000                  # 单个 chunk 在 prompt 中的最大 token 数
-  max_total_prompt_tokens: 30000              # 整个 prompt 最大 token 数
+  max_tokens_per_chunk: 5000                  # 单个 chunk 在 prompt 中的最大 token 数
+  max_total_prompt_tokens: 128000             # 整个 prompt 最大 token 数
   concurrency: 4                              # 并发线程数 (1=串行, >1=线程池并行)
 
 logging:
