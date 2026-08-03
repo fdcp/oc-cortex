@@ -273,23 +273,37 @@ def main():
     if args.force:
         done: dict = {}
         pending = dict(sessions_chunks)
+        prior_batches_map: dict[str, list[dict]] = {}
         logger.info("--force: 忽略 checkpoint, 全量重新处理")
     else:
         done = load_checkpoint(checkpoint_path)
-        # 只保留当前 P1 输出中仍存在的 session (P1 删掉的 session 从 done 剔除)
         done = {sid: rec for sid, rec in done.items() if sid in sessions_chunks}
         existing_summaries = load_existing_summaries(summary_file)
         pending: dict[str, list[Chunk]] = {}
+        prior_batches_map = {}
         stale: list[str] = []
         for sid, scs in sessions_chunks.items():
             rec = done.get(sid)
             cur_hash = session_fingerprint(scs)
             if rec and rec.get("content_hash") == cur_hash:
-                for c in scs:
-                    if c.task_summary is None and c.chunk_id in existing_summaries:
-                        c.task_summary = existing_summaries[c.chunk_id]
+                if rec.get("split_mode") == "multi":
+                    batches = rec.get("batches", [])
+                    if batches and all(
+                        b.get("status") == "success" for b in batches
+                    ):
+                        for c in scs:
+                            if c.task_summary is None and c.chunk_id in existing_summaries:
+                                c.task_summary = existing_summaries[c.chunk_id]
+                    else:
+                        pending[sid] = scs
+                        prior_batches_map[sid] = batches
+                else:
+                    for c in scs:
+                        if c.task_summary is None and c.chunk_id in existing_summaries:
+                            c.task_summary = existing_summaries[c.chunk_id]
             else:
                 pending[sid] = scs
+                prior_batches_map.pop(sid, None)
                 if rec:
                     stale.append(sid)
                     done.pop(sid, None)
@@ -321,6 +335,9 @@ def main():
                     summary_map[c.chunk_id] = existing_summaries_full[c.chunk_id]
 
     def _on_session_done(sid, result, scs) -> None:
+        if result.get("split_mode") == "multi":
+            _save_multi_session(sid, result, scs)
+            return
         if result["status"] != "success":
             return
         merged_tasks.extend(result["tasks"])
@@ -342,6 +359,63 @@ def main():
             f"checkpoint {len(done)})"
         )
 
+    def _on_batch_done(sid, batch_result, scs) -> None:
+        """多 batch session 每跑完一个 batch 立即更新 checkpoint,
+        Ctrl-C 时已完成 batch 不丢, 下次续跑只重跑失败的。"""
+        rec = done.get(sid, {})
+        rec["chunk_ids"] = sorted(c.chunk_id for c in scs)
+        rec["chunk_count"] = len(scs)
+        rec["content_hash"] = session_fingerprint(scs)
+        rec["split_mode"] = "multi"
+        batches = rec.get("batches", [])
+        batch_dict = batch_result.to_checkpoint_dict()
+        replaced = False
+        for i, b in enumerate(batches):
+            if b.get("batch_id") == batch_result.batch_id:
+                batches[i] = batch_dict
+                replaced = True
+                break
+        if not replaced:
+            batches.append(batch_dict)
+        batches.sort(key=lambda b: b.get("batch_id", 0))
+        rec["batches"] = batches
+        done[sid] = rec
+        save_checkpoint(checkpoint_path, done)
+        logger.info(
+            f"  → session {sid} batch {batch_result.batch_id} "
+            f"({batch_result.status}) 已落 checkpoint"
+        )
+
+    def _save_multi_session(sid, result, scs) -> None:
+        """多 batch session 落盘: 合并所有 batch 的 tasks 和 summaries,
+        写 checkpoint (含 batches 列表)。"""
+        batch_results = result.get("batch_results", [])
+        for br in batch_results:
+            for cid, smry in br.chunk_summaries.items():
+                summary_map[cid] = smry
+        merged_tasks.extend(result["tasks"])
+        save_tasks(merged_tasks, args.output)
+        save_summary_map(summary_map, summary_file)
+
+        rec = done.get(sid, {})
+        rec["chunk_ids"] = sorted(c.chunk_id for c in scs)
+        rec["chunk_count"] = len(scs)
+        rec["content_hash"] = session_fingerprint(scs)
+        rec["split_mode"] = "multi"
+        rec["batches"] = [br.to_checkpoint_dict() for br in batch_results]
+        if result["status"] == "success":
+            rec["completed_at"] = time.strftime("%Y-%m-%dT%H:%M:%S")
+        rec.pop("error", None)
+        done[sid] = rec
+        save_checkpoint(checkpoint_path, done)
+        n_batches = len(batch_results)
+        n_success = sum(1 for b in batch_results if b.status == "success")
+        logger.info(
+            f"  → session {sid} 已落盘 "
+            f"({len(result['tasks'])} task, {n_success}/{n_batches} batch 成功, "
+            f"累计 {len(merged_tasks)}, checkpoint {len(done)})"
+        )
+
     if pending:
         concurrency = args.concurrency or config.get("llm.concurrency", 1)
         extractor = TaskExtractor(
@@ -360,10 +434,15 @@ def main():
             ),
             concurrency=concurrency,
             temperature=config.get("llm.temperature", 0.3),
+            batch_size=config.get("llm.batch_size", 16),
+            per_chunk_output_tokens=config.get("llm.per_chunk_output_tokens", 250),
         )
         t0 = time.time()
         _new_tasks_unused, session_coverage = extractor.extract_tasks_batch(
-            pending, on_session_done=_on_session_done
+            pending,
+            on_session_done=_on_session_done,
+            on_batch_done=_on_batch_done,
+            prior_batches_map=prior_batches_map,
         )
         elapsed = time.time() - t0
         logger.info(f"Task 提取耗时: {elapsed:.1f}s")

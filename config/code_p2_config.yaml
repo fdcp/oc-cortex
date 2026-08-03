@@ -29,6 +29,8 @@ llm:
   max_tokens_per_chunk: 5000                  # 单个 chunk 在 prompt 中的最大 token 数
   max_total_prompt_tokens: 128000             # 整个 prompt 最大 token 数
   concurrency: 4                              # 并发线程数 (1=串行, >1=线程池并行)
+  batch_size: 16                              # 多 batch 切分时单次 LLM 调用目标 chunk 数
+  per_chunk_output_tokens: 250                # 每 chunk 预留的 LLM summary 输出 token (切分触发: session 总输入 + N*250 > max_total)
 
 logging:
   level: "INFO"                               # DEBUG / INFO / WARNING / ERROR

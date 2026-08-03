@@ -12,16 +12,154 @@ import json
 import re
 import time
 import os
+import math
+import hashlib
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass, field
 from typing import Optional
 
 from openai import OpenAI
 from loguru import logger
 
 from code_p1_models import Chunk
-from code_p1_utils import count_tokens, safe_truncate
+from code_p1_utils import count_tokens, safe_truncate, chunk_content_hash
 from code_p2_models import Task
+
+
+@dataclass
+class BatchPlan:
+    """单个 batch 的切分计划"""
+    start_idx: int
+    end_idx: int
+    chunks: list[Chunk]
+    content_hash: str
+
+    @property
+    def chunk_count(self) -> int:
+        return len(self.chunks)
+
+
+@dataclass
+class BatchResult:
+    """单个 batch 的执行结果"""
+    batch_id: int
+    start_idx: int
+    end_idx: int
+    content_hash: str
+    status: str
+    attempts: int
+    tasks: list[Task] = field(default_factory=list)
+    chunk_summaries: dict[str, str] = field(default_factory=dict)
+    error: Optional[str] = None
+
+    def to_checkpoint_dict(self) -> dict:
+        return {
+            "batch_id": self.batch_id,
+            "chunk_range": [self.start_idx, self.end_idx],
+            "content_hash": self.content_hash,
+            "status": self.status,
+            "attempts": self.attempts,
+            "tasks": [t.to_dict() for t in self.tasks],
+            "chunk_summaries": self.chunk_summaries,
+            "error": self.error,
+        }
+
+    @classmethod
+    def from_checkpoint_dict(cls, data: dict) -> "BatchResult":
+        return cls(
+            batch_id=data["batch_id"],
+            start_idx=data["chunk_range"][0],
+            end_idx=data["chunk_range"][1],
+            content_hash=data["content_hash"],
+            status=data["status"],
+            attempts=data.get("attempts", 1),
+            tasks=[Task.from_dict(t) for t in data.get("tasks", [])],
+            chunk_summaries=dict(data.get("chunk_summaries", {})),
+            error=data.get("error"),
+        )
+
+
+class BatchPlanner:
+    """
+    多 batch 切分器: 顺序切 m 个 chunk/批, 每批独立校验 token 是否超
+    max_total_prompt_tokens, 超了则按 ceil(m/2) 递归, 直到 len(batch)==1 兜底。
+    """
+
+    def __init__(
+        self,
+        max_total_tokens: int,
+        m: int = 16,
+        per_chunk_output_tokens: int = 250,
+    ):
+        if m < 1:
+            raise ValueError(f"batch_size m must be >= 1, got {m}")
+        self.max_total_tokens = max_total_tokens
+        self.m = m
+        self.per_chunk_output_tokens = per_chunk_output_tokens
+
+    def _chunk_input_tokens(self, c: Chunk) -> int:
+        if c.cleaned_size_tokens and c.cleaned_size_tokens > 0:
+            return c.cleaned_size_tokens
+        return count_tokens(c.cleaned_text())
+
+    def _batch_input_tokens(self, chunks: list[Chunk]) -> int:
+        return sum(self._chunk_input_tokens(c) for c in chunks)
+
+    def _batch_fits(self, chunks: list[Chunk]) -> bool:
+        if not chunks:
+            return True
+        total = self._batch_input_tokens(chunks) + len(chunks) * self.per_chunk_output_tokens
+        return total <= self.max_total_tokens
+
+    def needs_split(self, chunks: list[Chunk]) -> bool:
+        """session 总输入 + N*250 > max_total 时需要切分"""
+        if not chunks:
+            return False
+        total = self._batch_input_tokens(chunks) + len(chunks) * self.per_chunk_output_tokens
+        return total > self.max_total_tokens
+
+    def plan(self, chunks: list[Chunk]) -> list[BatchPlan]:
+        """返回顺序 batch 列表; 每个 batch 内部校验大小, 超了递归减半"""
+        plans: list[BatchPlan] = []
+        i = 0
+        n = len(chunks)
+        while i < n:
+            target = self.m
+            batch = self._slice_to_fit(chunks, i, target)
+            start, end = i, i + len(batch)
+            batch_hash = self._hash_batch(batch)
+            plans.append(BatchPlan(
+                start_idx=start,
+                end_idx=end,
+                chunks=batch,
+                content_hash=batch_hash,
+            ))
+            i = end
+        return plans
+
+    def _slice_to_fit(
+        self, chunks: list[Chunk], start: int, target: int
+    ) -> list[Chunk]:
+        """从 start 起取最多 target 个 chunk, 但不超过 budget;
+        超了则 ceil(target/2) 递归, 1 chunk 兜底。"""
+        n = len(chunks)
+        while True:
+            end = min(start + target, n)
+            batch = chunks[start:end]
+            if self._batch_fits(batch) or len(batch) == 1:
+                return batch
+            target = max(1, math.ceil(target / 2))
+
+    @staticmethod
+    def _hash_batch(chunks: list[Chunk]) -> str:
+        """保留顺序的 batch 内容哈希 (用于增量续跑判断)"""
+        acc = hashlib.sha256()
+        for c in chunks:
+            h = c.content_hash or chunk_content_hash(c)
+            acc.update(h.encode("utf-8"))
+            acc.update(b"|")
+        return acc.hexdigest()
 
 
 # ============================================================
@@ -247,6 +385,8 @@ class TaskExtractor:
         max_total_prompt_tokens: int = 30000,
         concurrency: int = 1,
         temperature: float = 0.3,
+        batch_size: int = 16,
+        per_chunk_output_tokens: int = 250,
     ):
         self.model = model
         self.max_retries = max_retries
@@ -254,10 +394,11 @@ class TaskExtractor:
         self.timeout = timeout
         self.max_tokens_per_chunk = max_tokens_per_chunk
         self.max_total_prompt_tokens = max_total_prompt_tokens
-        self.concurrency = max(1, concurrency)  # 至少为 1
+        self.concurrency = max(1, concurrency)
         self.temperature = temperature
+        self.batch_size = max(1, batch_size)
+        self.per_chunk_output_tokens = max(1, per_chunk_output_tokens)
 
-        # 获取 API Key
         self.api_key = api_key or os.environ.get(api_key_env, "")
         if not self.api_key:
             raise ValueError(
@@ -267,18 +408,24 @@ class TaskExtractor:
 
         self.base_url = base_url
 
-        # 初始化 OpenAI 兼容客户端 (线程安全)
         self.client = OpenAI(
             api_key=self.api_key,
             base_url=self.base_url,
             timeout=self.timeout,
         )
 
+        self._planner = BatchPlanner(
+            max_total_tokens=self.max_total_prompt_tokens,
+            m=self.batch_size,
+            per_chunk_output_tokens=self.per_chunk_output_tokens,
+        )
+
         logger.info(
             f"TaskExtractor 初始化: model={self.model}, "
             f"base_url={self.base_url}, concurrency={self.concurrency}, "
             f"network_retries={self.max_retries}, content_retries={self.content_retries}, "
-            f"temperature={self.temperature}"
+            f"temperature={self.temperature}, batch_size={self.batch_size}, "
+            f"per_chunk_output_tokens={self.per_chunk_output_tokens}"
         )
 
     # --------------------------------------------------------
@@ -361,6 +508,7 @@ class TaskExtractor:
         llm_output: str,
         session_id: str,
         chunks: list[Chunk],
+        task_id_prefix: Optional[str] = None,
     ) -> tuple[list[Task], int, int]:
         """
         解析 LLM 输出并校验
@@ -473,7 +621,7 @@ class TaskExtractor:
                 assigned_chunks.add(full_cid)
 
             task = Task(
-                task_id=f"{session_id}_T{i + 1}",
+                task_id=f"{task_id_prefix or session_id + '_'}T{i + 1}",
                 session_id=session_id,
                 task_label=t.get("task_label", f"任务{i + 1}"),
                 task_summary=t.get("task_summary", ""),
@@ -673,6 +821,8 @@ class TaskExtractor:
     def extract_tasks_batch(
         self, sessions_chunks: dict[str, list[Chunk]],
         on_session_done=None,
+        on_batch_done=None,
+        prior_batches_map: Optional[dict[str, list[dict]]] = None,
     ) -> tuple[list[Task], list[dict]]:
         """
         批量处理多个 session
@@ -682,34 +832,54 @@ class TaskExtractor:
         - session_coverage: 每个 session 的 summary 覆盖统计列表
 
         当 concurrency > 1 时使用线程池并行调用 LLM,加速处理。
-        OpenAI SDK 的 client 是线程安全的,可以安全地在多线程中使用。
+        单 batch session 优先入池, 多 batch session 全部排在 Phase 2。
 
         on_session_done(session_id, result, chunks): 每跑完一个 session 在
-        主线程同步调用一次 (串行写入主线程), 适合增量落盘。result['status']
-        与 coverage 同字段集。chunks 是该 session 的 Chunk 列表 (含被 worker
-        写入的 task_summary)。
+        主线程同步调用一次 (串行写入主线程), 适合增量落盘。
+        on_batch_done(session_id, batch_result): 多 batch session 每跑完
+        一个 batch 调一次 (per-batch checkpoint 落盘)。
+        prior_batches_map: 多 batch session 的 checkpoint 续跑数据,
+        {session_id: [prior_batch_dict, ...]}, 用于跳过已成功的 batch。
         """
         total = len(sessions_chunks)
 
         if self.concurrency == 1 or total <= 1:
-            return self._extract_tasks_serial(sessions_chunks, on_session_done)
+            return self._extract_tasks_serial(
+                sessions_chunks, on_session_done,
+                on_batch_done=on_batch_done,
+                prior_batches_map=prior_batches_map,
+            )
 
-        return self._extract_tasks_parallel(sessions_chunks, on_session_done)
+        return self._extract_tasks_parallel(
+            sessions_chunks, on_session_done,
+            on_batch_done=on_batch_done,
+            prior_batches_map=prior_batches_map,
+        )
 
     def _extract_tasks_serial(
         self, sessions_chunks: dict[str, list[Chunk]], on_session_done=None,
+        on_batch_done=None,
+        prior_batches_map: Optional[dict[str, list[dict]]] = None,
     ) -> tuple[list[Task], list[dict]]:
-        """串行处理所有 session"""
+        """串行处理所有 session (concurrency=1)"""
         all_tasks: list[Task] = []
         session_coverage: list[dict] = []
         total = len(sessions_chunks)
+        prior_batches_map = prior_batches_map or {}
 
         for idx, (session_id, chunks) in enumerate(
             sessions_chunks.items(), 1
         ):
             logger.info(f"[{idx}/{total}] 处理 session: {session_id}")
             try:
-                result = self.extract_tasks(session_id, chunks)
+                if not self._needs_split(chunks):
+                    result = self.extract_tasks(session_id, chunks)
+                else:
+                    result = self._run_multi_batches_serial(
+                        session_id, chunks,
+                        prior=prior_batches_map.get(session_id, []),
+                        on_batch_done=on_batch_done,
+                    )
                 all_tasks.extend(result["tasks"])
                 cov = {
                     "session_id": session_id,
@@ -723,7 +893,6 @@ class TaskExtractor:
                 if on_session_done:
                     on_session_done(session_id, result, chunks)
             except Exception as e:
-                # extract_tasks 内部已 catch 所有异常, 这里兜底意外错误
                 logger.error(f"Session {session_id} 意外错误: {e}")
                 session_coverage.append({
                     "session_id": session_id,
@@ -737,92 +906,199 @@ class TaskExtractor:
         self._log_batch_summary("串行", session_coverage, all_tasks)
         return all_tasks, session_coverage
 
+    def _run_multi_batches_serial(
+        self,
+        session_id: str,
+        chunks: list[Chunk],
+        prior: list[dict],
+        on_batch_done=None,
+    ) -> dict:
+        """串行跑多 batch session (用于 concurrency=1)"""
+        plans = self._planner.plan(chunks)
+        prior_idx = self._build_prior_index(prior)
+        results: list[BatchResult] = []
+        for batch_id, plan in enumerate(plans):
+            pb = prior_idx.get((batch_id, plan.content_hash))
+            if pb and pb.get("status") == "success":
+                result = self._batch_result_from_prior(batch_id, plan, pb)
+                logger.debug(f"Session {session_id} batch {batch_id}: 复用 checkpoint")
+            else:
+                result = self._extract_one_batch(session_id, batch_id, plan)
+            results.append(result)
+            if on_batch_done:
+                on_batch_done(session_id, result, chunks)
+        return self._merge_batch_results(session_id, chunks, results)
+
     def _extract_tasks_parallel(
         self, sessions_chunks: dict[str, list[Chunk]], on_session_done=None,
+        on_batch_done=None,
+        prior_batches_map: Optional[dict[str, list[dict]]] = None,
     ) -> tuple[list[Task], list[dict]]:
-        """并行处理所有 session (线程池)"""
+        """两阶段并行: Phase 1 单 batch session, Phase 2 多 batch session 的所有 batch。
+        共享 ThreadPoolExecutor, 但多 batch session 全部排在 Phase 2。"""
         all_tasks: list[Task] = []
         session_coverage: list[dict] = []
-        total = len(sessions_chunks)
+        prior_batches_map = prior_batches_map or {}
 
-        # 线程安全的进度计数器
-        progress_lock = threading.Lock()
-        completed_count = 0
-
-        # 将 session 列表转为有序列表,便于追踪
-        session_items = list(sessions_chunks.items())
-
+        single_sessions: dict[str, list[Chunk]] = {}
+        multi_sessions: dict[str, list[Chunk]] = {}
+        for sid, chunks in sessions_chunks.items():
+            (multi_sessions if self._needs_split(chunks) else single_sessions)[sid] = chunks
         logger.info(
-            f"并行处理 {total} 个 session, 并发数: {self.concurrency}"
+            f"分类: 单 batch={len(single_sessions)} sessions, "
+            f"多 batch={len(multi_sessions)} sessions, "
+            f"并发={self.concurrency}"
         )
 
-        def _process_one(
-            item: tuple[str, list[Chunk]]
-        ) -> tuple[str, dict]:
-            """处理单个 session, 返回 (session_id, result_dict)"""
-            nonlocal completed_count
-            session_id, chunks = item
-            try:
-                result = self.extract_tasks(session_id, chunks)
-                return session_id, result
-            except Exception as e:
-                # extract_tasks 内部已 catch 所有异常, 这里兜底意外错误
-                logger.error(f"Session {session_id} 意外错误: {e}")
-                return session_id, {
-                    "tasks": [],
-                    "summaries_written": 0,
-                    "total_chunks": len(chunks),
-                    "total_attempts": 0,
-                    "status": "failed",
-                    "error": str(e),
-                }
-            finally:
-                with progress_lock:
-                    completed_count += 1
-                    current = completed_count
-                logger.info(f"进度: [{current}/{total}]")
-
         with ThreadPoolExecutor(max_workers=self.concurrency) as executor:
-            # 提交所有任务
-            future_to_session = {
-                executor.submit(_process_one, item): item[0]
-                for item in session_items
-            }
+            phase1 = self._run_phase1(
+                executor, single_sessions, on_session_done,
+                total_sessions=len(sessions_chunks),
+            )
+            all_tasks.extend(phase1["all_tasks"])
+            session_coverage.extend(phase1["coverage"])
 
-            # 收集结果
-            for future in as_completed(future_to_session):
-                session_id = future_to_session[future]
-                try:
-                    sid, result = future.result()
-                    all_tasks.extend(result["tasks"])
-                    cov = {
-                        "session_id": sid,
-                        "total_chunks": result["total_chunks"],
-                        "summaries_written": result["summaries_written"],
-                        "total_attempts": result["total_attempts"],
-                        "status": result["status"],
-                        "error": result["error"],
-                    }
-                    session_coverage.append(cov)
-                    if on_session_done:
-                        on_session_done(
-                            sid, result, sessions_chunks.get(sid, [])
-                        )
-                except Exception as e:
-                    logger.error(f"Session {session_id} 线程异常: {e}")
-                    session_coverage.append({
-                        "session_id": session_id,
-                        "total_chunks": 0,
-                        "summaries_written": 0,
-                        "total_attempts": 0,
-                        "status": "thread_error",
-                        "error": str(e),
-                    })
+            if multi_sessions:
+                phase2 = self._run_phase2(
+                    executor, multi_sessions, prior_batches_map,
+                    on_session_done, on_batch_done,
+                )
+                all_tasks.extend(phase2["all_tasks"])
+                session_coverage.extend(phase2["coverage"])
 
         self._log_batch_summary(
             f"并发={self.concurrency}", session_coverage, all_tasks
         )
         return all_tasks, session_coverage
+
+    def _run_phase1(
+        self, executor, single_sessions, on_session_done, total_sessions
+    ) -> dict:
+        """Phase 1: 单 batch session 全部入池"""
+        all_tasks: list[Task] = []
+        coverage: list[dict] = []
+        progress_lock = threading.Lock()
+        completed = 0
+
+        def _process(sid, chunks):
+            nonlocal completed
+            try:
+                return sid, self.extract_tasks(sid, chunks)
+            except Exception as e:
+                logger.error(f"Session {sid} 意外错误: {e}")
+                return sid, {
+                    "tasks": [], "summaries_written": 0,
+                    "total_chunks": len(chunks), "total_attempts": 0,
+                    "status": "failed", "error": str(e),
+                }
+            finally:
+                with progress_lock:
+                    completed += 1
+                    logger.info(f"进度: [{completed}/{total_sessions}]")
+
+        futures = {
+            executor.submit(_process, sid, chs): sid
+            for sid, chs in single_sessions.items()
+        }
+        for fut in as_completed(futures):
+            sid = futures[fut]
+            try:
+                _, result = fut.result()
+                all_tasks.extend(result["tasks"])
+                coverage.append(self._build_coverage(sid, result))
+                if on_session_done:
+                    on_session_done(sid, result, single_sessions.get(sid, []))
+            except Exception as e:
+                logger.error(f"Session {sid} 线程异常: {e}")
+                coverage.append(self._build_thread_error_coverage(sid, e))
+        return {"all_tasks": all_tasks, "coverage": coverage}
+
+    def _run_phase2(
+        self, executor, multi_sessions, prior_batches_map,
+        on_session_done, on_batch_done,
+    ) -> dict:
+        """Phase 2: 多 batch session 全部 batch 入池 (含可复用 batch)"""
+        all_tasks: list[Task] = []
+        coverage: list[dict] = []
+        progress_lock = threading.Lock()
+        completed = 0
+        total_batches = sum(
+            len(self._planner.plan(chs)) for chs in multi_sessions.values()
+        )
+
+        reusable: dict[str, list[BatchResult]] = {}
+        futures = {}
+
+        for sid, chunks in multi_sessions.items():
+            plans = self._planner.plan(chunks)
+            prior_idx = self._build_prior_index(
+                prior_batches_map.get(sid, [])
+            )
+            for batch_id, plan in enumerate(plans):
+                pb = prior_idx.get((batch_id, plan.content_hash))
+                if pb and pb.get("status") == "success":
+                    reusable.setdefault(sid, []).append(
+                        self._batch_result_from_prior(batch_id, plan, pb)
+                    )
+                    logger.debug(
+                        f"Session {sid} batch {batch_id}: 复用 checkpoint"
+                    )
+                else:
+                    fut = executor.submit(
+                        self._extract_one_batch, sid, batch_id, plan
+                    )
+                    futures[fut] = (sid, batch_id)
+
+        batch_results: dict[str, list[BatchResult]] = {
+            sid: list(rs) for sid, rs in reusable.items()
+        }
+        for fut in as_completed(futures):
+            sid, batch_id = futures[fut]
+            try:
+                result = fut.result()
+            except Exception as e:
+                logger.error(f"Session {sid} batch {batch_id} 线程异常: {e}")
+                result = BatchResult(
+                    batch_id=batch_id, start_idx=-1, end_idx=-1,
+                    content_hash="", status="failed", attempts=0,
+                    error=str(e),
+                )
+            batch_results.setdefault(sid, []).append(result)
+            if on_batch_done:
+                on_batch_done(sid, result, multi_sessions.get(sid, []))
+            with progress_lock:
+                completed += 1
+                logger.info(f"多 batch 进度: [{completed}/{total_batches}]")
+
+        for sid, brs in batch_results.items():
+            brs.sort(key=lambda r: r.batch_id)
+            chunks = multi_sessions[sid]
+            merged = self._merge_batch_results(sid, chunks, brs)
+            all_tasks.extend(merged["tasks"])
+            coverage.append(self._build_coverage(sid, merged))
+            if on_session_done:
+                on_session_done(sid, merged, chunks)
+        return {"all_tasks": all_tasks, "coverage": coverage}
+
+    @staticmethod
+    def _build_coverage(session_id: str, result: dict) -> dict:
+        return {
+            "session_id": session_id,
+            "total_chunks": result["total_chunks"],
+            "summaries_written": result["summaries_written"],
+            "total_attempts": result["total_attempts"],
+            "status": result["status"],
+            "error": result["error"],
+        }
+
+    @staticmethod
+    def _build_thread_error_coverage(session_id: str, e: Exception) -> dict:
+        return {
+            "session_id": session_id,
+            "total_chunks": 0, "summaries_written": 0,
+            "total_attempts": 0,
+            "status": "thread_error", "error": str(e),
+        }
 
     @staticmethod
     def _log_batch_summary(
@@ -850,3 +1126,191 @@ class TaskExtractor:
             parts.append(f"重试后恢复 {retried}")
         parts.append(f"共 {len(all_tasks)} 个 task")
         logger.info(", ".join(parts))
+
+    def _needs_split(self, chunks: list[Chunk]) -> bool:
+        return self._planner.needs_split(chunks)
+
+    def _extract_one_batch(
+        self,
+        session_id: str,
+        batch_id: int,
+        plan: BatchPlan,
+    ) -> BatchResult:
+        """单 batch 调 LLM, content_retries 内重试; 返回 BatchResult
+        (status: success | incomplete | failed)"""
+        batch_chunks = plan.chunks
+        pre_existing = {c.chunk_id for c in batch_chunks if c.task_summary}
+        last_error = None
+        tasks: list[Task] = []
+
+        for attempt in range(1, self.content_retries + 1):
+            if attempt > 1:
+                for c in batch_chunks:
+                    if c.chunk_id not in pre_existing:
+                        c.task_summary = None
+
+            try:
+                prompt = self._build_prompt(batch_chunks)
+                llm_output = self._call_llm_with_retry(prompt)
+                task_id_prefix = f"{session_id}_b{batch_id}_"
+                tasks, summaries_written, total_chunks = self._parse_and_validate(
+                    llm_output, session_id, batch_chunks,
+                    task_id_prefix=task_id_prefix,
+                )
+            except Exception as e:
+                last_error = str(e)
+                logger.warning(
+                    f"Session {session_id} batch {batch_id} "
+                    f"(内容重试 {attempt}/{self.content_retries}): {e}"
+                )
+                continue
+
+            chunk_summaries = {
+                c.chunk_id: c.task_summary
+                for c in batch_chunks if c.task_summary
+            }
+
+            issues = []
+            if summaries_written < total_chunks:
+                issues.append(
+                    f"chunk_summaries 缺失 {total_chunks - summaries_written}/{total_chunks}"
+                )
+            if not tasks:
+                issues.append("tasks 为空")
+
+            if not issues:
+                logger.info(
+                    f"Session {session_id} batch {batch_id} "
+                    f"({len(batch_chunks)} chunks): 提取 {len(tasks)} tasks"
+                    + (f" (第 {attempt} 次尝试)" if attempt > 1 else "")
+                )
+                return BatchResult(
+                    batch_id=batch_id,
+                    start_idx=plan.start_idx,
+                    end_idx=plan.end_idx,
+                    content_hash=plan.content_hash,
+                    status="success",
+                    attempts=attempt,
+                    tasks=tasks,
+                    chunk_summaries=chunk_summaries,
+                )
+
+            issue_str = "; ".join(issues)
+            last_error = issue_str
+            if attempt < self.content_retries:
+                logger.warning(
+                    f"Session {session_id} batch {batch_id}: {issue_str}, "
+                    f"内容重试 {attempt}/{self.content_retries}"
+                )
+            else:
+                logger.error(
+                    f"Session {session_id} batch {batch_id}: {issue_str}, "
+                    f"已达最大内容重试"
+                )
+                return BatchResult(
+                    batch_id=batch_id,
+                    start_idx=plan.start_idx,
+                    end_idx=plan.end_idx,
+                    content_hash=plan.content_hash,
+                    status="incomplete",
+                    attempts=attempt,
+                    tasks=tasks,
+                    chunk_summaries=chunk_summaries,
+                    error=issue_str,
+                )
+
+        return BatchResult(
+            batch_id=batch_id,
+            start_idx=plan.start_idx,
+            end_idx=plan.end_idx,
+            content_hash=plan.content_hash,
+            status="failed",
+            attempts=self.content_retries,
+            tasks=[],
+            chunk_summaries={},
+            error=last_error,
+        )
+
+    def _merge_batch_results(
+        self,
+        session_id: str,
+        chunks: list[Chunk],
+        batch_results: list[BatchResult],
+    ) -> dict:
+        """合并 batch 结果: chunk_summaries 按 chunk_id 合并;
+        tasks 全局重编号 T1..Tn, 按 batch 顺序拼接。
+        返回与 extract_tasks 兼容的 dict, 额外含 batch_results / split_mode。"""
+        all_summaries: dict[str, str] = {}
+        ordered_tasks: list[Task] = []
+        n_success = 0
+        n_failed = 0
+        n_incomplete = 0
+
+        for br in sorted(batch_results, key=lambda r: r.batch_id):
+            if br.status == "success":
+                n_success += 1
+            elif br.status == "incomplete":
+                n_incomplete += 1
+            else:
+                n_failed += 1
+                continue
+            all_summaries.update(br.chunk_summaries)
+            ordered_tasks.extend(br.tasks)
+
+        for i, task in enumerate(ordered_tasks):
+            task.task_id = f"{session_id}_T{i + 1}"
+
+        if n_failed > 0:
+            status = "incomplete"
+            err = f"{n_failed} batches failed"
+        elif n_incomplete > 0:
+            status = "incomplete"
+            err = f"{n_incomplete} batches incomplete"
+        else:
+            status = "success"
+            err = None
+
+        for c in chunks:
+            if c.chunk_id in all_summaries and not c.task_summary:
+                c.task_summary = all_summaries[c.chunk_id]
+
+        summaries_written = sum(1 for c in chunks if c.task_summary)
+        total_attempts = max((br.attempts for br in batch_results), default=0)
+
+        return {
+            "tasks": ordered_tasks,
+            "summaries_written": summaries_written,
+            "total_chunks": len(chunks),
+            "total_attempts": total_attempts,
+            "status": status,
+            "error": err,
+            "split_mode": "multi",
+            "batch_results": batch_results,
+        }
+
+    @staticmethod
+    def _build_prior_index(
+        prior: list[dict],
+    ) -> dict[tuple[int, str], dict]:
+        idx: dict[tuple[int, str], dict] = {}
+        for pb in prior or []:
+            key = (pb.get("batch_id"), pb.get("content_hash"))
+            if key[0] is not None and key[1]:
+                idx[key] = pb
+        return idx
+
+    @staticmethod
+    def _batch_result_from_prior(
+        batch_id: int, plan: BatchPlan, prior: dict
+    ) -> BatchResult:
+        return BatchResult(
+            batch_id=batch_id,
+            start_idx=plan.start_idx,
+            end_idx=plan.end_idx,
+            content_hash=plan.content_hash,
+            status=prior.get("status", "success"),
+            attempts=prior.get("attempts", 1),
+            tasks=[Task.from_dict(t) for t in prior.get("tasks", [])],
+            chunk_summaries=dict(prior.get("chunk_summaries", {})),
+            error=prior.get("error"),
+        )

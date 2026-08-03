@@ -24,9 +24,23 @@ Phase 1 chunks (JSONL)
         │
    [按 session 分组]
         │
-   [构建 CoT Prompt] ── 所有 chunk 格式化后注入三步分析模板
+   [预算检查] Σ(chunk输入) + N*250 > max_total ?
         │
-   [调用 LLM] ── OpenAI 兼容 API, 支持多线程并发
+   ├─ 否 ─→ [单 batch 路径] ─→ 1 次 LLM 调用 (沿用今天)
+   │
+   └─ 是 ─→ [多 batch 路径]
+              │
+              ▼
+          [BatchPlanner] 顺序切 m=16, 超了 ceil(m/2) 递归
+              │
+              ▼
+          [两阶段调度] 单 batch session 优先, 多 batch session 排后
+              │
+              ▼
+          [Per-batch LLM] 每 batch content_retries 次重试
+              │
+              ▼
+          [合并] chunk_summaries 按 chunk_id 合并; tasks 全局重编号 T1..Tn
         │
    [解析 JSON] ── 提取 + 截断修复
         │
@@ -152,10 +166,33 @@ output:
 
 ### Token 预算管理
 
-- 单个 chunk 在 prompt 中最多 2000 tokens (超限自动截断,首尾保留策略)
-- 整个 prompt 最多 30000 tokens (超限时按比例缩减每个 chunk)
+- 单个 chunk 在 prompt 中最多 `max_tokens_per_chunk` tokens (超限自动截断,首尾保留策略)
+- 整个 prompt 最多 `max_total_prompt_tokens` tokens (超限时按比例缩减每个 chunk)
 - LLM 输出 `max_tokens=16000` (CoT 输出含 chunk_summaries, 需要更多 token)
 - `max_tokens` 仅控制输出 token 数, 不含输入
+
+### 多 batch 切分 (大 session)
+
+当单 session 的 `Σ(chunk输入) + N*250 > max_total_prompt_tokens` 时, 自动切分成多个 batch 串行/并行调用同一个 LLM, 每个 batch 独立产出 `chunk_summaries` + `tasks`, 最终合并为一个 session 级别的结果 (`tasks` 全局重编号 `T1..Tn`)。
+
+**切分策略** (`BatchPlanner`):
+- 目标 batch size `m = llm.batch_size` (默认 16)
+- 顺序切: 第 1 批 `m` 个 chunk, 第 2 批 `m` 个, ...
+- 每批独立校验 token: `batch输入 + len*250 > max_total` 则该批 `ceil(m/2)`, 递归直到 1 chunk 兜底
+- 1 个 chunk 仍超 budget 时强制接受 (走 `_build_prompt` 的截断兜底, 行为与单 batch 一致)
+
+**两阶段调度** (`_extract_tasks_parallel`):
+- Phase 1: 单 batch session 全部入池, 全部完成后才进入 Phase 2
+- Phase 2: 多 batch session 的所有 batch 一起入池 (含 checkpoint 复用的 batch), 共享同一 `ThreadPoolExecutor`
+- 这样单 batch session 不被多 batch 大 session 阻塞, 短 session 优先完成
+
+**Checkpoint 续跑** (`.p2_checkpoint.json`):
+- 多 batch session 的 checkpoint 记录带 `split_mode: "multi"` + `batches: [{batch_id, chunk_range, content_hash, status, attempts, tasks, chunk_summaries, error}, ...]`
+- 每个 batch 跑完立即落盘 (`_on_batch_done` 回调), Ctrl-C 后下次跑只重跑 `status != "success"` 的 batch
+- 旧记录无 `split_mode` 视为 single, 向后兼容
+- Batch 内容哈希按 chunk 顺序计算 (不 sort), 任一 chunk 变化只重跑该 batch
+
+**风险**: 跨 batch task 碎片化 (一个真实 task 跨 batch 时被识别为多个)。当前不接受 v1, 后续可加 batch 间 task 合并后处理。
 
 ### JSON 截断修复
 
