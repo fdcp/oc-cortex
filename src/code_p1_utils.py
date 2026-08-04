@@ -53,6 +53,11 @@ class Config:
         return val
 
 
+def build_retrieval_query(query: str, instruction: str = "") -> str:
+    """将检索指令拼接到用户查询前。"""
+    return f"{instruction}{query}"
+
+
 # ============================================================
 # 日志
 # ============================================================
