@@ -8,8 +8,9 @@
 2. 样本浏览 (随机抽取 payload)
 3. 数据分析 (session/task/chunk 分布, 压缩率)
 4. 向量近邻分析 (embedding 聚类质量)
-5. 检索质量测试 (预设查询 + 命中率)
+5. 检索质量测试 (预设查询 + 名义/有效双口径命中率)
 6. Chunk Summary 质量抽样
+7. 检视结论 (触发式事实汇总, 无固定建议)
 """
 import json
 import sys
@@ -210,19 +211,21 @@ def show_data_analysis(client: QdrantClient, collections: dict) -> None:
     if no_task:
         print(f"  未关联 task 的 chunk: {len(no_task)} 个")
 
+    return len(no_task)
+
 
 # ============================================================
 # 4. 向量近邻分析 (检查 embedding 质量)
 # ============================================================
 
-def show_neighbor_analysis(client: QdrantClient, collections: dict) -> None:
+def show_neighbor_analysis(client: QdrantClient, collections: dict) -> list:
     section("4. 向量近邻分析 (检查 embedding 语义聚类)")
 
     tasks_col = collections["tasks"]
     task_points, _ = client.scroll(tasks_col, limit=1000, with_payload=True, with_vectors=True)
     if len(task_points) < 3:
         print("  Task 数量不足, 跳过")
-        return
+        return []
 
     print(f"  分析 {len(task_points)} 个 task 向量的近邻关系\n")
 
@@ -262,6 +265,8 @@ def show_neighbor_analysis(client: QdrantClient, collections: dict) -> None:
     else:
         print("  无高相似度 task 对 (cosine > 0.85), embedding 区分度良好")
 
+    return interesting_pairs
+
 
 # ============================================================
 # 5. 检索质量测试
@@ -279,11 +284,13 @@ TEST_QUERIES = [
 
 def show_search_quality(client: QdrantClient, collections: dict,
                         model_name: str, device: str,
-                        cache_folder: str | None) -> None:
+                        cache_folder: str | None) -> dict | None:
     section("5. 检索质量测试")
     tasks_col = collections["tasks"]
     print(f"  使用 Dense 检索 (Cosine) 对 {tasks_col} 集合执行测试查询")
-    print(f"  (模型: {model_name}, 基于关键词匹配, 适应 LLM 标签变化)\n")
+    print(f"  (模型: {model_name})")
+    print("  名义命中 = top-5 内任一条的 label+summary 含关键词")
+    print("  有效命中 = 全排名中首个 label 含关键词的 task 进入 top-5\n")
 
     try:
         from sentence_transformers import SentenceTransformer
@@ -294,29 +301,34 @@ def show_search_quality(client: QdrantClient, collections: dict,
         )
     except Exception as e:
         print(f"  无法加载 embedding 模型: {e}")
-        return
+        return None
 
-    correct = 0
-    total = 0
+    try:
+        total_points = getattr(client.get_collection(tasks_col), "points_count", 0) or 0
+    except Exception:
+        total_points = 0
+    fetch_limit = max(total_points, 5)
+
+    results = []
 
     for query, keywords in TEST_QUERIES:
         qvec = encoder.encode([query], normalize_embeddings=True)[0].tolist()
         hits = client.query_points(
             collection_name=tasks_col,
             query=qvec,
-            limit=5,
+            limit=fetch_limit,
             with_payload=True,
-        )
+        ).points
 
-        top_labels = []
-        for h in hits.points:
-            label = (h.payload or {}).get("task_label", "?")
-            top_labels.append((label, h.score))
+        top5 = hits[:5]
+        top_labels = [
+            ((h.payload or {}).get("task_label", "?"), h.score) for h in top5
+        ]
 
-        # 关键词匹配: 检查 top-5 中是否有 label 或 summary 包含任一关键词
+        # 名义命中: top-5 中任一条的 label 或 summary 包含任一关键词
         hit_any = False
         hit_details = []
-        for h in hits.points:
+        for h in top5:
             pl = h.payload or {}
             text = pl.get("task_label", "") + " " + pl.get("task_summary", "")
             matched_kw = [kw for kw in keywords if kw.lower() in text.lower()]
@@ -324,33 +336,72 @@ def show_search_quality(client: QdrantClient, collections: dict,
                 hit_any = True
                 hit_details.append((pl.get("task_label", "?"), h.score, matched_kw))
 
-        if hit_any:
-            correct += 1
-        total += 1
+        # 有效命中: 全排名中首个 label 含关键词的位置
+        label_first_rank = None
+        label_first_label = None
+        label_first_score = None
+        for i, h in enumerate(hits, 1):
+            label = (h.payload or {}).get("task_label", "")
+            if any(kw.lower() in label.lower() for kw in keywords):
+                label_first_rank, label_first_label, label_first_score = i, label, h.score
+                break
 
-        mark = "OK" if hit_any else "MISS"
+        effective_hit = label_first_rank is not None and label_first_rank <= 5
+        drift = hit_any and not effective_hit
+
+        mark = "OK" if effective_hit else ("DRIFT" if drift else "MISS")
         print(f"  [{mark}] Query: \"{query}\"")
         print(f"     关键词: {keywords}")
         print(f"     Top-5:")
         for i, (label, score) in enumerate(top_labels, 1):
             matched = [kw for kw in keywords if kw.lower() in label.lower()]
-            hit_mark = f" <-- 命中 {matched}" if matched else ""
+            hit_mark = f" <-- label 命中 {matched}" if matched else ""
             print(f"       {i}. [{score:.4f}] {label}{hit_mark}")
+        if label_first_rank is not None:
+            print(
+                f"     label 首个命中: rank {label_first_rank} "
+                f"\"{label_first_label}\" (cosine={label_first_score:.4f})"
+            )
+        else:
+            print(f"     label 首个命中: 无 (前 {len(hits)} 名均未在 label 命中)")
         print()
 
-    print(f"  命中率: {correct}/{total} ({correct/total:.0%})")
+        results.append({
+            "query": query,
+            "nominal_hit": hit_any,
+            "effective_hit": effective_hit,
+            "drift": drift,
+            "label_first_rank": label_first_rank,
+            "label_first_label": label_first_label,
+            "label_first_score": label_first_score,
+            "top1_label": top_labels[0][0] if top_labels else "(空集合)",
+            "top1_score": top_labels[0][1] if top_labels else None,
+            "nominal_matched_kw": sorted({kw for _, _, kws in hit_details for kw in kws}),
+        })
+
+    total = len(results)
+    denom = total or 1
+    nominal = sum(1 for r in results if r["nominal_hit"])
+    effective = sum(1 for r in results if r["effective_hit"])
+    drift_count = sum(1 for r in results if r["drift"])
+    print(f"  名义命中率: {nominal}/{total} ({nominal/denom:.0%})")
+    print(f"  有效命中率: {effective}/{total} ({effective/denom:.0%})")
+    if drift_count:
+        print(f"  其中 DRIFT (名义命中但 label 目标跌出 top-5): {drift_count} 条, 详见检视结论")
+
+    return {"queries": results, "nominal": nominal, "effective": effective, "total": total}
 
 
 # ============================================================
 # 6. Chunk Summary 质量抽样
 # ============================================================
 
-def show_summary_quality(summaries_file: Path, chunks_file: Path, tasks_file: Path) -> None:
+def show_summary_quality(summaries_file: Path, chunks_file: Path, tasks_file: Path) -> list:
     section("6. Chunk Summary 质量抽样")
 
     if not summaries_file.exists():
         print(f"  {summaries_file} 不存在, 跳过")
-        return
+        return []
 
     summaries = {}
     with open(summaries_file, "r", encoding="utf-8") as f:
@@ -380,7 +431,7 @@ def show_summary_quality(summaries_file: Path, chunks_file: Path, tasks_file: Pa
     lens = [len(s) for s in summaries.values()]
     if not lens:
         print("  无 summary 数据")
-        return
+        return []
 
     avg_len = sum(lens) / len(lens)
     print(f"  总 chunk summary 数: {len(summaries)}")
@@ -402,6 +453,59 @@ def show_summary_quality(summaries_file: Path, chunks_file: Path, tasks_file: Pa
         for cid in chunk_ids[:2]:
             cs = summaries.get(cid, "(无)")
             print(f"    chunk {cid[-6:]}: {cs[:100]}{'...' if len(cs) > 100 else ''}")
+
+    return short_ids
+
+
+# ============================================================
+# 7. 检视结论 (触发式事实汇总)
+# ============================================================
+
+def print_conclusion(search_result: dict | None, high_sim_pairs: list,
+                     short_ids: list, no_task_count: int) -> None:
+    section("7. 检视结论 (自动生成, 仅陈述事实)")
+
+    triggered = []
+
+    if search_result is None:
+        triggered.append("检索质量测试未执行 (embedding 模型加载失败), 无检索结论")
+    else:
+        s = search_result
+        print(f"  检索命中率: 名义 {s['nominal']}/{s['total']}, 有效 {s['effective']}/{s['total']}")
+        print("  (名义 = top-5 内 label+summary 含关键词; 有效 = label 首个命中进入 top-5)")
+        for r in s["queries"]:
+            if r["drift"]:
+                kws = "/".join(r["nominal_matched_kw"]) if r["nominal_matched_kw"] else "?"
+                triggered.append(
+                    f"查询 \"{r['query']}\" 名义命中但 label 首个命中仅 rank {r['label_first_rank']}: "
+                    f"\"{r['label_first_label']}\" (cosine={r['label_first_score']:.4f}); "
+                    f"top-1 为 \"{r['top1_label']}\" (cosine={r['top1_score']:.4f}), "
+                    f"名义命中由 summary 关键词 [{kws}] 贡献"
+                )
+            elif not r["nominal_hit"]:
+                triggered.append(
+                    f"查询 \"{r['query']}\" 全量排名中无任何关键词命中 (label+summary)"
+                )
+
+    if high_sim_pairs:
+        pair_desc = "; ".join(
+            f"{a} <-> {b} ({score:.4f})" for a, b, score in high_sim_pairs
+        )
+        triggered.append(f"高相似 task 对 (cosine > 0.85) {len(high_sim_pairs)} 对: {pair_desc}")
+
+    if short_ids:
+        shown = ", ".join(short_ids[:5]) + (" ..." if len(short_ids) > 5 else "")
+        triggered.append(f"过短 chunk summary (<30字) {len(short_ids)} 条: {shown}")
+
+    if no_task_count:
+        triggered.append(f"未关联 task 的 chunk: {no_task_count} 个")
+
+    if not triggered:
+        print("  无触发项: 全部预设查询有效命中 top-5, 无高相似 task 对, 无过短 summary")
+    else:
+        print(f"\n  触发项 {len(triggered)} 条:")
+        for i, item in enumerate(triggered, 1):
+            print(f"  [{i}] {item}")
 
 
 # ============================================================
@@ -461,17 +565,14 @@ def main():
 
     show_collection_stats(client)
     show_sample_payloads(client, collections, n=args.samples)
-    show_data_analysis(client, collections)
-    show_neighbor_analysis(client, collections)
-    show_search_quality(client, collections, model_name, device, cache_folder)
-    show_summary_quality(summaries_file, chunks_file, tasks_file)
+    no_task_count = show_data_analysis(client, collections)
+    high_sim_pairs = show_neighbor_analysis(client, collections)
+    search_result = show_search_quality(client, collections, model_name, device, cache_folder)
+    short_ids = show_summary_quality(summaries_file, chunks_file, tasks_file)
 
-    section("检视完成")
-    print("  后续建议:")
-    print("  - 检索命中率低 -> 换更强 embedding 模型 (Qwen3-Embedding)")
-    print("  - 高相似 task 对 -> 合并或优化 task 抽取 prompt")
-    print("  - summary 过短 -> 调整 Phase 2 prompt 最小长度要求")
-    print("  - 完整搜索体验 -> code_p4_search_cli.py --interactive")
+    client.close()
+
+    print_conclusion(search_result, high_sim_pairs, short_ids, no_task_count)
 
 
 if __name__ == "__main__":
