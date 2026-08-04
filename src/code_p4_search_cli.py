@@ -35,7 +35,7 @@ _offline_mode = _config.get("embedding.offline_mode", True)
 setup_hf_env(offline_mode=_offline_mode, cache_folder=_cache_folder)
 
 from loguru import logger
-from code_p1_utils import setup_logger
+from code_p1_utils import build_retrieval_query, setup_logger
 from code_p4_searcher import SessionSearcher, SessionSearchResult
 
 
@@ -93,11 +93,14 @@ def run_single_search(
     query: str,
     top_k: int = 5,
     skip_rerank: bool = False,
+    query_instruction: str = "",
 ):
     """执行单次搜索并打印结果"""
     t0 = time.time()
     results = searcher.search(
-        query, top_k=top_k, skip_rerank=skip_rerank
+        build_retrieval_query(query, query_instruction),
+        top_k=top_k,
+        skip_rerank=skip_rerank,
     )
     elapsed = time.time() - t0
 
@@ -115,7 +118,12 @@ def run_single_search(
     return results
 
 
-def run_interactive(searcher: SessionSearcher, top_k: int, skip_rerank: bool):
+def run_interactive(
+    searcher: SessionSearcher,
+    top_k: int,
+    skip_rerank: bool,
+    query_instruction: str,
+):
     """交互模式: 循环输入查询"""
     print("\n" + "=" * 60)
     print("  跨 Session 搜索 (交互模式)")
@@ -137,10 +145,10 @@ def run_interactive(searcher: SessionSearcher, top_k: int, skip_rerank: bool):
             break
         if query.lower() == "demo":
             for q in DEMO_QUERIES:
-                run_single_search(searcher, q, top_k, skip_rerank)
+                run_single_search(searcher, q, top_k, skip_rerank, query_instruction)
             continue
 
-        run_single_search(searcher, query, top_k, skip_rerank)
+        run_single_search(searcher, query, top_k, skip_rerank, query_instruction)
 
 
 def main():
@@ -175,14 +183,31 @@ def main():
     logger.info(f"搜索引擎初始化完成, 耗时 {time.time() - t0:.1f}s")
 
     if args.interactive:
-        run_interactive(searcher, args.top_k, args.no_rerank)
+        run_interactive(
+            searcher,
+            args.top_k,
+            args.no_rerank,
+            config.get("query_instruction_for_retrieval", ""),
+        )
     elif args.query:
-        run_single_search(searcher, args.query, args.top_k, args.no_rerank)
+        run_single_search(
+            searcher,
+            args.query,
+            args.top_k,
+            args.no_rerank,
+            config.get("query_instruction_for_retrieval", ""),
+        )
     else:
         # 无参数时运行 demo
         print("未指定 --query, 运行示例查询:")
         for q in DEMO_QUERIES:
-            run_single_search(searcher, q, args.top_k, args.no_rerank)
+            run_single_search(
+                searcher,
+                q,
+                args.top_k,
+                args.no_rerank,
+                config.get("query_instruction_for_retrieval", ""),
+            )
 
 
 if __name__ == "__main__":

@@ -32,7 +32,7 @@ logger.add(sys.stderr, level="WARNING")
 from qdrant_client import QdrantClient
 
 # 复用 Phase 1 的全局配置加载器 (点号路径 + 脚本同目录回退)
-from code_p1_utils import Config
+from code_p1_utils import Config, build_retrieval_query
 
 # 仓库根目录 (src/ 的上一级), 用于解析相对路径, 使脚本可从任意 CWD 运行
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -284,7 +284,8 @@ TEST_QUERIES = [
 
 def show_search_quality(client: QdrantClient, collections: dict,
                         model_name: str, device: str,
-                        cache_folder: str | None) -> dict | None:
+                        cache_folder: str | None,
+                        query_instruction: str) -> dict | None:
     section("5. 检索质量测试")
     tasks_col = collections["tasks"]
     print(f"  使用 Dense 检索 (Cosine) 对 {tasks_col} 集合执行测试查询")
@@ -312,7 +313,8 @@ def show_search_quality(client: QdrantClient, collections: dict,
     results = []
 
     for query, keywords in TEST_QUERIES:
-        qvec = encoder.encode([query], normalize_embeddings=True)[0].tolist()
+        retrieval_query = build_retrieval_query(query, query_instruction)
+        qvec = encoder.encode([retrieval_query], normalize_embeddings=True)[0].tolist()
         hits = client.query_points(
             collection_name=tasks_col,
             query=qvec,
@@ -544,6 +546,7 @@ def main():
     model_name = config.get("embedding.model", "BAAI/bge-small-zh-v1.5")
     device = config.get("embedding.device", "cpu")
     cache_folder = config.get("embedding.cache_folder", None)
+    query_instruction = config.get("query_instruction_for_retrieval", "")
 
     summaries_file = _resolve_path(
         config.get("phase2.chunk_summaries_file", "./output/chunks_summary_p2.jsonl")
@@ -567,7 +570,9 @@ def main():
     show_sample_payloads(client, collections, n=args.samples)
     no_task_count = show_data_analysis(client, collections)
     high_sim_pairs = show_neighbor_analysis(client, collections)
-    search_result = show_search_quality(client, collections, model_name, device, cache_folder)
+    search_result = show_search_quality(
+        client, collections, model_name, device, cache_folder, query_instruction
+    )
     short_ids = show_summary_quality(summaries_file, chunks_file, tasks_file)
 
     client.close()

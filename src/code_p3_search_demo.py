@@ -33,7 +33,7 @@ _offline_mode = _config.get("embedding.offline_mode", True)
 setup_hf_env(offline_mode=_offline_mode, cache_folder=_cache_folder)
 
 from loguru import logger
-from code_p1_utils import setup_logger
+from code_p1_utils import build_retrieval_query, setup_logger
 from code_p1_models import Chunk, CleanedToolCall
 from code_p2_models import Task
 from code_p3_qdrant_store import Phase3Store, SearchResult, HybridResult
@@ -254,17 +254,19 @@ def main():
 
     # 7. 运行检索演示
     queries = [args.query] if args.query else DEMO_QUERIES
+    query_instruction = config.get("query_instruction_for_retrieval", "")
 
     logger.info("\n" + "=" * 60)
     logger.info("混合检索演示")
     logger.info("=" * 60)
 
     for query in queries:
+        retrieval_query = build_retrieval_query(query, query_instruction)
         logger.info(f"\n>>> 查询: {query}")
 
         # Dense only (on chunks_summary)
         dense_results = store.search_dense(
-            query, collection=store.chunks_summary_collection, top_k=args.top_k
+            retrieval_query, collection=store.chunks_summary_collection, top_k=args.top_k
         )
         print(fmt_search_results(
             dense_results,
@@ -274,7 +276,7 @@ def main():
         # Sparse only (on chunks_cleaned_text)
         if sparse_method == "bm25":
             sparse_results = store.search_sparse_bm25(
-                query, collection=store.chunks_cleaned_text_collection, top_k=args.top_k
+                retrieval_query, collection=store.chunks_cleaned_text_collection, top_k=args.top_k
             )
             print(fmt_search_results(
                 sparse_results,
@@ -282,7 +284,7 @@ def main():
             ))
         else:
             sparse_results = store.search_sparse_bge_m3(
-                query, collection=store.chunks_cleaned_text_collection, top_k=args.top_k
+                retrieval_query, collection=store.chunks_cleaned_text_collection, top_k=args.top_k
             )
             print(fmt_search_results(
                 sparse_results,
@@ -291,7 +293,7 @@ def main():
 
         # Hybrid (cross-collection: dense → summary, sparse → cleaned_text)
         hybrid_results = store.search_hybrid_cross_collection(
-            query,
+            retrieval_query,
             dense_collection=store.chunks_summary_collection,
             sparse_collection=store.chunks_cleaned_text_collection,
             top_k=args.top_k,
