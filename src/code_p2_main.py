@@ -297,6 +297,10 @@ def main():
                     else:
                         pending[sid] = scs
                         prior_batches_map[sid] = batches
+                        # 部分完成的 session 视为待处理: 必须移出 done,
+                        # 否则旧 tasks 会被承接进 merged_tasks, 与重跑
+                        # 新产出的 tasks 叠加造成 task_id 重复
+                        done.pop(sid, None)
                 else:
                     for c in scs:
                         if c.task_summary is None and c.chunk_id in existing_summaries:
