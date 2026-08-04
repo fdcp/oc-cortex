@@ -2,6 +2,16 @@
 
 项目中有三个脚本都涉及 Qdrant 向量检索，但定位、检索深度和使用场景各不相同。本文梳理它们的异同，帮助快速选择正确的工具。
 
+## 查询输入
+
+三个检索入口都读取 `query_instruction_for_retrieval` 配置。配置非空时，实际检索查询为：
+
+```text
+query_instruction_for_retrieval + 原始 query
+```
+
+默认前缀为 `为这个句子生成表示以用于检索相关文章：`，用于给 embedding 检索模型提供查询指令。终端输出仍展示原始 query。Phase 4 的 Reranker 也接收拼接后的查询，同时继续使用独立的 `reranker.instruction` 作为 Reranker 的 `<Instruct>` 内容。
+
 ## 一览
 
 | 维度 | `code_p3_search_demo.py` | `code_MS_inspect.py` | `code_p4_search_cli.py` |
