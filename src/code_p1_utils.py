@@ -122,10 +122,12 @@ def safe_truncate(text: str, max_tokens: int, head_ratio: float = 0.7) -> str:
         return text[:head_chars] + "\n\n[...TRUNCATED...]\n\n" + text[-tail_chars:]
 
     tokens = enc.encode(text, disallowed_special=())
-    head_len = int(len(tokens) * head_ratio)
+    head_len = int(max_tokens * head_ratio)
     tail_len = max_tokens - head_len - 20  # 留 token 给省略号标记
     head = enc.decode(tokens[:head_len])
     tail = enc.decode(tokens[-tail_len:]) if tail_len > 0 else ""
+    return f"{head}\n\n[...TRUNCATED, original {len(tokens)} tokens...]\n\n{tail}"
+
     # ============================================================
 # 指纹 / 哈希
 # ============================================================
