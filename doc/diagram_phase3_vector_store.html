@@ -181,7 +181,7 @@
 <!-- ===== BM25 Mode ===== -->
 <div class="mode-section">
   <div class="mode-title bm25">sparse.method = "bm25" (开发模式)</div>
-  <div class="mode-desc">Qdrant 仅存 unnamed dense vector (512d)，BM25 为纯内存索引，仅 chunks_cleaned_text 有 BM25</div>
+  <div class="mode-desc">Qdrant 仅存 unnamed dense vector (512d)，BM25 为纯内存索引，chunks_summary 与 chunks_cleaned_text 都有 BM25</div>
 
   <div class="pipeline">
     <!-- Column 1: tasks -->
@@ -200,8 +200,8 @@
       <div class="box qdrant-box">
         <div class="coll-name">Qdrant: tasks</div>
         <div class="coll-detail">unnamed vector 512d</div>
-      </div>
-      <div class="note">无 sparse</div>
+       </div>
+       <div class="note">无 sparse</div>
     </div>
 
     <!-- Column 2: chunks_summary -->
@@ -221,7 +221,12 @@
         <div class="coll-name">Qdrant: chunks_summary</div>
         <div class="coll-detail">unnamed vector 512d</div>
       </div>
-      <div class="note">无 sparse</div>
+       <div class="arrow">+</div>
+       <div class="box bm25-mem">
+         <div>BM25 内存索引</div>
+         <div class="mem-label">rank_bm25.BM25Okapi (jieba 分词)</div>
+       </div>
+       <div class="note">仅内存, 不入 Qdrant</div>
     </div>
 
     <!-- Column 3: chunks_cleaned_text -->
@@ -333,14 +338,14 @@
 <!-- ===== Retrieval Pattern ===== -->
 <div class="mode-section" style="border-color: #388bfd44;">
   <div class="mode-title" style="color: #58a6ff;">检索模式 (P4 Cross-Collection Hybrid)</div>
-  <div class="mode-desc">不论哪种 sparse 方法，检索路径一致：dense 搜 chunks_summary，sparse 搜 chunks_cleaned_text，RRF 融合</div>
+  <div class="mode-desc">chunks_summary 可配置为 dense 或 sparse；两路 chunk→task 先 RRF，再与 tasks.task_summary 的 Dense 结果做第二次 RRF</div>
 
   <div style="display: flex; gap: 40px; justify-content: center; align-items: center; margin-top: 16px;">
     <div style="text-align: center;">
       <div class="box" style="background: #1c2333; border: 1.5px solid #58a6ff44; color: #79c0ff; max-width: 220px;">
-        <div style="font-weight: 600;">Dense 检索</div>
-        <div style="font-size: 12px; color: #8b949e; margin-top: 4px;">BGE-small-zh query →</div>
-        <div style="font-size: 13px; color: #58a6ff; font-weight: 600; margin-top: 2px;">chunks_summary</div>
+         <div style="font-weight: 600;">chunks_summary 检索</div>
+         <div style="font-size: 12px; color: #8b949e; margin-top: 4px;">配置 dense / sparse →</div>
+         <div style="font-size: 13px; color: #58a6ff; font-weight: 600; margin-top: 2px;">chunk → task</div>
       </div>
     </div>
 
@@ -348,9 +353,9 @@
 
     <div style="text-align: center;">
       <div class="box" style="background: #1c2333; border: 1.5px solid #f0883e44; color: #f0883e; max-width: 220px;">
-        <div style="font-weight: 600;">Sparse 检索</div>
+         <div style="font-weight: 600;">chunks_cleaned_text Sparse</div>
         <div style="font-size: 12px; color: #8b949e; margin-top: 4px;">BM25 内存 / BGE-M3 Qdrant →</div>
-        <div style="font-size: 13px; color: #f0883e; font-weight: 600; margin-top: 2px;">chunks_cleaned_text</div>
+         <div style="font-size: 13px; color: #f0883e; font-weight: 600; margin-top: 2px;">chunk → task</div>
       </div>
     </div>
 
@@ -358,9 +363,9 @@
 
     <div style="text-align: center;">
       <div class="box" style="background: #1a2e1a; border: 1.5px solid #3fb95066; color: #7ee787; max-width: 180px;">
-        <div style="font-weight: 600;">RRF 融合</div>
+         <div style="font-weight: 600;">第一层 RRF</div>
         <div style="font-size: 12px; color: #8b949e; margin-top: 4px;">k=60</div>
-        <div style="font-size: 11px; color: #6e7681; margin-top: 2px;">chunk→task 映射</div>
+         <div style="font-size: 11px; color: #6e7681; margin-top: 2px;">两路 chunk→task</div>
       </div>
     </div>
   </div>
