@@ -7,16 +7,78 @@ Sparse 支持 BM25 (开发) 或 BGE-M3 (上线)，由 config sparse.method 决�
 复用 Phase 3 的 Phase3Store + Qdrant 数据
 """
 import json
+import os
+from pathlib import Path
 import time
 from dataclasses import dataclass, field
 
+from openai import OpenAI
 from loguru import logger
+import yaml
 
 from code_p1_utils import Config
 from code_p1_models import Chunk, CleanedToolCall
 from code_p2_models import Task
 from code_p3_qdrant_store import Phase3Store, SearchResult
 from code_p4_reranker import Qwen3Reranker
+
+
+DEFAULT_QUERY_REWRITE_MODEL = "deepseek-v4-flash-free"
+OPENCODE_MODELS_CONFIG = (
+    Path(__file__).parents[1] / "config" / "opencode_models.yaml"
+)
+
+
+def _resolve_query_mode(enabled: bool, instruction: str) -> tuple[bool, str]:
+    if enabled:
+        if instruction:
+            logger.warning(
+                "query_rewrite.enable 已启用，忽略 query_instruction_for_retrieval"
+            )
+        return True, ""
+    return False, instruction
+
+
+def _load_opencode_model_settings(
+    model_name: str = DEFAULT_QUERY_REWRITE_MODEL,
+    config_path: Path = OPENCODE_MODELS_CONFIG,
+) -> tuple[str, str]:
+    config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    model = next(
+        (item for item in config["models"] if item["name"] == model_name),
+        None,
+    )
+    if model is None:
+        raise ValueError(f"模型未在 opencode_models.yaml 中找到: {model_name}")
+
+    endpoint = config["endpoints"][model["endpoint"]]
+    auth_file = Path(config["auth_file"]).expanduser()
+    auth = json.loads(auth_file.read_text(encoding="utf-8"))
+    auth_provider = endpoint["auth_provider"]
+    api_key = auth[auth_provider]["key"]
+    os.environ["OPENCODE_ZEN_API_KEY"] = api_key
+    return model_name, endpoint["base_url"]
+
+
+def _load_query_rewrite_prompt() -> str:
+    """加载 P4 查询改写系统提示词。"""
+    prompt_path = Path(__file__).parents[1] / "prompts" / "p4_query_rewrite.md"
+    return prompt_path.read_text(encoding="utf-8")
+
+
+def _parse_query_rewrite_response(content: str) -> tuple[str, str]:
+    """解析查询改写 JSON，返回查询类型和单个改写查询。"""
+    cleaned = content.strip()
+    if cleaned.startswith("```") and cleaned.endswith("```"):
+        cleaned = cleaned.split("\n", 1)[-1].rsplit("\n", 1)[0]
+    data = json.loads(cleaned)
+    query_type = data.get("query_type")
+    rewritten_query = data.get("rewritten_query")
+    if not isinstance(query_type, str) or not isinstance(rewritten_query, str):
+        raise ValueError("query rewrite 返回缺少 query_type 或 rewritten_query")
+    if not rewritten_query.strip():
+        raise ValueError("query rewrite 返回空 rewritten_query")
+    return query_type, rewritten_query.strip()
 
 
 # ============================================================
@@ -122,6 +184,23 @@ class SessionSearcher:
         self.chunks_summary_method = self.config.get(
             "sparse.chunks_summary_method", "sparse"
         )
+        configured_instruction = self.config.get(
+            "query_instruction_for_retrieval", ""
+        )
+        self.query_rewrite_enabled, self.query_instruction = _resolve_query_mode(
+            self.config.get("query_rewrite.enable", False),
+            configured_instruction,
+        )
+        self.query_rewrite_client = None
+        self.query_rewrite_model = DEFAULT_QUERY_REWRITE_MODEL
+        if self.query_rewrite_enabled:
+            model_name, base_url = _load_opencode_model_settings()
+            self.query_rewrite_client = OpenAI(
+                api_key=os.environ["OPENCODE_ZEN_API_KEY"],
+                base_url=base_url,
+                timeout=self.config.get("query_rewrite.timeout", 60),
+            )
+            self.query_rewrite_model = model_name
         if self.chunks_summary_method not in {"sparse", "dense"}:
             raise ValueError(
                 "sparse.chunks_summary_method must be 'sparse' or 'dense'"
@@ -154,7 +233,6 @@ class SessionSearcher:
 
         # 3. 初始化 Phase3Store (embedding + Qdrant + BM25)
         cache_folder = self.config.get("embedding.cache_folder")
-        import os
         if cache_folder is None:
             cache_folder = os.path.expanduser("~/.cache/huggingface/hub")
 
@@ -289,19 +367,22 @@ class SessionSearcher:
         """
         t_total = time.time()
         n_candidates = top_k * candidate_multiplier
+        dense_query = self._build_dense_query(query)
         logger.info(
-            f"搜索: '{query}' (top_k={top_k}, skip_rerank={skip_rerank})"
+            f"搜索: '{query}' (dense_query='{dense_query}', "
+            f"top_k={top_k}, skip_rerank={skip_rerank})"
         )
 
         # 阶段 1: Dense → tasks 集合
         dense_results = self.store.search_dense(
-            query, collection=self.store.tasks_collection, top_k=n_candidates
+            dense_query, collection=self.store.tasks_collection, top_k=n_candidates
         )
         logger.info(f"  Dense[tasks]: {len(dense_results)} 结果")
 
         # 阶段 2: 两路 chunk 检索 → 分别映射回 task
         sparse_top_k = n_candidates * 3  # 取更多 chunk, 映射后去重
-        summary_chunk_results = self._search_chunks_summary(query, sparse_top_k)
+        summary_query = dense_query if self.chunks_summary_method == "dense" else query
+        summary_chunk_results = self._search_chunks_summary(summary_query, sparse_top_k)
         summary_task_results = self._aggregate_chunks_to_tasks(summary_chunk_results)
         logger.info(
             f"  {self.chunks_summary_method}[chunks_summary] → task 聚合: "
@@ -409,6 +490,36 @@ class SessionSearcher:
             f"耗时 {time.time() - t_total:.2f}s"
         )
         return results
+
+    def _build_dense_query(self, query: str) -> str:
+        """构造仅供稠密检索使用的查询。"""
+        if self.query_rewrite_enabled:
+            if self.query_rewrite_client is None:
+                raise RuntimeError("query rewrite client 未初始化")
+            response = self.query_rewrite_client.chat.completions.create(
+                model=self.config.get(
+                    "query_rewrite.model", self.query_rewrite_model
+                ),
+                messages=[
+                    {"role": "system", "content": _load_query_rewrite_prompt()},
+                    {"role": "user", "content": query},
+                ],
+                temperature=0.2,
+                max_tokens=self.config.get("query_rewrite.max_tokens", 1024),
+            )
+            if not response.choices or response.choices[0].message is None:
+                raise ValueError("query rewrite 返回空响应")
+            content = response.choices[0].message.content
+            if not content:
+                raise ValueError("query rewrite 返回空内容")
+            query_type, rewritten_query = _parse_query_rewrite_response(content)
+            logger.info(
+                f"Query rewrite: type={query_type}, query='{rewritten_query}'"
+            )
+            return rewritten_query
+        if self.query_instruction:
+            return f"{self.query_instruction}{query}"
+        return query
 
     def _search_chunks_summary(self, query: str, top_k: int) -> list[SearchResult]:
         """按配置从 chunks_summary 集合执行 dense 或 sparse 检索。"""

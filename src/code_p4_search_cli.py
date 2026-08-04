@@ -35,7 +35,7 @@ _offline_mode = _config.get("embedding.offline_mode", True)
 setup_hf_env(offline_mode=_offline_mode, cache_folder=_cache_folder)
 
 from loguru import logger
-from code_p1_utils import build_retrieval_query, setup_logger
+from code_p1_utils import setup_logger
 from code_p4_searcher import SessionSearcher, SessionSearchResult
 
 
@@ -93,12 +93,11 @@ def run_single_search(
     query: str,
     top_k: int = 5,
     skip_rerank: bool = False,
-    query_instruction: str = "",
 ):
     """执行单次搜索并打印结果"""
     t0 = time.time()
     results = searcher.search(
-        build_retrieval_query(query, query_instruction),
+        query,
         top_k=top_k,
         skip_rerank=skip_rerank,
     )
@@ -122,7 +121,6 @@ def run_interactive(
     searcher: SessionSearcher,
     top_k: int,
     skip_rerank: bool,
-    query_instruction: str,
 ):
     """交互模式: 循环输入查询"""
     print("\n" + "=" * 60)
@@ -145,10 +143,10 @@ def run_interactive(
             break
         if query.lower() == "demo":
             for q in DEMO_QUERIES:
-                run_single_search(searcher, q, top_k, skip_rerank, query_instruction)
+                run_single_search(searcher, q, top_k, skip_rerank)
             continue
 
-        run_single_search(searcher, query, top_k, skip_rerank, query_instruction)
+        run_single_search(searcher, query, top_k, skip_rerank)
 
 
 def main():
@@ -187,7 +185,6 @@ def main():
             searcher,
             args.top_k,
             args.no_rerank,
-            config.get("query_instruction_for_retrieval", ""),
         )
     elif args.query:
         run_single_search(
@@ -195,7 +192,6 @@ def main():
             args.query,
             args.top_k,
             args.no_rerank,
-            config.get("query_instruction_for_retrieval", ""),
         )
     else:
         # 无参数时运行 demo
@@ -206,7 +202,6 @@ def main():
                 q,
                 args.top_k,
                 args.no_rerank,
-                config.get("query_instruction_for_retrieval", ""),
             )
 
 
