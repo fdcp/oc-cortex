@@ -444,10 +444,18 @@ class TaskExtractor:
                 {"role": "user", "content": prompt},
             ],
             temperature=self.temperature,
-            max_tokens=16000,  # CoT prompt 含 chunk_summaries, 需要更多 token
+            max_tokens=16000,
         )
 
+        if response is None or not response.choices:
+            raise ValueError(
+                f"LLM 返回空 choices, response={response!r}"
+            )
+
         msg = response.choices[0].message
+        if msg is None:
+            raise ValueError(f"LLM 返回空 message, choice={response.choices[0]!r}")
+
         content = msg.content
 
         # Reasoning 模型 (如 DeepSeek V4) 可能把 token 消耗在 thinking 上,
