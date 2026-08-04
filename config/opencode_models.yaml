@@ -1,0 +1,68 @@
+auth_file: ~/.local/share/opencode/auth.json
+endpoints:
+  zen:
+    base_url: https://opencode.ai/zen/v1
+    auth_provider: opencode-go
+  go:
+    base_url: https://opencode.ai/zen/go/v1
+    auth_provider: opencode-go
+models:
+- name: grok-4.5
+  endpoint: go
+- name: gpt-5.6-luna
+  endpoint: go
+- name: glm-5.2
+  endpoint: go
+- name: glm-5.1
+  endpoint: go
+- name: kimi-k3
+  endpoint: go
+- name: kimi-k2.7-code
+  endpoint: go
+- name: kimi-k2.6
+  endpoint: go
+- name: deepseek-v4-pro
+  endpoint: go
+- name: deepseek-v4-flash
+  endpoint: go
+- name: mimo-v2.5
+  endpoint: go
+- name: mimo-v2.5-pro
+  endpoint: go
+- name: minimax-m3
+  endpoint: go
+- name: minimax-m2.7
+  endpoint: go
+- name: minimax-m2.5
+  endpoint: go
+- name: qwen3.8-max
+  endpoint: go
+- name: qwen3.7-max
+  endpoint: go
+- name: qwen3.7-plus
+  endpoint: go
+- name: qwen3.6-plus
+  endpoint: go
+- name: hy3
+  endpoint: go
+- name: big-pickle
+  endpoint: zen
+- name: mimo-v2.5-free
+  endpoint: zen
+- name: laguna-s-2.1-free
+  endpoint: zen
+- name: ling-3.0-flash-free
+  endpoint: zen
+- name: north-mini-code-free
+  endpoint: zen
+- name: nemotron-3-ultra-free
+  endpoint: zen
+- name: deepseek-v4-flash-free
+  endpoint: zen
+extractor:
+  max_retries: 2
+  content_retries: 2
+  timeout: 120
+  temperature: 0.2
+  max_tokens_per_chunk: 2000
+  max_total_prompt_tokens: 30000
