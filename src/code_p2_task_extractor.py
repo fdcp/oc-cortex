@@ -23,7 +23,7 @@ from openai import OpenAI
 from loguru import logger
 
 from code_p1_models import Chunk
-from code_p1_utils import count_tokens, safe_truncate, chunk_content_hash
+from code_p1_utils import count_tokens, truncate_chunk_text, chunk_content_hash
 from code_p2_models import Task
 
 
@@ -343,13 +343,12 @@ def _format_chunks_for_prompt(
 ) -> str:
     """
     将所有 chunk 格式化为 prompt 中的轮次文本
-    对单个 chunk 超限时进行截断
+    单个 chunk 超限时走分级截断: 先丢工具调用 (bash -> tool_call -> mcp),
+    仍超则 user_message 全量 + assistant 头70%尾30%
     """
     parts = []
     for chunk in chunks:
-        text = chunk.cleaned_text()
-        if count_tokens(text) > max_tokens_per_chunk:
-            text = safe_truncate(text, max_tokens_per_chunk)
+        text = truncate_chunk_text(chunk, max_tokens_per_chunk)
         # chunk_id 格式: {session_id}_c{index} -> 提取 c{index} 作为短 ID
         short_id = chunk.chunk_id.split("_c")[-1] if "_c" in chunk.chunk_id else chunk.chunk_id
         parts.append(f"--- c{short_id} ---\n{text}\n")
