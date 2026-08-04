@@ -1,9 +1,9 @@
 """
 Phase 3 核心模块: Qdrant 三集合向量存储 + 混合检索
 - tasks 集合: task_summary 向量化 (dense only)
-- chunks_summary 集合: chunk summary 向量化 (dense only)
-- chunks_cleaned_text 集合: cleaned_text 向量化 (dense + BM25)
-- 混合检索: dense (summary) + sparse (cleaned_text BM25) + RRF 融合
+ - chunks_summary 集合: chunk summary 向量化 (dense + sparse)
+ - chunks_cleaned_text 集合: cleaned_text 向量化 (dense + BM25)
+ - 混合检索: dense (summary) + sparse (summary/cleaned_text) + RRF 融合
 """
 import os
 import platform
@@ -523,7 +523,7 @@ class Phase3Store:
         summaries: dict[str, str],
         tasks: Optional[list[Task]] = None,
     ) -> int:
-        """将 Chunk summary 写入 chunks_summary 集合 (dense only, 无 BM25)"""
+        """将 Chunk summary 写入 chunks_summary 集合并建立 sparse 索引。"""
         if not chunks:
             logger.warning("upsert_chunks_summary: 无 chunk 可写入")
             return 0
@@ -602,6 +602,23 @@ class Phase3Store:
             f"Chunks summary upsert 完成: {len(points)} 条写入 "
             f"'{self.chunks_summary_collection}'"
         )
+
+        if self.sparse_method == "bm25":
+            self.build_bm25_index(
+                self.chunks_summary_collection,
+                texts,
+                [_stable_uuid(c.chunk_id) for c in valid_chunks],
+                [
+                    {
+                        "chunk_id": c.chunk_id,
+                        "session_id": c.session_id,
+                        "turn_index": c.turn_index,
+                        "task_id": chunk_to_task.get(c.chunk_id, ""),
+                        "summary": summaries.get(c.chunk_id, ""),
+                    }
+                    for c in valid_chunks
+                ],
+            )
 
         return len(points)
 
