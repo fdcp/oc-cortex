@@ -19,7 +19,7 @@ query_instruction_for_retrieval + 原始 query
 | 定位 | 检索实验室 | 数据质检 | 检索产品 |
 | 所属阶段 | Phase 3 | 里程碑检视 | Phase 4 |
 | 核心类 | `Phase3Store` | `QdrantClient` (直调) | `SessionSearcher` |
-| 检索方式 | Dense / Sparse / Hybrid 三路分开展示 | 仅 Dense (top-5 命中率验证) | Hybrid + Reranker 完整流水线 |
+| 检索方式 | Dense / Sparse / Hybrid 三路分开展示 | 仅 Dense (top-5 命中率验证) | 两级 RRF Hybrid + Reranker |
 | 结果粒度 | Chunk 级别 (chunk_id + score) | Task/Chunk 级别 (命中统计) | Task 级别 (附带 Chunk 摘要和文本预览) |
 | 数据写入 | 每次运行重建索引 (upsert) | 只读 | 只读 (假设已由 `code_p3_main.py` 写入) |
 | 交互模式 | 无 (批量示例查询) | 无 (全自动检视) | 有 (`--interactive`) |
@@ -87,14 +87,16 @@ python src/code_MS_inspect.py --config config/code_p3_config.yaml --samples 8
 
 这是面向最终用户的搜索 CLI，封装了完整的 Hybrid + Reranker 精排流水线。假设 Qdrant 数据已由 Phase 3 写入，直接连接读取。
 
-**检索流程（5 阶段）：**
+**检索流程（7 阶段）：**
 
 ```
 Stage 1: Dense 检索 → tasks 集合 → task_summary 语义匹配 → n_candidates 条候选
-Stage 2: Sparse 检索 → chunks_cleaned_text 集合 → BM25/BGE-M3 匹配 → 聚合到 Task 级别
-Stage 3: RRF 融合 → 合并 Dense + Sparse 候选 → 截断到 n_candidates
-Stage 4: Reranker 精排 → Qwen3-Reranker 对 task_summary 重新打分 → top_k
-Stage 5: Chunk 展开 → 为每个结果 Task 附加关联 Chunk 的摘要和文本预览
+Stage 2: chunks_summary 检索 → dense 或 sparse（sparse.chunks_summary_method）→ 聚合到 Task 级别
+Stage 3: Sparse 检索 → chunks_cleaned_text 集合 → BM25/BGE-M3 匹配 → 聚合到 Task 级别
+Stage 4: Chunk 路径 RRF → 合并 Stage 2 + Stage 3
+Stage 5: Task 路径 RRF → 合并 Stage 1 + Stage 4 → 截断到 n_candidates
+Stage 6: Reranker 精排 → Qwen3-Reranker 对 task_summary 重新打分 → top_k
+Stage 7: Chunk 展开 → 为每个结果 Task 附加关联 Chunk 的摘要和文本预览
 ```
 
 **关键特点：**
@@ -102,7 +104,7 @@ Stage 5: Chunk 展开 → 为每个结果 Task 附加关联 Chunk 的摘要和�
 - 返回 `SessionSearchResult`，包含 task_label、task_summary、rerank_score、hybrid_score，以及关联 Chunk 的 summary 和 cleaned_text_preview，信息最丰富。
 - 支持 `--interactive` 交互模式，循环输入查询。
 - 支持 `--no-rerank` 跳过精排，方便对比粗排和精排效果。
-- Dense 检索目标是 tasks 集合（Task 级别），Sparse 检索目标是 chunks_cleaned_text 集合（Chunk 级别，聚合回 Task），实现了跨集合 Hybrid。
+- Dense 检索目标是 tasks 集合（Task 级别）；两个 chunk 路径分别查询 `chunks_summary` 和 `chunks_cleaned_text`（Chunk 级别，聚合回 Task），先做 chunk 路径 RRF，再与 tasks Dense 结果做第二次 RRF。
 - 启动快（不重建索引），适合日常使用。
 
 **典型用法：**
@@ -133,7 +135,7 @@ python src/code_p4_search_cli.py --query "优化器学习率" --no-rerank
 
 | 维度 | P3 demo | MS inspect | P4 CLI |
 |------|---------|------------|--------|
-| 目标集合 | chunks_cleaned_text | — (无) | chunks_cleaned_text |
+| 目标集合 | chunks_summary / chunks_cleaned_text | — (无) | chunks_summary / chunks_cleaned_text |
 | 方法 | BM25 或 BGE-M3 (可切换) | — | BM25 或 BGE-M3 (config 决定) |
 | Chunk→Task 聚合 | — (Chunk 级返回) | — | `_aggregate_chunks_to_tasks()` 取最高分 |
 
@@ -141,7 +143,7 @@ python src/code_p4_search_cli.py --query "优化器学习率" --no-rerank
 
 | 维度 | P3 demo | MS inspect | P4 CLI |
 |------|---------|------------|--------|
-| 融合方式 | RRF 跨集合 (summary ↔ cleaned_text) | — | RRF 跨集合 (tasks ↔ cleaned_text) |
+| 融合方式 | RRF 跨集合 (summary ↔ cleaned_text) | — | 两级 RRF：chunk 路径先融合，再与 tasks 融合 |
 | Reranker | — | — | Qwen3-Reranker 精排 |
 | 结果粒度 | Chunk 级 (HybridResult) | — | Task 级 (SessionSearchResult + ChunkDetail) |
 

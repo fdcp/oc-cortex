@@ -100,7 +100,7 @@ BGE-M3 是 BAAI 的多语言多粒度检索模型，同时产出 dense embedding
 | BM25 | `search_sparse_bm25()` | in-memory (rank_bm25 库) | 开发环境，数据量 < 10K |
 | BGE-M3 | `search_sparse_bge_m3()` | Qdrant sparse vectors | 生产环境，大规模数据 |
 
-BM25 索引仅在 `chunks_cleaned_text` 集合上构建。BGE-M3 sparse vectors 在三个集合上都存储，但搜索流水线只查询 `chunks_cleaned_text`。
+BM25 索引在 `chunks_summary` 和 `chunks_cleaned_text` 两个集合上构建。BGE-M3 sparse vectors 在三个集合上都存储；P4 可按 `sparse.chunks_summary_method` 将 `chunks_summary` 配置为 dense 或 sparse，并始终检索 `chunks_cleaned_text` 的 sparse 路径。
 
 ## 3. Hybrid 检索 (混合检索)
 
@@ -136,17 +136,19 @@ RRF_score(d) = Σ 1 / (k + rank_i(d))
 
 ### 项目实现
 
-本项目的 Hybrid 检索是**跨集合**的（cross-collection）：
+本项目的 Hybrid 检索是**跨集合、分层融合**的（cross-collection hierarchical fusion）：
 
 ```
-Dense  → tasks 集合 (task_summary 语义)    ─┐
-                                              ├── RRF 融合 → 统一排序
-Sparse → chunks_cleaned_text 集合 (关键词)  ─┘
+chunks_summary → task 映射 (dense 或 sparse) ─┐
+                                                ├── 第一层 RRF → chunk task 结果
+chunks_cleaned_text → task 映射 (sparse)     ─┘
+                                                        │
+Dense → tasks 集合 (task_summary 语义) ─────────────────┴── 第二层 RRF
 ```
 
-两路搜的是不同集合、不同文本，因此能覆盖不同类型的查询意图。Sparse 搜出的是 chunk 级结果，需要先聚合到 task 级（同一 task 取最高分），再与 Dense 的 task 级结果做 RRF 融合。
+三路搜的是不同集合或不同文本表示，因此能覆盖不同类型的查询意图。两个 chunk 路径先分别聚合到 task 级（同一 task 取最高分），再互相做第一层 RRF；第一层结果随后与 Dense 的 task 级结果做第二层 RRF。
 
-跨集合 Hybrid 相比同集合 Hybrid 的优势：Dense 在 summary 文本上语义更浓缩（LLM 生成的摘要），Sparse 在 cleaned_text 上关键词更完整（原始对话包含具体术语和代码），两者互补性更强。
+跨集合 Hybrid 相比同集合 Hybrid 的优势：`chunks_summary` 提供可配置的语义或关键词路径，`chunks_cleaned_text` 保留完整原始对话中的具体术语和代码，`tasks.task_summary` 提供高层语义，三者互补性更强。
 
 ## 4. 粗排 (Coarse Ranking)
 
@@ -163,21 +165,28 @@ Sparse → chunks_cleaned_text 集合 (关键词)  ─┘
 
 ### 项目实现
 
-本项目的粗排由 Stage 1-3 组成：
+本项目的粗排由 Stage 1-5 组成：
 
 ```
 Stage 1: Dense → tasks 集合
          编码 query → Qdrant cosine ANN → top (top_k × 5) 个 task
          耗时: < 0.02s
 
-Stage 2: Sparse → chunks_cleaned_text 集合
+Stage 2: chunks_summary → task 集合
+          dense 或 sparse，由 sparse.chunks_summary_method 配置
+          top (top_k × 15) 个 chunk → 聚合为 task 级
+
+Stage 3: Sparse → chunks_cleaned_text 集合
          BM25: jieba 分词 → BM25Okapi 打分 → top (top_k × 15) 个 chunk
          BGE-M3: sparse encode → Qdrant sparse search → top (top_k × 15) 个 chunk
          → 聚合为 task 级 (同一 task 取最高分)
          耗时: < 0.01s (BM25) / ~0.1-0.5s (BGE-M3)
 
-Stage 3: RRF 融合
-         合并 Stage 1 + Stage 2 的 task 级结果 → top (top_k × 5) 个候选
+Stage 4: Chunk 路径 RRF
+          合并 Stage 2 + Stage 3 的 task 级结果
+
+Stage 5: Task 路径 RRF
+          合并 Stage 1 + Stage 4 的 task 级结果 → top (top_k × 5) 个候选
          耗时: < 0.001s
 
 粗排总耗时: < 0.5s
