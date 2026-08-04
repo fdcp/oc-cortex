@@ -196,7 +196,7 @@ python3 src/code_p3_search_demo.py --query "序列并行" --top-k 5
 
 ### Phase 4: 跨 Session 搜索
 
-**做什么**: 两阶段查询：Dense 搜 `tasks` 集合（task_summary 语义匹配） + Sparse（BM25/BGE-M3）搜 `chunks_cleaned_text` 集合并映射回 task → RRF 融合 → Qwen3-Reranker 精排 → Chunk 详情展开。
+**做什么**: 两级 RRF 查询：Dense 搜 `tasks` 集合（task_summary 语义匹配）；`chunks_summary` 按配置使用 Dense 或 Sparse，`chunks_cleaned_text` 使用 Sparse，两路分别映射回 task 后先做 RRF，再与 Dense task 结果做 RRF → Qwen3-Reranker 精排 → Chunk 详情展开。
 
 **前置条件**:
 - Phase 3 产物（Qdrant 三个集合已填充）
@@ -221,6 +221,7 @@ python3 src/code_p4_search_cli.py --interactive
 - `reranker.model` — Reranker 模型（默认 `Qwen/Qwen3-Reranker-0.6B`）
 - `reranker.device` — 推理设备（默认 `cpu`，可改 `mps`/`cuda`）
 - `sparse.method` — 稀疏检索方法（`bm25` 或 `bge_m3`）
+- `sparse.chunks_summary_method` — `chunks_summary` 的检索方式（`sparse` 或 `dense`）
 - `sparse.fuse_k` — RRF 融合常数（默认 60）
 
 详见 `doc/code_p4_README.md`。

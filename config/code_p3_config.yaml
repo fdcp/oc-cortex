@@ -25,6 +25,7 @@ embedding:
 # 稀疏检索
 sparse:
   method: "bm25"                     # bm25 | bge_m3
+  chunks_summary_method: "sparse"    # sparse | dense
   bge_m3_model: "BAAI/bge-m3"       # sparse_method=bge_m3 时使用的模型
   jieba_mode: "search"               # jieba 分词模式 (bm25 使用)
   bm25_params:

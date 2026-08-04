@@ -2,9 +2,9 @@
 
 ## 概述
 
-Phase 4 在 Phase 3 的三集合向量存储基础上，构建面向最终用户的**跨 session 搜索**能力。核心流程为两阶段粗排（Dense + Sparse → RRF 融合）加一阶段精排（Qwen3-Reranker），返回 Task 级别的搜索结果，附带关联 Chunk 的摘要和文本预览。
+Phase 4 在 Phase 3 的三集合向量存储基础上，构建面向最终用户的**跨 session 搜索**能力。核心流程为两级 RRF 粗排加一阶段精排（Qwen3-Reranker），返回 Task 级别的搜索结果，附带关联 Chunk 的摘要和文本预览。
 
-**核心设计原则：Dense 搜 task_summary 做语义匹配，Sparse 搜 cleaned_text 做关键词/稀疏向量匹配（BM25 或 BGE-M3），Reranker 对候选 task 做精排。**
+**核心设计原则：Dense 搜 task_summary 做语义匹配；chunks_summary 和 chunks_cleaned_text 分别检索并映射到 task 后先做 RRF，再与 Dense task 结果做第二次 RRF；Reranker 对候选 task 做精排。**
 
 与前序阶段的关系：
 
@@ -96,7 +96,7 @@ Phase 4 同时读取以下 Phase 3 配置项：
 
 ## 核心设计
 
-### 五阶段搜索流水线
+### 七阶段搜索流水线
 
 `SessionSearcher.search()` 封装了完整的搜索流程：
 
@@ -106,24 +106,30 @@ Phase 4 同时读取以下 Phase 3 配置项：
   ├─ Stage 1: Dense → tasks 集合
   │   语义匹配 task_summary，取 top_k × candidate_multiplier 条候选
   │
-  ├─ Stage 2: Sparse → chunks_cleaned_text 集合
+  ├─ Stage 2: chunks_summary 检索
+  │   由 sparse.chunks_summary_method 配置为 dense 或 sparse
+  │   → _aggregate_chunks_to_tasks() 聚合为 task 级
+  │
+  ├─ Stage 3: chunks_cleaned_text 检索
   │   BM25 关键词匹配 或 BGE-M3 sparse 向量匹配 cleaned_text
-  │   取 n_candidates × 3 条 chunk 命中
-  │   → _aggregate_chunks_to_tasks() 聚合为 task 级 (同一 task 取最高分)
+  │   → _aggregate_chunks_to_tasks() 聚合为 task 级
   │
-  ├─ Stage 3: RRF 融合
-  │   合并 Dense task 结果 + Sparse→task 结果 → 截断到 n_candidates
+  ├─ Stage 4: Chunk 路径 RRF
+  │   chunks_summary→task + chunks_cleaned_text→task
   │
-  ├─ Stage 4: Reranker 精排 (可选, --no-rerank 跳过)
+  ├─ Stage 5: Task 路径 RRF
+  │   Dense(tasks.task_summary) + Stage 4 结果 → 截断到 n_candidates
+  │
+  ├─ Stage 6: Reranker 精排 (可选, --no-rerank 跳过)
   │   Qwen3-Reranker 对 task_summary 重新打分 → top_k
   │
-  └─ Stage 5: Chunk 展开
+  └─ Stage 7: Chunk 展开
       为每个结果 task 查找关联 chunk，附加 summary 和 cleaned_text 预览
 ```
 
 ### 候选倍数 (candidate_multiplier)
 
-粗排候选池大小为 `top_k × candidate_multiplier`（默认 5）。例如 `top_k=5` 时，Stage 1-3 会产出 25 个候选 task，Stage 4 从中精排出 5 个。倍数越大，Reranker 看到的候选越多，精度可能更高但耗时更长。
+粗排候选池大小为 `top_k × candidate_multiplier`（默认 5）。例如 `top_k=5` 时，最终 RRF 会产出最多 25 个候选 task，随后 Reranker 从中精排出 5 个。倍数越大，Reranker 看到的候选越多，精度可能更高但耗时更长。
 
 ### Sparse Chunk→Task 聚合
 
