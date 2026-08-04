@@ -4,6 +4,7 @@
 import hashlib
 import json
 import os
+import re
 import sys
 from dataclasses import asdict
 import yaml
@@ -11,6 +12,8 @@ import tiktoken
 from pathlib import Path
 from loguru import logger
 from typing import Optional, TYPE_CHECKING
+
+from code_p1_models import render_chunk_text
 
 if TYPE_CHECKING:
     from code_p1_models import Chunk, Turn
@@ -128,7 +131,165 @@ def safe_truncate(text: str, max_tokens: int, head_ratio: float = 0.7) -> str:
     tail = enc.decode(tokens[-tail_len:]) if tail_len > 0 else ""
     return f"{head}\n\n[...TRUNCATED, original {len(tokens)} tokens...]\n\n{tail}"
 
-    # ============================================================
+
+# 分级截断时, 各段 token 数相加与整段实测可能有 ±few 的 tokenizer 边界误差,
+# 末级拼装时预留少量余量避免超预算
+_CONCAT_SLACK = 4
+
+
+# 命令注入折叠: <auto-slash-command> 包裹型 (opencode 把 slash 命令模板展开注入)
+_AUTO_CMD_RE = re.compile(r"^\s*<auto-slash-command>")
+# 包裹文本首个标题中的命令, 如 "# /init-deep Command"
+_AUTO_CMD_HEAD_RE = re.compile(r"#\s*(/[A-Za-z][\w-]*)")
+# 裸 /命令: 单段 (字母开头, 仅字母/数字/下划线/连字符), 且其后必须是空白或结尾 —
+# 多段绝对路径 (如 "/Users/a/b.yaml 中的...") 首段后跟 "/", 不会命中
+_BARE_SLASH_CMD_RE = re.compile(r"^(/[A-Za-z][\w-]*)(?=\s|$)")
+# 裸 @mention: 取首个非空白 token (如 @src/foo.py)
+_BARE_AT_CMD_RE = re.compile(r"^(@\S+)")
+# 兜底: 包裹文本中提取第一个命令形态 token
+_ANY_SLASH_CMD_RE = re.compile(r"(/[A-Za-z][\w-]*)(?=\s|$)")
+
+
+def collapse_command_injection(user_message: str) -> str:
+    """
+    命令注入型 user_message 折叠为命令 token 本身。
+
+    opencode 会把 slash 命令的完整模板文本注入 user_message (可达数千 token),
+    真实用户意图只有命令本身。支持两种形态:
+      1. <auto-slash-command> 包裹: 提取首个 "# /xxx Command" 标题中的命令,
+         兜底提取文本中第一个命令形态 token
+      2. 裸命令开头: 单段 /command ("/init-deep --flag" → "/init-deep")
+         或 @mention 开头 (保留首个 @token)
+
+    多段绝对路径 ("/Users/.../x.yaml 中的 embedding...") 与普通文本
+    不视为命令, 原样返回。
+    """
+    text = user_message.lstrip()
+    if not text:
+        return user_message
+
+    if _AUTO_CMD_RE.match(text):
+        m = _AUTO_CMD_HEAD_RE.search(text)
+        if m:
+            return m.group(1)
+        m = _ANY_SLASH_CMD_RE.search(text)
+        if m:
+            return m.group(1)
+        return user_message
+
+    m = _BARE_SLASH_CMD_RE.match(text)
+    if m:
+        return m.group(1)
+    m = _BARE_AT_CMD_RE.match(text)
+    if m:
+        return m.group(1)
+    return user_message
+
+
+def truncate_chunk_text(chunk: "Chunk", max_tokens: int) -> str:
+    """
+    分级截断单个 chunk 至 max_tokens 以内 (供 P2 prompt 拼装使用)
+
+    前置: 命令注入折叠 — user_message 为 slash 命令/@mention 注入时
+    (含 <auto-slash-command> 包裹型), 只保留命令 token (见
+    collapse_command_injection); 折叠后不超预算即整体保留。
+
+    分级策略 (每级判断是否达标, 达标即返回):
+      0. 全文 (折叠后的 user + 其余部分) 不超预算 → 原样返回
+      1. 丢弃 bash 类 tool_calls
+      2. 再丢弃 tool_call 类 tool_calls
+      3. 丢弃全部 tool/mcp calls (附一行省略数量标记)
+      4. 只剩 user_message + assistant_messages 仍超预算:
+         user_message 保持全量, assistant_messages 块按剩余预算的
+         头 70% + 尾 30% 截断 (复用 safe_truncate)
+
+    边界情况:
+      - user_message 单独已超预算 → 直接截断 user_message, assistant 无法保留
+      - assistant_messages 为空或剩余预算过小 → 仅返回 user 部分 + 省略标记
+    """
+    user_msg = collapse_command_injection(chunk.user_message)
+    if user_msg != chunk.user_message:
+        logger.info(
+            f"truncate_chunk_text {chunk.chunk_id}: 命令注入折叠 "
+            f"{count_tokens(chunk.user_message)} -> {count_tokens(user_msg)} "
+            f"tokens: {user_msg!r}"
+        )
+
+    full = render_chunk_text(
+        user_msg, chunk.assistant_messages, chunk.tool_calls, chunk.mcp_calls
+    )
+    if count_tokens(full) <= max_tokens:
+        return full
+
+    total_calls = len(chunk.tool_calls) + len(chunk.mcp_calls)
+
+    def _note(dropped: int) -> str:
+        if dropped <= 0:
+            return ""
+        return f"[... 已省略 {dropped} 条工具/MCP 调用记录 ...]"
+
+    def _render(tcs: list, mcs: list) -> str:
+        dropped = total_calls - len(tcs) - len(mcs)
+        return render_chunk_text(
+            user_msg, chunk.assistant_messages, tcs, mcs,
+            note=_note(dropped),
+        )
+
+    # 阶段 1-3: 渐进丢弃工具调用 (先 bash, 再 tool_call, 最后 mcp_calls)
+    staged = [
+        ([tc for tc in chunk.tool_calls if tc.type != "bash"],
+         list(chunk.mcp_calls)),
+        ([tc for tc in chunk.tool_calls
+          if tc.type not in ("bash", "tool_call")],
+         list(chunk.mcp_calls)),
+        ([], []),
+    ]
+    for level, (tcs, mcs) in enumerate(staged, 1):
+        text = _render(tcs, mcs)
+        if count_tokens(text) <= max_tokens:
+            logger.debug(
+                f"truncate_chunk_text {chunk.chunk_id}: "
+                f"阶段 {level} 达标 ({count_tokens(text)}/{max_tokens} tokens)"
+            )
+            return text
+
+    # 阶段 4: 只剩 user + assistant 仍超: user 全量, assistant 头70%+尾30%
+    dropped_note = _note(total_calls)
+    note_tokens = count_tokens(dropped_note) + (2 if dropped_note else 0)
+    user_block = f"[User]\n{user_msg}\n"
+    user_tokens = count_tokens(user_block)
+
+    if user_tokens + note_tokens + _CONCAT_SLACK >= max_tokens:
+        logger.warning(
+            f"truncate_chunk_text {chunk.chunk_id}: user_message 单独已超预算 "
+            f"({user_tokens} >= {max_tokens}), assistant 内容无法保留"
+        )
+        return safe_truncate(user_block, max_tokens)
+
+    assistant_budget = (
+        max_tokens - user_tokens - note_tokens - _CONCAT_SLACK
+    )
+    if not chunk.assistant_messages or assistant_budget <= 20:
+        text = user_block
+        if dropped_note:
+            text += f"\n{dropped_note}\n"
+        return text
+
+    joined = "".join(
+        f"\n[Assistant]\n{msg}\n" for msg in chunk.assistant_messages
+    )
+    truncated = safe_truncate(joined, assistant_budget)
+    text = user_block + truncated
+    if dropped_note:
+        text += f"\n{dropped_note}\n"
+    logger.debug(
+        f"truncate_chunk_text {chunk.chunk_id}: 阶段 4 assistant 截断 "
+        f"({count_tokens(text)}/{max_tokens} tokens)"
+    )
+    return text
+
+
+# ============================================================
 # 指纹 / 哈希
 # ============================================================
 
