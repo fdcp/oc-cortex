@@ -41,6 +41,21 @@ config/
 
 Phase 4 没有独立的配置文件，复用 `config/code_p3_config.yaml`，其中 `reranker:` 段为 Phase 4 新增。
 
+## Query Rewrite 实验状态
+
+`p4-query-rewrite` 分支实现了基于 OpenCode Zen `deepseek-v4-flash-free` 的单查询改写，并将改写结果仅用于 Dense 检索。实际测试表明，Query Rewrite 的检索效果不如原有方案，因此当前不建议将该分支合并到 `main`。
+
+当前建议使用原有检索方式：
+
+```yaml
+query_instruction_for_retrieval: "为这个句子生成表示以用于检索相关文章："
+
+query_rewrite:
+  enable: false
+```
+
+如需继续实验，可切换到 `p4-query-rewrite` 分支并设置 `query_rewrite.enable: true`。该实验分支的改动已单独提交，未合并到 `main`。
+
 ## 运行
 
 ### 单次查询
