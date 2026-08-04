@@ -1,6 +1,9 @@
 # Phase 3 配置
 # Qdrant 三集合向量存储 (tasks / chunks_summary / chunks_cleaned_text)
 
+# 查询向量化指令 (为空时保持原始 query)
+query_instruction_for_retrieval: "为这个句子生成表示以用于检索相关文章："
+
 # Phase 2 输出
 phase2:
   tasks_file: "./output/tasks.jsonl"
