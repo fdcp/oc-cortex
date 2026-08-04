@@ -14,20 +14,17 @@ output:
   chunk_summaries: "./output/chunks_summary_p2.jsonl"  # chunk 总结 (chunk_id + summary)
   checkpoint: "./output/.p2_checkpoint.json"            # [wired] 增量 checkpoint 路径; 命令行 --checkpoint 优先
 
-# LLM 配置 (OpenCode Go - Hy3)
-# 注意: hy3-free 已从 OpenCode Zen 免费层下线, hy3 现仅在 OpenCode Go 订阅端点提供
-#       (端点 .../zen/go/v1, 模型 ID 为 "hy3", auth.json provider = opencode-go)
 llm:
-  provider: "opencode_go"
-  model: "hy3"                                # OpenCode Go 订阅模型
-  api_key_env: "OPENCODE_ZEN_API_KEY"         # 环境变量名 (从 auth.json 的 opencode-go key 注入)
-  base_url: "https://opencode.ai/zen/go/v1"   # OpenCode Go OpenAI 兼容端点
+  provider: "opencode_go"                  # 仅作记录, 代码不读取
+  model: "qwen3.7-plus"
+  api_key_env: "OPENCODE_ZEN_API_KEY"       # 从 auth.json 的 opencode-go key 注入
+  base_url: "https://opencode.ai/zen/go/v1/"
   max_retries: 3                              # 网络层调用最大重试次数 (指数退避 2s/4s/8s)
   content_retries: 3                          # 内容校验重试次数 (chunk_summaries 缺失或 tasks 为空时)
   timeout: 120                                # 单次请求超时(秒)
   temperature: 0.2                            # 生成温度 (低=更确定)
-  max_tokens_per_chunk: 5000                  # 单个 chunk 在 prompt 中的最大 token 数
-  max_total_prompt_tokens: 128000             # 整个 prompt 最大 token 数
+  max_tokens_per_chunk: 3000                  # 单个 chunk 在 prompt 中的最大 token 数
+  max_total_prompt_tokens: 30000             # 整个 prompt 最大 token 数
   concurrency: 4                              # 并发线程数 (1=串行, >1=线程池并行)
   batch_size: 16                              # 多 batch 切分时单次 LLM 调用目标 chunk 数
   per_chunk_output_tokens: 250                # 每 chunk 预留的 LLM summary 输出 token (切分触发: session 总输入 + N*250 > max_total)
