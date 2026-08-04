@@ -51,6 +51,34 @@ class Session:
 # 切分 + 整理后的 Chunk
 # ============================================================
 
+def render_chunk_text(
+    user_message: str,
+    assistant_messages: list,
+    tool_calls: list,
+    mcp_calls: list,
+    note: str = "",
+) -> str:
+    """将 chunk 各部分渲染为可读文本。
+
+    Chunk.cleaned_text 与 code_p1_utils.truncate_chunk_text (分级截断)
+    共用此渲染格式, 修改格式时需同时考虑两处调用方。
+
+    note: 可选附加行 (如截断时的"已省略 N 条工具调用"标记)。
+    """
+    parts = [f"[User]\n{user_message}\n"]
+    for msg in assistant_messages:
+        parts.append(f"\n[Assistant]\n{msg}\n")
+    for tc in tool_calls:
+        status = "OK" if tc.ok else f"FAIL: {tc.error or 'unknown'}"
+        parts.append(f"\n[Tool:{tc.type}] {tc.summary} [{status}]\n")
+    for mc in mcp_calls:
+        status = "OK" if mc.ok else f"FAIL: {mc.error or 'unknown'}"
+        parts.append(f"\n[MCP:{mc.type}] {mc.summary} [{status}]\n")
+    if note:
+        parts.append(f"\n{note}\n")
+    return "".join(parts)
+
+
 @dataclass
 class CleanedToolCall:
     """整理后的工具调用(摘要形式)"""
@@ -84,16 +112,12 @@ class Chunk:
 
     def cleaned_text(self) -> str:
         """整理后的可读文本(供后续 LLM 使用)"""
-        parts = [f"[User]\n{self.user_message}\n"]
-        for msg in self.assistant_messages:
-            parts.append(f"\n[Assistant]\n{msg}\n")
-        for tc in self.tool_calls:
-            status = "OK" if tc.ok else f"FAIL: {tc.error or 'unknown'}"
-            parts.append(f"\n[Tool:{tc.type}] {tc.summary} [{status}]\n")
-        for mc in self.mcp_calls:
-            status = "OK" if mc.ok else f"FAIL: {mc.error or 'unknown'}"
-            parts.append(f"\n[MCP:{mc.type}] {mc.summary} [{status}]\n")
-        return "".join(parts)
+        return render_chunk_text(
+            self.user_message,
+            self.assistant_messages,
+            self.tool_calls,
+            self.mcp_calls,
+        )
 
     def to_dict(self) -> dict:
         data = asdict(self)
