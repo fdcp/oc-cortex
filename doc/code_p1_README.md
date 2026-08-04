@@ -174,7 +174,10 @@ session (id, parent_id, title, time_created, ...)
 
 - 用 `tiktoken` 的 `cl100k_base` 编码近似(Qwen3 同源)
 - 离线时回退到 `len(text) * 0.75` 估算(中英文混合经验值)
-- `safe_truncate()` 保留首 70% + 尾 30%,中间省略号
+- `safe_truncate()` 字符串级截断: 保留首 70% + 尾 30%(按 `max_tokens` 预算计算),中间省略号
+- `truncate_chunk_text()` chunk 级**分级截断**(供 Phase 2 prompt 拼装): 前置命令注入折叠, 再先丢 bash、再丢 tool_call、再丢全部工具/MCP 调用(留省略标记), 仍超则 `user_message` 全量 + `assistant_messages` 头 70% + 尾 30%
+- `collapse_command_injection()` 命令注入折叠: `/命令`、`@mention` 或 `<auto-slash-command>` 包裹型的 user_message 只保留命令 token; 多段文件路径与普通文本不折叠
+- 渲染格式统一在 `code_p1_models.render_chunk_text()`(`Chunk.cleaned_text()` 与分级截断共用)
 
 ## 输出格式
 

@@ -166,7 +166,11 @@ output:
 
 ### Token 预算管理
 
-- 单个 chunk 在 prompt 中最多 `max_tokens_per_chunk` tokens (超限自动截断,首尾保留策略)
+- 单个 chunk 在 prompt 中最多 `max_tokens_per_chunk` tokens, 超限走**分级截断** (`truncate_chunk_text`):
+  0. 前置: 命令注入折叠 (`collapse_command_injection`) — user_message 为 `/命令` 或 `@mention` 注入 (含 `<auto-slash-command>` 包裹型, 模板可达数千 token) 时只保留命令 token; 多段文件路径 (`/Users/...`) 与普通文本不折叠
+  1. 丢 bash 类 tool_calls → 2. 再丢 tool_call 类 → 3. 丢全部工具/MCP 调用 (留省略数量标记) → 4. 仍超则 `user_message` 保持全量 + `assistant_messages` 按剩余预算头 70% + 尾 30% 截断
+  - 设计意图: 优先保留对话语义 (user/assistant), 工具调用摘要最先被牺牲
+  - 边界: `user_message` 单独已超预算时只截 user (打 WARNING, assistant 无法保留)
 - 整个 prompt 最多 `max_total_prompt_tokens` tokens (超限时按比例缩减每个 chunk)
 - LLM 输出 `max_tokens=16000` (CoT 输出含 chunk_summaries, 需要更多 token)
 - `max_tokens` 仅控制输出 token 数, 不含输入
