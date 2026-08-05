@@ -120,6 +120,11 @@ def main():
         help="跳过抽取, 直接加载已有 triples/entities 文件",
     )
     parser.add_argument(
+        "--force", action="store_true",
+        help="强制重新抽取 (删除已有 triples/entities 文件后从零开始), "
+             "与 --skip-extraction 互斥",
+    )
+    parser.add_argument(
         "--extraction_mode", type=str, default=None,
         choices=["triple", "entity"],
         help="抽取模式 (覆盖配置文件中的 knowledge_graph.extraction_mode, "
@@ -226,7 +231,7 @@ def main():
             logger.info(f"加载 {len(inverted_index)} 个已有实体")
         else:
             inverted_index = builder.extract_all_entities(
-                tasks, output_file=entity_extract_file,
+                tasks, output_file=entity_extract_file, force=args.force,
             )
 
         t_extraction = time.time() - t0
@@ -287,7 +292,7 @@ def main():
             logger.info(f"加载 {len(triples)} 个已有三元组")
         else:
             triples = builder.extract_all_triples(
-                tasks, output_file=triples_file,
+                tasks, output_file=triples_file, force=args.force,
             )
 
         t_extraction = time.time() - t0

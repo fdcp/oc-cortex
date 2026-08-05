@@ -685,6 +685,7 @@ class KGBuilder:
         self,
         tasks: list[Task],
         output_file: Optional[str] = None,
+        force: bool = False,
     ) -> list[Triple]:
         """
         批量抽取所有 task 的三元组
@@ -692,6 +693,13 @@ class KGBuilder:
         Args:
             tasks: task 列表
             output_file: 增量输出 JSONL 路径 (每个 task 抽取后立即追加)
+            force: 强制重抽。True 时会先删除 output_file (如有), 然后从零开始,
+                   跳过断点续传逻辑。
+
+        注意:
+            默认会从 output_file 恢复已有进度——若文件中所有 task_id 都已存在,
+            则不会调用 LLM, 直接复用旧结果。如需重跑, 请传 force=True
+            或在 CLI 加 --force 参数。
         """
         all_triples: list[Triple] = []
         total = len(tasks)
@@ -699,20 +707,34 @@ class KGBuilder:
         # 加载已有进度 (断点续传)
         done_task_ids: set[str] = set()
         if output_file and Path(output_file).exists():
-            with open(output_file, "r", encoding="utf-8") as f:
-                for line in f:
-                    line = line.strip()
-                    if line:
-                        t = Triple.from_dict(json.loads(line))
-                        all_triples.append(t)
-                        done_task_ids.add(t.source_task_id)
-            logger.info(f"从 {output_file} 恢复 {len(all_triples)} 条三元组, "
-                       f"已完成 {len(done_task_ids)} 个 task")
+            if force:
+                # 强制模式: 先删旧文件, 跳过恢复
+                Path(output_file).unlink(missing_ok=True)
+                logger.warning(
+                    f"[force] 已删除旧抽取文件 {output_file}, 重新从零开始抽取三元组"
+                )
+            else:
+                with open(output_file, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if line:
+                            t = Triple.from_dict(json.loads(line))
+                            all_triples.append(t)
+                            done_task_ids.add(t.source_task_id)
+                logger.warning(
+                    f"检测到 {output_file} 已有 {len(all_triples)} 条三元组 / "
+                    f"{len(done_task_ids)} 个 task, 将复用旧结果。"
+                    f"如需重新抽取, 请加 --force 参数。"
+                )
 
         # 过滤已完成的 task
         pending_tasks = [t for t in tasks if t.task_id not in done_task_ids]
         if not pending_tasks:
-            logger.info("所有 task 已完成, 无需重新抽取")
+            logger.warning(
+                f"所有 {len(tasks)} 个 task 在抽取结果中均已存在, "
+                f"本次未调用 LLM, 直接复用旧结果。"
+                f"如需重抽请加 --force。"
+            )
             return all_triples
 
         logger.info(f"开始三元组抽取: {len(pending_tasks)}/{total} 个 task 待处理, "
@@ -826,6 +848,7 @@ class KGBuilder:
         self,
         tasks: list[Task],
         output_file: Optional[str] = None,
+        force: bool = False,
     ) -> dict[str, list[str]]:
         """
         批量提取所有 task 的关键实体, 构建倒排索引
@@ -833,9 +856,16 @@ class KGBuilder:
         Args:
             tasks: task 列表
             output_file: 增量输出 JSONL 路径
+            force: 强制重抽。True 时会先删除 output_file (如有), 然后从零开始,
+                   跳过断点续传逻辑。
 
         Returns:
             inverted_index: {entity_name: [task_ids]}
+
+        注意:
+            默认会从 output_file 恢复已有进度——若文件中所有 task_id 都已存在,
+            则不会调用 LLM, 直接复用旧结果。如需重跑, 请传 force=True
+            或在 CLI 加 --force 参数。
         """
         inverted_index: dict[str, list[str]] = {}
         total = len(tasks)
@@ -843,31 +873,43 @@ class KGBuilder:
         # 加载已有进度 (断点续传)
         done_task_ids: set[str] = set()
         if output_file and Path(output_file).exists():
-            with open(output_file, "r", encoding="utf-8") as f:
-                for line in f:
-                    line = line.strip()
-                    if line:
-                        try:
-                            record = json.loads(line)
-                            task_id = record.get("task_id", "")
-                            entities = record.get("entities", [])
-                            done_task_ids.add(task_id)
-                            for entity in entities:
-                                if entity not in inverted_index:
-                                    inverted_index[entity] = []
-                                if task_id not in inverted_index[entity]:
-                                    inverted_index[entity].append(task_id)
-                        except json.JSONDecodeError:
-                            continue
-            logger.info(
-                f"从 {output_file} 恢复倒排索引: {len(inverted_index)} 个实体, "
-                f"已完成 {len(done_task_ids)} 个 task"
-            )
+            if force:
+                # 强制模式: 先删旧文件, 跳过恢复
+                Path(output_file).unlink(missing_ok=True)
+                logger.warning(
+                    f"[force] 已删除旧抽取文件 {output_file}, 重新从零开始提取实体"
+                )
+            else:
+                with open(output_file, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if line:
+                            try:
+                                record = json.loads(line)
+                                task_id = record.get("task_id", "")
+                                entities = record.get("entities", [])
+                                done_task_ids.add(task_id)
+                                for entity in entities:
+                                    if entity not in inverted_index:
+                                        inverted_index[entity] = []
+                                    if task_id not in inverted_index[entity]:
+                                        inverted_index[entity].append(task_id)
+                            except json.JSONDecodeError:
+                                continue
+                logger.warning(
+                    f"检测到 {output_file} 已有 {len(inverted_index)} 个实体 / "
+                    f"{len(done_task_ids)} 个 task, 将复用旧结果。"
+                    f"如需重新提取, 请加 --force 参数。"
+                )
 
         # 过滤已完成的 task
         pending_tasks = [t for t in tasks if t.task_id not in done_task_ids]
         if not pending_tasks:
-            logger.info("所有 task 已完成, 无需重新提取")
+            logger.warning(
+                f"所有 {len(tasks)} 个 task 在抽取结果中均已存在, "
+                f"本次未调用 LLM, 直接复用旧结果。"
+                f"如需重抽请加 --force。"
+            )
             return inverted_index
 
         logger.info(
