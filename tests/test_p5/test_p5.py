@@ -136,10 +136,15 @@ def benchmark_run(
     try:
         # ── 初始化 KGBuilder ──
         t_init = time.time()
+        # 测试要遍历指定 model, 所以在 post_init 之前先改 config
+        # 让 triple_model/entity_model 都指向本轮要测的 model
+        config.set("llm.triple_model", model)
+        config.set("llm.entity_model", model)
+        # 同步确保 extraction_mode 跟 mode 参数一致 (post_init 会再次确认)
+        config.set("knowledge_graph.extraction_mode", mode)
+
         builder = KGBuilder(
-            model=model,
-            api_key_env=config.get("llm.api_key_env", "OPENCODE_ZEN_API_KEY"),
-            base_url=config.get("llm.base_url", "https://opencode.ai/zen/v1"),
+            extraction_mode=mode,
             max_retries=config.get("llm.max_retries", 3),
             content_retries=config.get("llm.content_retries", 2),
             timeout=config.get("llm.timeout", 120),
@@ -158,8 +163,12 @@ def benchmark_run(
             entities_collection=config.get("qdrant.entities_collection", "entities"),
             alignment_threshold=config.get("knowledge_graph.entity_alignment_threshold", 0.92),
         )
+        builder.post_init(config)
         result["init_time"] = round(time.time() - t_init, 1)
-        logger.info(f"  初始化耗时: {result['init_time']:.1f}s (Qdrant: {qdrant_tmp})")
+        logger.info(
+            f"  初始化耗时: {result['init_time']:.1f}s (Qdrant: {qdrant_tmp}, "
+            f"model={builder.model}, base_url={builder.base_url})"
+        )
 
         t_pipeline = time.time()
         triples_file = str(run_dir / "triples.jsonl")

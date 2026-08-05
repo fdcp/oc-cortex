@@ -52,6 +52,19 @@ class Config:
                 return default
         return val
 
+    def set(self, key: str, value) -> None:
+        """支持点号路径写入,如 set('knowledge_graph.extraction_mode', 'entity')
+
+        中间路径若不存在会自动创建空 dict。
+        """
+        keys = key.split(".")
+        target = self.raw
+        for k in keys[:-1]:
+            if k not in target or not isinstance(target[k], dict):
+                target[k] = {}
+            target = target[k]
+        target[keys[-1]] = value
+
 
 def build_retrieval_query(query: str, instruction: str = "") -> str:
     """将检索指令拼接到用户查询前。"""

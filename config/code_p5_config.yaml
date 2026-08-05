@@ -5,18 +5,31 @@ phase2:
   tasks_file: "./output/tasks.jsonl"
 
 # LLM (同 Phase 2, OpenCode Zen)
+# 注意: api_key_env / base_url 已移除, 由 opencode_models.yaml 提供
 llm:
-  model: "nemotron-3-ultra-free"    # nemotron-3-ultra-free for Triple Extraction; hy3-free for Entity Extraction
-  api_key_env: "OPENCODE_ZEN_API_KEY"
-  base_url: "https://opencode.ai/zen/v1"
+  triple_model: "nemotron-3-ultra-free"   # Triple Extraction 使用的模型
+  entity_model: "hy3"  # Entity Extraction 使用的模型
+  # 上面两个字段是运行时的实际值, KGBuilder.post_init() 会按 extraction_mode 选其中一个
+  # 若某个字段缺失, 回退到 model 字段; 若 model 也缺, 默认 "deepseek-v4-flash-free"
+  model: "hy3"         # 兜底默认值 (triple_model / entity_model 未配时)
+  merge_model: "deepseek-v4-flash-free"  # 实体合并 (alignment) 用的轻量模型
+                                      # 合并本质是 MERGE/KEEP 二分类, reasoning 模型 (如 hy3)
+                                      # 用不上还会浪费 max_tokens, 用轻量模型更稳更快
   max_retries: 3
   content_retries: 2
   timeout: 120
-  max_tokens: 4000          # 三元组抽取 max_tokens
-  merge_max_tokens: 200     # 实体合并确认 max_tokens (单条)
+  max_tokens: 6000          # 三元组抽取 max_tokens
+  merge_max_tokens: 420   # 实体合并确认 max_tokens (单条)
+                           # 注意: 此值需 ≥ 2000, 否则 reasoning 模型 (如 hy3) 会因预算不足
+                           # 连 thinking 都放不下, 频繁返回空内容, 漏掉大量本该合并的实体对
   merge_batch_size: 20      # 批量合并确认: 每批发送的实体对数
   merge_batch_enable: false  # 是否启用批量合并确认 (false=逐条确认, 更稳定)
   concurrency: 4            # 并发线程数
+
+# OpenCode 模型池配置: 提供 base_url 和 api_key (通过 auth.json)
+# 路径支持相对路径 (优先 CWD, 找不到再退到项目根) 或绝对路径
+opencode_models:
+  config_path: "config/opencode_models.yaml"
 
 # Embedding (复用 Phase 3)
 embedding:
@@ -34,7 +47,7 @@ qdrant:
 
 # 知识图谱
 knowledge_graph:
-  extraction_mode: "triple"       # "triple" (三元组) | "entity" (直接实体提取+倒排索引)
+  extraction_mode: "entity"       # "triple" (三元组) | "entity" (直接实体提取+倒排索引)
   entity_alignment_threshold: 0.92
   # 输出目录 (两种模式互不干扰)
   triple_output_dir: "./output/triple"    # triple 模式输出目录

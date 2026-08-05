@@ -7,8 +7,9 @@ Phase 5 主入口: 知识图谱构建
   entity: LLM 直接抽取关键实体 → 倒排索引 + 共现图谱
 
 用法:
-  export OPENCODE_ZEN_API_KEY=$(python3 -c "import json; d=json.load(open('$HOME/.local/share/opencode/auth.json')); print(d['opencode-go']['key'])")
+  # 默认从 opencode_models.yaml 读 base_url, 从 auth.json 读 api_key
   python code_p5_main.py --config code_p5_config.yaml
+  python code_p5_main.py --config code_p5_config.yaml --extraction_mode entity
   python code_p5_main.py --config code_p5_config.yaml --concurrency 8
   python code_p5_main.py --config code_p5_config.yaml --limit 5
   python code_p5_main.py --config code_p5_config.yaml --skip-alignment
@@ -118,6 +119,12 @@ def main():
         "--skip-extraction", action="store_true",
         help="跳过抽取, 直接加载已有 triples/entities 文件",
     )
+    parser.add_argument(
+        "--extraction_mode", type=str, default=None,
+        choices=["triple", "entity"],
+        help="抽取模式 (覆盖配置文件中的 knowledge_graph.extraction_mode, "
+             "同时决定使用 llm.triple_model 还是 llm.entity_model)",
+    )
     args = parser.parse_args()
 
     # 1. 加载配置
@@ -158,9 +165,7 @@ def main():
         )
 
     builder = KGBuilder(
-        model=config.get("llm.model", "deepseek-v4-flash-free"),
-        api_key_env=config.get("llm.api_key_env", "OPENCODE_ZEN_API_KEY"),
-        base_url=config.get("llm.base_url", "https://opencode.ai/zen/v1"),
+        extraction_mode=args.extraction_mode,
         max_retries=config.get("llm.max_retries", 3),
         content_retries=config.get("llm.content_retries", 2),
         timeout=config.get("llm.timeout", 120),
@@ -180,9 +185,12 @@ def main():
         alignment_threshold=config.get("knowledge_graph.entity_alignment_threshold", 0.92),
     )
 
-    # 读取抽取模式, 确定输出目录
+    # LLM 后初始化: 覆盖 extraction_mode → 选 model (triple/entity) → 加载 opencode_models.yaml → 初始化 client
+    builder.post_init(config)
+
+    # 读取最终的抽取模式 (可能已被 args.extraction_mode 覆盖)
     extraction_mode = config.get("knowledge_graph.extraction_mode", "triple")
-    logger.info(f"抽取模式: {extraction_mode}")
+    logger.info(f"抽取模式: {extraction_mode} (model={builder.model})")
 
     if extraction_mode == "entity":
         output_dir = config.get("knowledge_graph.entity_output_dir", "./output/entity")

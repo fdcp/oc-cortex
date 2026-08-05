@@ -12,8 +12,9 @@ import hashlib
 import pickle
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
+import yaml
 from openai import OpenAI
 from loguru import logger
 import networkx as nx
@@ -22,6 +23,14 @@ from code_update_prompt_utils import load_prompt
 
 from code_p2_models import Task
 from code_p5_models import Triple, Entity, KGStats
+
+if TYPE_CHECKING:
+    from code_p1_utils import Config
+
+
+# 默认 Zen 端点 (opencode_models.yaml 加载失败时回退)
+DEFAULT_FALLBACK_BASE_URL = "https://opencode.ai/zen/v1"
+DEFAULT_FALLBACK_API_KEY_ENV = "OPENCODE_ZEN_API_KEY"
 
 
 # ============================================================
@@ -243,10 +252,7 @@ class KGBuilder:
 
     def __init__(
         self,
-        model: str = "deepseek-v4-flash-free",
-        api_key: Optional[str] = None,
-        api_key_env: str = "OPENCODE_ZEN_API_KEY",
-        base_url: str = "https://opencode.ai/zen/v1",
+        extraction_mode: Optional[str] = None,
         max_retries: int = 3,
         content_retries: int = 2,
         timeout: int = 120,
@@ -277,21 +283,17 @@ class KGBuilder:
         self.entities_collection = entities_collection
         self.embedding_dim = embedding_dim
 
-        # API Key
-        self.api_key = api_key or os.environ.get(api_key_env, "")
-        if not self.api_key:
-            raise ValueError(
-                f"未找到 API Key: 环境变量 {api_key_env} 未设置。\n"
-                f"请先设置: export {api_key_env}='your-api-key'"
-            )
-
-        # OpenAI 客户端
-        self.client = OpenAI(
-            api_key=self.api_key,
-            base_url=base_url,
-            timeout=self.timeout,
-        )
-        self.model = model
+        # 延迟到 post_init() 初始化的字段
+        self._extraction_mode_param = extraction_mode  # 仅作为优先级最高的覆盖值
+        self.extraction_mode: Optional[str] = None     # 由 post_init 从 config 读出最终值
+        self.model: Optional[str] = None              # 由 post_init 按 extraction_mode 选定
+        self.api_key: Optional[str] = None             # 由 post_init 从 opencode_models.yaml + auth.json 取
+        self.base_url: Optional[str] = None            # 由 post_init 从 opencode_models.yaml 取
+        self.client: Optional[OpenAI] = None           # 由 post_init 创建
+        # Merge (实体合并) 独立的 model + client, 避免 reasoning 模型吃满 max_tokens
+        self.merge_model: Optional[str] = None         # 由 post_init 从 config['llm.merge_model'] 读
+        self.merge_base_url: Optional[str] = None
+        self.merge_client: Optional[OpenAI] = None
 
         # Embedding 模型
         self.embedding_offline_mode = embedding_offline_mode
@@ -329,8 +331,171 @@ class KGBuilder:
         self._ensure_entities_collection()
 
         logger.info(
-            f"KGBuilder 初始化: model={model}, concurrency={self.concurrency}, "
-            f"alignment_threshold={alignment_threshold}"
+            f"KGBuilder 初始化 (LLM 待 post_init 配置): concurrency={self.concurrency}, "
+            f"alignment_threshold={alignment_threshold}, extraction_mode={extraction_mode!r}"
+        )
+
+    # --------------------------------------------------------
+    # LLM 后初始化 (post_init)
+    # --------------------------------------------------------
+
+    def _resolve_endpoint_for_model(
+        self,
+        model_name: str,
+        config: "Config",
+    ) -> tuple[str, str]:
+        """根据 model_name 从 opencode_models.yaml 查 base_url + api_key。
+
+        Returns:
+            (api_key, base_url): api_key 可能为空字符串 (需要外部再 fallback 到环境变量)
+        """
+        base_url = DEFAULT_FALLBACK_BASE_URL
+        api_key = ""
+
+        cfg_rel = config.get("opencode_models.config_path", "config/opencode_models.yaml")
+        cfg_path = Path(cfg_rel)
+        candidates: list[Path] = []
+        if cfg_path.is_absolute():
+            candidates.append(cfg_path)
+        else:
+            candidates.append(Path.cwd() / cfg_path)
+            candidates.append(Path(__file__).resolve().parents[1] / cfg_rel)
+
+        opencode_path: Optional[Path] = next((p for p in candidates if p.exists()), None)
+
+        if opencode_path is None:
+            logger.warning(
+                f"找不到 opencode_models.yaml (尝试过: "
+                f"{', '.join(str(p) for p in candidates)}), "
+                f"模型 {model_name!r} 使用默认 base_url + 环境变量 key"
+            )
+            return api_key, base_url
+
+        try:
+            opencode_cfg = yaml.safe_load(opencode_path.read_text(encoding="utf-8"))
+        except (yaml.YAMLError, OSError) as e:
+            logger.warning(f"加载 {opencode_path} 失败: {e}, 使用默认 base_url")
+            return api_key, base_url
+
+        if not opencode_cfg:
+            return api_key, base_url
+
+        model_entry = next(
+            (m for m in opencode_cfg.get("models", []) if m.get("name") == model_name),
+            None,
+        )
+        if model_entry is None:
+            logger.warning(
+                f"模型 {model_name!r} 不在 {opencode_path} 中, "
+                f"使用默认 base_url + 环境变量 key"
+            )
+            return api_key, base_url
+
+        endpoint_name = model_entry.get("endpoint")
+        endpoint = opencode_cfg.get("endpoints", {}).get(endpoint_name or "", {})
+        if endpoint.get("base_url"):
+            base_url = endpoint["base_url"]
+
+        auth_file_rel = opencode_cfg.get("auth_file", "~/.local/share/opencode/auth.json")
+        auth_file = Path(auth_file_rel).expanduser()
+        if auth_file.exists():
+            try:
+                auth_data = json.loads(auth_file.read_text(encoding="utf-8"))
+                auth_provider = endpoint.get("auth_provider", "opencode-go")
+                api_key = (auth_data.get(auth_provider, {}).get("key", "") or "")
+            except (json.JSONDecodeError, KeyError) as e:
+                logger.warning(f"读取 {auth_file} 失败: {e}")
+        else:
+            logger.warning(f"auth.json 不存在: {auth_file}")
+
+        return api_key, base_url
+
+    def _init_client(
+        self,
+        model_name: str,
+        config: "Config",
+    ) -> tuple[Optional[str], Optional[str], Optional[OpenAI]]:
+        """根据 model_name 解析 endpoint 并创建 OpenAI client。
+
+        Returns:
+            (api_key, base_url, client) 任一为 None 表示初始化失败
+        """
+        api_key, base_url = self._resolve_endpoint_for_model(model_name, config)
+        if not api_key:
+            api_key = os.environ.get(DEFAULT_FALLBACK_API_KEY_ENV, "")
+        if not api_key:
+            logger.warning(
+                f"模型 {model_name!r}: 未找到 API Key (opencode_models.yaml + 环境变量都无),"
+                f" 该 client 初始化失败"
+            )
+            return None, base_url, None
+        client = OpenAI(api_key=api_key, base_url=base_url, timeout=self.timeout)
+        return api_key, base_url, client
+
+    def post_init(self, config: "Config") -> None:
+        """后初始化: 在 KGBuilder() 之后由调用方显式调用。
+
+        职责 (按顺序):
+          1. 若 __init__ 的 extraction_mode 参数被显式传入 (非 None),
+             覆盖 config['knowledge_graph.extraction_mode'] (优先级最高)。
+          2. 从 config 读出最终 extraction_mode,
+             选 self.model = config['llm.triple_model'] (triple 模式)
+                    或 config['llm.entity_model'] (entity 模式),
+                    缺省时回退到 config['llm.model']。
+          3. 用 _init_client 解析 endpoint, 创建 self.client。
+          4. 用 _init_client 解析 merge endpoint, 创建 self.merge_client
+             (model = config['llm.merge_model'], 缺省回退到 self.model)。
+
+        若 opencode_models.yaml 中未列出 self.model, 或文件/auth.json 缺失,
+        回退到默认 Zen 端点 + OPENCODE_ZEN_API_KEY 环境变量, 仍失败则抛 ValueError。
+        """
+        # ── 1. extraction_mode 覆盖 (优先级最高) ──
+        if self._extraction_mode_param is not None:
+            config.set("knowledge_graph.extraction_mode", self._extraction_mode_param)
+
+        # ── 2. 选 main model ──
+        self.extraction_mode = config.get("knowledge_graph.extraction_mode", "triple")
+        fallback_model = config.get("llm.model", "deepseek-v4-flash-free")
+        if self.extraction_mode == "entity":
+            self.model = config.get("llm.entity_model") or fallback_model
+        else:
+            self.model = config.get("llm.triple_model") or fallback_model
+
+        # ── 3. 解析并创建 main client ──
+        self.api_key, self.base_url, self.client = self._init_client(self.model, config)
+        if self.client is None:
+            raise ValueError(
+                f"未找到 API Key: opencode_models.yaml 加载失败或不含模型 {self.model!r}, "
+                f"且环境变量 {DEFAULT_FALLBACK_API_KEY_ENV} 未设置。\n"
+                f"请检查: (1) opencode_models.yaml 是否包含模型 {self.model}; "
+                f"(2) auth.json 是否存在并包含对应 provider; "
+                f"(3) export {DEFAULT_FALLBACK_API_KEY_ENV}='your-key'"
+            )
+
+        # ── 4. 解析并创建 merge client (独立于 main) ──
+        self.merge_model = config.get("llm.merge_model") or self.model
+        if self.merge_model == self.model:
+            # merge 没单独配, 直接复用 main client (避免重复建连)
+            self.merge_base_url = self.base_url
+            self.merge_client = self.client
+            logger.info(
+                f"merge_model 未独立配置, 复用 main model: {self.merge_model}"
+            )
+        else:
+            self.merge_api_key, self.merge_base_url, self.merge_client = self._init_client(
+                self.merge_model, config
+            )
+            if self.merge_client is None:
+                raise ValueError(
+                    f"merge_model {self.merge_model!r} 初始化失败: "
+                    f"opencode_models.yaml 不含此模型, 且环境变量未设。"
+                )
+
+        logger.info(
+            f"KGBuilder LLM 后初始化完成: model={self.model}, base_url={self.base_url}, "
+            f"extraction_mode={self.extraction_mode}, "
+            f"merge_model={self.merge_model}, merge_base_url={self.merge_base_url}, "
+            f"concurrency={self.concurrency}"
         )
 
     # --------------------------------------------------------
@@ -357,11 +522,27 @@ class KGBuilder:
     # LLM 调用
     # --------------------------------------------------------
 
-    def _call_llm(self, prompt: str, max_tokens: Optional[int] = None) -> str:
-        """调用 LLM 获取响应"""
+    def _call_llm(
+        self,
+        prompt: str,
+        max_tokens: Optional[int] = None,
+        *,
+        model: Optional[str] = None,
+        client: Optional[OpenAI] = None,
+    ) -> str:
+        """调用 LLM 获取响应。
+
+        默认使用 self.model + self.client; 也可显式传入 (用于 merge 任务用独立 client)。
+        """
+        use_model = model or self.model
+        use_client = client or self.client
+        if use_client is None or use_model is None:
+            raise RuntimeError(
+                "KGBuilder 尚未完成 LLM 初始化, 请先调用 builder.post_init(config)。"
+            )
         tokens = max_tokens or self.max_tokens
-        response = self.client.chat.completions.create(
-            model=self.model,
+        response = use_client.chat.completions.create(
+            model=use_model,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3,
             max_tokens=tokens,
@@ -392,12 +573,19 @@ class KGBuilder:
 
         return content.strip()
 
-    def _call_llm_with_retry(self, prompt: str, max_tokens: Optional[int] = None) -> str:
-        """带指数退避重试的 LLM 调用"""
+    def _call_llm_with_retry(
+        self,
+        prompt: str,
+        max_tokens: Optional[int] = None,
+        *,
+        model: Optional[str] = None,
+        client: Optional[OpenAI] = None,
+    ) -> str:
+        """带指数退避重试的 LLM 调用 (model/client 可选, 透传给 _call_llm)"""
         last_error = None
         for attempt in range(self.max_retries):
             try:
-                return self._call_llm(prompt, max_tokens)
+                return self._call_llm(prompt, max_tokens, model=model, client=client)
             except Exception as e:
                 last_error = e
                 if attempt < self.max_retries - 1:
@@ -890,6 +1078,19 @@ class KGBuilder:
             return {name: name for name in entities}
 
         # 4. LLM 二次确认 (批量 / 单条)
+        # 先打印实体对齐使用的模型, 方便排查 "为啥合并/不合并"
+        merge_mode = "批量" if self.merge_batch_enable else "单条"
+        if self.merge_model == self.model and self.merge_client is self.client:
+            merge_model_note = f"{self.merge_model} (复用 main client)"
+        else:
+            merge_model_note = (
+                f"{self.merge_model} (独立 client, base_url={self.merge_base_url})"
+            )
+        logger.info(
+            f"实体对齐 LLM 确认: {merge_mode}模式, {len(merge_candidates)} 对候选, "
+            f"使用模型 {merge_model_note}"
+        )
+
         uf = UnionFind()
         for name in entities:
             uf.find(name)  # 初始化
@@ -962,7 +1163,7 @@ class KGBuilder:
 
     def _llm_confirm_merge(self, entity_a: str, entity_b: str,
                            entity_map: Optional[dict[str, Entity]] = None) -> bool:
-        """LLM 确认两个实体是否应该合并"""
+        """LLM 确认两个实体是否应该合并 (用独立的 merge_model + merge_client)"""
         # 构建上下文信息
         context_a = f"实体类型: {_infer_entity_type(entity_a)}"
         context_b = f"实体类型: {_infer_entity_type(entity_b)}"
@@ -979,7 +1180,12 @@ class KGBuilder:
             context_a=context_a, context_b=context_b,
         )
         try:
-            output = self._call_llm_with_retry(prompt, max_tokens=self.merge_max_tokens)
+            output = self._call_llm_with_retry(
+                prompt,
+                max_tokens=self.merge_max_tokens,
+                model=self.merge_model,
+                client=self.merge_client,
+            )
             output_upper = output.strip().upper()
             return "MERGE" in output_upper
         except Exception as e:
@@ -1144,7 +1350,12 @@ class KGBuilder:
 
         for attempt in range(content_retries):
             try:
-                output = self._call_llm_with_retry(prompt, max_tokens=batch_tokens)
+                output = self._call_llm_with_retry(
+                    prompt,
+                    max_tokens=batch_tokens,
+                    model=self.merge_model,
+                    client=self.merge_client,
+                )
                 results, total_decisions = self._parse_batch_merge_response(output, pairs)
 
                 # 保留最佳结果
