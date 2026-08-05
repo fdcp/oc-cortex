@@ -47,6 +47,8 @@ from typing import Optional
 
 from loguru import logger
 
+from code_update_prompt_utils import load_prompt
+
 from code_p1_utils import count_tokens, safe_truncate
 from code_p6_summarizer import SessionSummarizer, _get_client, DEFAULT_MODEL
 
@@ -120,40 +122,6 @@ class SkeletonResult:
     task_summaries: list[dict]  # 参与总结的 task 列表
     elapsed_ms: int
     debug: dict = field(default_factory=dict)
-
-
-# ============================================================
-# Prompt 模板
-# ============================================================
-
-SKELETON_SYSTEM_PROMPT = """你是一个技术写作助手，擅长从知识图谱的结构化信息和工作记录中提炼主题性总结。
-
-你的输出要求：
-- 以决策链和技术关系为主线组织内容
-- 突出「为什么选择」「如何对比」「有何取舍」等决策逻辑
-- 引用具体的 task_id 和实体名称方便追溯
-- 中文为主，技术术语可保留英文
-- 400-1000 字"""
-
-SKELETON_USER_PROMPT = """请基于以下知识图谱结构和工作记录，生成一篇带决策溯源的主题总结。
-
-【主题】
-{topic}
-
-【知识图谱结构】
-{skeleton}
-
-{decision_context}
-
-【相关工作记录】
-{task_summaries}
-
-【要求】
-1. 以决策逻辑为主线（为什么选 A 而不是 B，A 解决了什么问题）
-2. 保留技术细节和具体结论
-3. 标注信息来自哪个 task（用 [task_id] 标记）
-4. 如果图谱中有选型对比关系，重点展开对比分析
-5. 最后给出技术决策的整体评价和后续建议"""
 
 
 # ============================================================
@@ -467,7 +435,7 @@ class SummarySkeleton:
             for t in sorted_tasks
         )
 
-        user_prompt = SKELETON_USER_PROMPT.format(
+        user_prompt = load_prompt("SKELETON_USER_PROMPT").format(
             topic=topic,
             skeleton=skeleton_text,
             decision_context=decision_context,
@@ -602,7 +570,7 @@ class SummarySkeleton:
             output = client.chat.completions.create(
                 model=DEFAULT_MODEL,
                 messages=[
-                    {"role": "system", "content": SKELETON_SYSTEM_PROMPT},
+                    {"role": "system", "content": load_prompt("SKELETON_SYSTEM_PROMPT")},
                     {"role": "user", "content": user_prompt},
                 ],
                 temperature=0.3,

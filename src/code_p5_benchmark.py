@@ -24,10 +24,10 @@ from loguru import logger
 
 # 复用已有 prompt 和解析工具
 from code_p5_kg_builder import (
-    TRIPLE_EXTRACTION_PROMPT,
     _extract_json_from_response,
     _repair_truncated_json,
 )
+from code_update_prompt_utils import load_prompt
 from code_p2_models import Task
 
 
@@ -162,7 +162,7 @@ def benchmark_model(
     t_total = time.time()
 
     def _process(task: Task) -> dict:
-        prompt = TRIPLE_EXTRACTION_PROMPT.format(task_summary=task.task_summary)
+        prompt = load_prompt("TRIPLE_EXTRACTION_PROMPT").format(task_summary=task.task_summary)
         try:
             resp = call_llm(client, model, prompt)
             triples = parse_triples(resp["content"])

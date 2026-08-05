@@ -3,7 +3,7 @@ Phase 2: Task Extractor
 从 session chunks 中用 LLM 提炼 1-5 个 task
 
 核心流程:
-  1. 构建 prompt: 将 session 所有 chunk 格式化后注入 SESSION_TASK_PROMPT
+  1. 构建 prompt: 通过 load_prompt("SESSION_TASK_PROMPT") 读取并注入 session 所有 chunk
   2. 调用 LLM (OpenAI 兼容 API, 如 DashScope / SiliconFlow / OpenRouter)
   3. 解析 JSON + 校验 (任务数量 / chunk_id 覆盖 / 无重复归属)
   4. 返回 Task 列表
@@ -25,6 +25,7 @@ from loguru import logger
 from code_p1_models import Chunk
 from code_p1_utils import count_tokens, truncate_chunk_text, chunk_content_hash
 from code_p2_models import Task
+from code_update_prompt_utils import load_prompt
 
 
 @dataclass
@@ -161,75 +162,6 @@ class BatchPlanner:
             acc.update(b"|")
         return acc.hexdigest()
 
-
-# ============================================================
-# Prompt 模板
-# ============================================================
-
-SESSION_TASK_PROMPT = """你是一个资深的技术工作分析助手。请阅读以下一个 opencode session 的完整对话(已按"轮次"切分,每个轮次包含 1 个 user 消息及其触发的所有操作)。
-
-请严格按以下三个步骤分析,最终输出 JSON。
-
-【步骤 1: 逐轮提炼】
-逐一阅读每个轮次,提炼该轮的**核心信息或关键进展**。
-
-写作要求:
-- 聚焦于"这一轮产生了什么有价值的结论/产出/决策",而非描述对话过程
-- 不要写"用户询问…,助手回答…"这种流水账
-- 用主语直接陈述事实,如:"确认了 X 的性能指标为 Y"、"完成了 Z 模块的实现"
-
-好的例子: "确认 V100 Tensor Core 算力为 125 TFLOPS (FP16),适合中小模型推理场景"
-坏的例子: "用户询问了V100的算力情况，助手详细列出了V100的算力参数、硬件规格和典型用途"
-
-【步骤 2: 识别任务】
-基于步骤 1 的提炼,归纳该 session 完成的主要任务:
-- 粒度是"一件独立的事",不是"一轮对话"
-- 同一件事可能跨多个轮次
-- 不连续的轮次可能属于同一件事，如"turn1 说事A, turn2～4 说事B，turn5 说事A"，那么taskA就包含了turn1和turn5
-- 大多数 session 有 1-2 个任务,极少超过 5 个
-- 任务之间应相对独立,不是同一件事的子步骤
-注意：不要按时间顺序生硬切分，而是全局审视所有轮次的摘要，将语义高度相关、服务于同一目标的轮次合并为一个任务。
-
-【步骤 3: 归类轮次】
-将每个轮次归入它所属的任务。**关键约束:每个轮次都必须归入至少一个任务,不允许遗漏。**
-
-【task_summary 写作要求】
-每个 task 的 summary 必须是语义自洽的知识块（彻底去除”用户”、”助手”等对话痕迹）。
-根据任务复杂度选择合适的结构：
-
-■ 深度技术任务（涉及分析、设计、实现、对比、推导）使用完整三段式：
-- 背景与目标：一句话说明任务的背景和要解决的问题（为什么做）。
-- 核心产出与关键决策：说明做了什么、怎么做的，必须保留关键技术实体和参数，以便于后续构建知识图谱和精准检索。
-- 结论与意义：点明最终结果、业务建议或影响（结果如何）。
-
-■ 简单操作性任务（安装工具、解释命令、回答概念、环境配置）使用简洁结构：
-- 一句话说明做了什么
-- 保留关键技术实体和参数
-- 不需要强行添加”结论与意义”
-
-好的例子（深度）: “为深入理解 LLM 训练硬件选型，系统对比了 V100/A100/A800/H100/H200/H800 六款 GPU 在算力、显存带宽和互联能力上的差异。结论：基于 Hopper 架构的 H100/H200 适合大规模训练；H800/A800 因 NVLink 带宽阉割至 400GB/s 不适合多机多卡场景；A800 是当前国内性价比合规选择。”
-好的例子（简洁）: “通过 brew install tmux 安装终端复用器（版本 3.6b），并使用 bunx 安装 oh-my-openagent 插件配置 opencode 平台，禁用付费模型，默认 fallback 为 gpt-5-nano。”
-坏的例子: “用户询问V100算力，助手回答了。用户又对比多款GPU，助手提供了对比表。用户讨论H200，助手纠正了说法。用户问显存影响，助手解释了。”
-
-【输出格式】严格 JSON,不要其他内容:
-{{
-  “chunk_summaries”: [
-    {{“chunk_id”: “c1”, “summary”: “该轮的核心结论或关键进展”}},
-    {{“chunk_id”: “c2”, “summary”: “...”}}
-  ],
-  “tasks”: [
-    {{
-      “task_id”: “T1”,
-      “task_label”: “简短中文标签(5-15 字)”,
-      “task_summary”: “深度任务用三段式,简单任务用简洁式(50-200 字)”,
-      “chunk_ids”: [“c1”, “c2”, “c3”]
-    }}
-  ]
-}}
-
-【轮次内容】
-{turns_content}
-"""
 
 
 # ============================================================
@@ -687,7 +619,7 @@ class TaskExtractor:
         turns_content = _format_chunks_for_prompt(
             chunks, max_tokens_per_chunk=self.max_tokens_per_chunk
         )
-        prompt = SESSION_TASK_PROMPT.format(turns_content=turns_content)
+        prompt = load_prompt("SESSION_TASK_PROMPT").format(turns_content=turns_content)
 
         total_tokens = count_tokens(prompt)
         if total_tokens > self.max_total_prompt_tokens:
@@ -701,7 +633,7 @@ class TaskExtractor:
             turns_content = _format_chunks_for_prompt(
                 chunks, max_tokens_per_chunk=reduced_per_chunk
             )
-            prompt = SESSION_TASK_PROMPT.format(turns_content=turns_content)
+            prompt = load_prompt("SESSION_TASK_PROMPT").format(turns_content=turns_content)
             logger.info(f"截断后 prompt tokens: {count_tokens(prompt)}")
 
         return prompt

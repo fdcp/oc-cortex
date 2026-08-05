@@ -30,6 +30,8 @@ from typing import Optional
 from loguru import logger
 from openai import OpenAI
 
+from code_update_prompt_utils import load_prompt
+
 from code_p1_utils import count_tokens, safe_truncate
 from code_p4_searcher import SessionSearcher, SessionSearchResult
 
@@ -74,46 +76,6 @@ class SummaryResult:
     total_tokens: int             # 输入 LLM 的总 token 数
     elapsed_ms: int               # 总耗时
     debug: dict = field(default_factory=dict)
-
-
-# ============================================================
-# Prompt 模板
-# ============================================================
-
-SUMMARY_SYSTEM_PROMPT = """你是一个技术写作助手，擅长从多个工作记录中提炼主题性总结。
-
-你的输出要求：
-- 按主题或时间线组织，不要简单罗列
-- 突出关键决策、问题解决思路、技术要点
-- 引用具体的 task 标识（如 task_id）方便追溯
-- 中文为主，技术术语可保留英文
-- 300-800 字"""
-
-SUMMARY_USER_PROMPT = """请基于以下多个历史工作记录，生成一篇主题性总结。
-
-【用户问题】
-{query}
-
-{time_range_text}
-
-【相关工作记录】（共 {task_count} 个任务）
-
-{task_contents}
-
-【要求】
-1. 围绕用户问题组织内容，不需要覆盖所有记录
-2. 按逻辑关系分组（如"问题发现 → 排查过程 → 解决方案"）
-3. 保留关键技术细节和具体结论
-4. 标注每条信息来自哪个 task（用 [task_id] 标记）
-5. 最后给出整体评价或后续建议"""
-
-TASK_CONTENT_TEMPLATE = """### [{task_label}] (task_id: {task_id}, session: {session_short}, {created_at})
-
-**摘要**: {task_summary}
-
-**对话内容**:
-{chunk_content}
----"""
 
 
 # ============================================================
@@ -211,7 +173,7 @@ class SessionSummarizer:
                 )
 
             # 格式化单个 task 内容
-            formatted = TASK_CONTENT_TEMPLATE.format(
+            formatted = load_prompt("TASK_CONTENT_TEMPLATE").format(
                 task_label=r.task_label,
                 task_id=r.task_id,
                 session_short=r.session_id[:12] + "...",
@@ -251,7 +213,7 @@ class SessionSummarizer:
         if time_range:
             time_range_text = f"【时间范围】{time_range[0]} 至 {time_range[1]}"
 
-        user_prompt = SUMMARY_USER_PROMPT.format(
+        user_prompt = load_prompt("SUMMARY_USER_PROMPT").format(
             query=query,
             time_range_text=time_range_text,
             task_count=len(task_contents),
@@ -361,7 +323,7 @@ class SessionSummarizer:
             output = client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": SUMMARY_SYSTEM_PROMPT},
+                    {"role": "system", "content": load_prompt("SUMMARY_SYSTEM_PROMPT")},
                     {"role": "user", "content": user_prompt},
                 ],
                 temperature=0.3,
