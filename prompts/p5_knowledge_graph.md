@@ -37,24 +37,24 @@
 禁止使用的关系: 是, 分为, 包含(除非是严格的模块-子模块关系), 形状为, 元素表达式
 
 【输出格式】严格 JSON, 输出 3-8 个高质量三元组:
-{
+{{
   "triples": [
-    {"head": "实体1", "relation": "精确关系", "tail": "实体2", "confidence": 0.9}
+    {{"head": "实体1", "relation": "精确关系", "tail": "实体2", "confidence": 0.9}}
   ]
-}
+}}
 
 重要: 你必须直接在 content 中输出上述 JSON 对象。不要把 JSON 放在 reasoning/思考过程中。
 如果你使用了 reasoning/思考过程, 请在思考结束后, 将完整的 JSON 对象作为你的最终回答输出。
 
 好的例子:
-  ({"head": "LLaMA", "relation": "使用", "tail": "RoPE位置编码", "confidence": 0.95})
-  ({"head": "opencode", "relation": "依赖", "tail": "SQLite", "confidence": 0.9})
-  ({"head": "RoPE位置编码", "relation": "实现于", "tail": "precompute_freqs_cis函数", "confidence": 0.85})
+  ({{"head": "LLaMA", "relation": "使用", "tail": "RoPE位置编码", "confidence": 0.95}})
+  ({{"head": "opencode", "relation": "依赖", "tail": "SQLite", "confidence": 0.9}})
+  ({{"head": "RoPE位置编码", "relation": "实现于", "tail": "precompute_freqs_cis函数", "confidence": 0.85}})
 
 坏的例子:
-  ({"head": "freqs张量", "relation": "形状为", "tail": "[seq_len, dim//2]"}) ← 属性值不是实体
-  ({"head": "消息模型", "relation": "包含", "tail": "agent"}) ← "包含"太笼统
-  ({"head": "最新会话ID", "relation": "是", "tail": "ses_0a53b68..."}) ← ID不是实体
+  ({{"head": "freqs张量", "relation": "形状为", "tail": "[seq_len, dim//2]"}}) ← 属性值不是实体
+  ({{"head": "消息模型", "relation": "包含", "tail": "agent"}}) ← "包含"太笼统
+  ({{"head": "最新会话ID", "relation": "是", "tail": "ses_0a53b68..."}}) ← ID不是实体
 
 【任务摘要】
 {task_summary}
@@ -100,16 +100,16 @@
 【输出格式】
 严格返回JSON数组，每个元素是包含"pair"和"action"的对象，不要返回扁平列表，不要添加任何额外文本：
 [
-  {"pair": ["实体A", "实体B"], "action": "MERGE"},
-  {"pair": ["实体C", "实体D"], "action": "KEEP"}
+  {{"pair": ["实体A", "实体B"], "action": "MERGE"}},
+  {{"pair": ["实体C", "实体D"], "action": "KEEP"}}
 ]
 
 【示例】
 输入: ["OpenCode", "opencode", "SQLite", "数据库"]
 输出:
 [
-  {"pair": ["OpenCode", "opencode"], "action": "MERGE"},
-  {"pair": ["SQLite", "数据库"], "action": "KEEP"}
+  {{"pair": ["OpenCode", "opencode"], "action": "MERGE"}},
+  {{"pair": ["SQLite", "数据库"], "action": "KEEP"}}
 ]
 
 重要: 不要把 JSON 放在 reasoning/思考过程中, 必须直接在 content 中输出 JSON。每对必须有一个判断。
@@ -139,7 +139,7 @@
 - 过于通用的词: 用户, 代码, 系统, 方法, 问题
 
 【输出格式】严格 JSON:
-{"entities": ["实体1", "实体2", "..."]}
+{{"entities": ["实体1", "实体2", "..."]}}
 
 输出 5-10 个高质量实体, 不要添加解释。
 
