@@ -96,6 +96,10 @@ def _build_target_registry() -> list:
         OutputTarget("p5", "dir",
                      _resolve(g(c5, "knowledge_graph.entity_output_dir", "./output/entity"), "./output/entity"),
                      "P5 entity 模式产物"),
+        OutputTarget("p5", "dir",
+                     _resolve(g(c5, "qdrant.path", "./qdrant_data"), "./qdrant_data")
+                     / "collection" / g(c5, "qdrant.entities_collection", "entities"),
+                     "P5 实体对齐 Qdrant 集合 (复用 P3 存储)"),
         OutputTarget("logs", "file",
                      _resolve(g(c1, "logging.file", "./logs/phase1.log"), "./logs/phase1.log"),
                      "P1 日志"),

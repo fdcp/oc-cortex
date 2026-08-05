@@ -43,6 +43,7 @@ p2     yes       79.0 KB  output/.p2_checkpoint.json
 p3     yes        3.0 MB  qdrant_data
 p5     no              -  output/triple
 p5     no              -  output/entity
+p5     no              -  qdrant_data/collection/entities
 logs   yes        3.7 KB  logs/phase1.log
 ...
 ```
@@ -93,13 +94,14 @@ flags 一览:
 | p3 | Qdrant 向量库 | dir | `code_p3_config.yaml: qdrant.path` → `qdrant_data/` |
 | p5 | triple 模式产物 | dir | `code_p5_config.yaml: knowledge_graph.triple_output_dir` → `output/triple/` |
 | p5 | entity 模式产物 | dir | `code_p5_config.yaml: knowledge_graph.entity_output_dir` → `output/entity/` |
+| p5 | 实体对齐 Qdrant 集合 | dir | `code_p5_config.yaml: qdrant.path` + `qdrant.entities_collection` → `qdrant_data/collection/entities/` |
 | logs | phase1/2/3/5 日志 | file | 各 config 的 `logging.file` |
 | logs | entity 模式日志 | file | 内置默认 `logs/phase5_entity.log` |
 
 说明:
 
 - checkpoint 与 phase **强绑**: checkpoint 注册为对应 phase 的目标,清 P1 必带 `.p1_checkpoint.json`,清 P2 必带 `.p2_checkpoint.json`,`--all` 一并清。
-- `--p5` 同时清 triple 与 entity 两个子目录,与 `knowledge_graph.extraction_mode` 无关。
+- `--p5` 同时清 triple 与 entity 两个子目录,以及 P5 实体对齐复用的 `qdrant_data/collection/entities` 集合(不碰 P3 的 tasks/chunks_summary/chunks_cleaned_text 三个集合),与 `knowledge_graph.extraction_mode` 无关。
 - 相对路径统一按 repo root 解析,工具可在任意 CWD 下运行。
 - `tests/` 下的 benchmark 副产物不在清理范围内。
 
