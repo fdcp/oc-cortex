@@ -29,10 +29,11 @@ import yaml
 from loguru import logger
 
 # ============================================================
-# 路径常量(相对 cwd 解析;AGENTS.md 约定从仓库根跑)
+# 路径常量(基于 __file__ 自定位仓库根,兼容任意 cwd)
 # ============================================================
-TABLE_PATH = Path("config/prompts_table.yaml")
-PROMPTS_DIR = Path("prompts")
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+TABLE_PATH = _REPO_ROOT / "config" / "prompts_table.yaml"
+PROMPTS_DIR = _REPO_ROOT / "prompts"
 
 # ============================================================
 # 内部状态(模块级缓存)
@@ -64,11 +65,17 @@ def _load_table() -> dict:
 
 
 def _read_file_lines(file_path: str) -> List[str]:
-    """按文件路径缓存读取整文件行列表。"""
+    """按文件路径缓存读取整文件行列表。
+
+    yaml 里 file 字段为相对仓库根的路径(如 prompts/xxx.md);
+    若已经是绝对路径则原样使用(便于跨环境调试)。
+    """
     if file_path not in _FILE_CACHE:
         p = Path(file_path)
+        if not p.is_absolute():
+            p = _REPO_ROOT / p
         if not p.exists():
-            raise FileNotFoundError(f"prompt 文件不存在: {file_path}")
+            raise FileNotFoundError(f"prompt 文件不存在: {p}")
         with p.open("r", encoding="utf-8") as f:
             _FILE_CACHE[file_path] = f.readlines()
     return _FILE_CACHE[file_path]
@@ -191,7 +198,7 @@ def _scan_prompts_in_md(md_path: Path) -> List[dict]:
 
         blocks.append({
             "name": name,
-            "file": str(md_path),
+            "file": str(md_path.relative_to(_REPO_ROOT)),
             "start_line": start_line,
             "end_line": end_line,
         })
