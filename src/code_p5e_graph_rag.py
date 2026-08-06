@@ -19,6 +19,98 @@ from code_update_prompt_utils import load_prompt
 
 
 # ============================================================
+# 查询实体抽取（轻量 LLM 调用，供 Graph-RAG 与 MCP 共用）
+# ============================================================
+
+# 默认模型 (entity 模式使用 hy3 code_p5_config.yaml 一致)
+DEFAULT_MODEL = "hy3"
+
+
+def _get_client() -> OpenAI:
+    """创建 OpenAI 客户端（复用 code_p5_config.yaml 配置）"""
+    api_key = os.environ.get("OPENCODE_ZEN_API_KEY", "")
+    return OpenAI(
+        api_key=api_key,
+        base_url="https://opencode.ai/zen/go/v1",
+        timeout=30,
+    )
+
+
+def extract_query_entities(
+    query: str,
+    max_retries: int = 2,
+    model: str = DEFAULT_MODEL,
+) -> list[str]:
+    """从用户查询中提取关键实体名称，用于图谱扩散。
+
+    Args:
+        query: 用户搜索查询
+        max_retries: 解析失败时重试次数
+        model: LLM 模型名
+
+    Returns:
+        实体名称列表（失败时返回空列表）
+    """
+    prompt_template = load_prompt("QUERY_ENTITY_PROMPT")
+    client = _get_client()
+
+    for attempt in range(max_retries + 1):
+        try:
+            output = client.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": prompt_template.format(query=query)}],
+                temperature=0.1,
+                max_tokens=2000,  # reasoning 模型 (如 hy3) 需要预算放 thinking
+            )
+        except Exception as e:
+            logger.warning(f"查询实体抽取 LLM 调用失败 (attempt {attempt + 1}): {e}")
+            continue  # 网络错误可重试
+
+        # 以下情况不重试（模型本身返回异常，重试无意义）
+        if not output.choices:
+            logger.warning("查询实体抽取 LLM 返回空 choices, 跳过图谱扩散")
+            break
+
+        message = output.choices[0].message
+        if message is None:
+            logger.warning("查询实体抽取 LLM 返回空 message, 跳过图谱扩散")
+            break
+
+        content = message.content
+
+        # Reasoning 模型 (如 hy3) 可能把 token 消耗在 thinking 上,
+        # 导致 content 为空;此时检查 reasoning_content 作为 fallback
+        if not content or not content.strip():
+            reasoning = None
+            if hasattr(message, "model_extra") and message.model_extra:
+                reasoning = message.model_extra.get("reasoning_content", "")
+            if reasoning and reasoning.strip():
+                logger.warning("查询实体抽取 LLM content 为空, 从 reasoning_content 提取")
+                content = reasoning
+            else:
+                logger.warning("查询实体抽取 LLM 返回空内容 (content 和 reasoning 均为空), 跳过图谱扩散")
+                break
+
+        content = content.strip()
+        # 去除 <think>...</think> 标签块 (部分模型会输出思考过程)
+        content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
+        # 去除可能包裹的 markdown 代码块标记
+        content = re.sub(r"^```(?:json)?\s*|\s*```$", "", content, flags=re.DOTALL).strip()
+
+        try:
+            data = json.loads(content)
+            entities = data.get("entities", [])
+            if isinstance(entities, list):
+                return [e.strip() for e in entities if isinstance(e, str) and len(e.strip()) >= 2]
+        except (json.JSONDecodeError, AttributeError):
+            logger.warning(f"查询实体抽取解析失败: {content[:100]}")
+            break  # 解析失败不重试
+
+    logger.warning("查询实体抽取未成功, 返回空列表 (退化为纯向量搜索)")
+    return []
+
+
+# ============================================================
 # Graph-RAG 搜索器
 # ============================================================
 
