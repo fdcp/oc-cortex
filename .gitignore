@@ -67,3 +67,6 @@ build/
 # Misc
 .omo/
 .ipynb_checkpoints/
+
+# Internal design docs (not for upstream)
+图谱方案.md
