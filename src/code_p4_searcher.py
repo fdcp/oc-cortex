@@ -9,6 +9,7 @@ Sparse 支持 BM25 (开发) 或 BGE-M3 (上线)，由 config sparse.method 决�
 import json
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from loguru import logger
 
@@ -128,11 +129,17 @@ class SessionSearcher:
             )
 
         # 2. 加载源数据到内存 map
-        tasks_file = self.config.get("phase2.tasks_file", "./output/tasks.jsonl")
-        chunks_file = self.config.get("phase1.chunks_file", "./output/chunks.jsonl")
-        summaries_file = self.config.get(
+        # 相对路径回退到仓库根（与 code_MS_inspect.py 一致, 兼容任意 cwd）
+        _repo_root = Path(config_path).resolve().parent.parent
+        def _resolve_path(p: str) -> str:
+            pp = Path(p)
+            return str(pp if pp.is_absolute() else (_repo_root / pp))
+
+        tasks_file = _resolve_path(self.config.get("phase2.tasks_file", "./output/tasks.jsonl"))
+        chunks_file = _resolve_path(self.config.get("phase1.chunks_file", "./output/chunks.jsonl"))
+        summaries_file = _resolve_path(self.config.get(
             "phase2.chunk_summaries_file", "./output/chunks_summary_p2.jsonl"
-        )
+        ))
 
         self.tasks = _load_tasks(tasks_file)
         self.chunks = _load_chunks(chunks_file)
@@ -163,7 +170,7 @@ class SessionSearcher:
             dim=self.config.get("embedding.dim", 512),
             batch_size=self.config.get("embedding.batch_size", 32),
             device=self.config.get("embedding.device", "cpu"),
-            qdrant_path=self.config.get("qdrant.path", "./qdrant_data"),
+            qdrant_path=_resolve_path(self.config.get("qdrant.path", "./qdrant_data")),
             tasks_collection=self.config.get("qdrant.collections.tasks", "tasks"),
             chunks_summary_collection=self.config.get(
                 "qdrant.collections.chunks_summary", "chunks_summary"
