@@ -6,6 +6,9 @@ endpoints:
   go:
     base_url: https://opencode.ai/zen/go/v1
     auth_provider: opencode-go
+  minimax:
+    base_url: https://api.minimaxi.com/v1
+    auth_provider: minimax-cn-coding-plan
 models:
 - name: grok-4.5
   endpoint: go
@@ -51,7 +54,9 @@ models:
   endpoint: zen
 - name: laguna-s-2.1-free
   endpoint: zen
-- name: ling-3.0-flash-free
+- name: ling-3.0-tiny-free
+  endpoint: zen
+- name: longcat-2.0-free
   endpoint: zen
 - name: north-mini-code-free
   endpoint: zen
@@ -59,6 +64,22 @@ models:
   endpoint: zen
 - name: deepseek-v4-flash-free
   endpoint: zen
+- name: MiniMax-M3
+  endpoint: minimax
+- name: MiniMax-M2.7
+  endpoint: minimax
+- name: MiniMax-M2.7-highspeed
+  endpoint: minimax
+- name: MiniMax-M2.5
+  endpoint: minimax
+- name: MiniMax-M2.5-highspeed
+  endpoint: minimax
+- name: MiniMax-M2.1
+  endpoint: minimax
+- name: MiniMax-M2.1-highspeed
+  endpoint: minimax
+- name: MiniMax-M2
+  endpoint: minimax
 extractor:
   max_retries: 2
   content_retries: 2

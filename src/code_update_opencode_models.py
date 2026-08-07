@@ -1,10 +1,11 @@
-"""用途：从 OpenCode Go/Zen 文档生成模型池配置。
+"""用途：从 OpenCode Go/Zen 与 MiniMax 文档生成模型池配置。
 
 使用方式：在项目根目录运行 `python3 src/code_update_opencode_models.py`，
-可通过 `--output`、`--go-url` 和 `--zen-url` 覆盖默认路径或文档地址。
+可通过 `--output`、`--go-url`、`--zen-url` 和 `--minimax-url` 覆盖默认路径或文档地址。
 
-输入：Go 文档的模型端点表，以及 Zen 文档的模型端点表和定价表。
-期望输出：`config/opencode_models.yaml`，包含全部 Go 模型和免费的 Zen 模型。
+输入：Go 文档的模型端点表、Zen 文档的模型端点表与定价表、MiniMax API 概览页的语言模型表。
+期望输出：`config/opencode_models.yaml`，包含全部 Go 模型、免费的 Zen 模型和 MiniMax 语言模型
+（M3 / M2.x 全系，H3 视频模型不在范围内）。
 """
 
 from dataclasses import dataclass
@@ -23,6 +24,7 @@ import yaml
 
 GO_DOC_URL: Final = "https://opencode.ai/docs/zh-cn/go/"
 ZEN_DOC_URL: Final = "https://opencode.ai/docs/zh-cn/zen/"
+MINIMAX_DOC_URL: Final = "https://platform.minimaxi.com/docs/api-reference/api-overview"
 DEFAULT_OUTPUT: Final = Path(__file__).parents[1] / "config" / "opencode_models.yaml"
 USER_AGENT: Final = "oc-sess-graph/model-pool-updater"
 
@@ -157,6 +159,29 @@ def extract_models(html: str, provider: str) -> list[ModelRecord]:
     raise ValueError(f"Unsupported provider: {provider}")
 
 
+def extract_minimax_models(html: str) -> list[ModelRecord]:
+    """Extract MiniMax language model IDs from the API overview page.
+
+    Only tables under the "语言模型" heading are considered; the H3 video model
+    lives under its own heading and is naturally excluded.
+    """
+    parser = _TableParser()
+    parser.feed(html)
+    rows = _find_table(parser.tables, ("语言模型",))
+    if not rows:
+        raise RuntimeError("MiniMax language model table not found")
+    header = [cell.replace(" ", "") for cell in rows[0]]
+    try:
+        name_index = header.index("模型名称")
+    except ValueError as error:
+        raise RuntimeError("MiniMax table has no 模型名称 column") from error
+    models: list[ModelRecord] = []
+    for row in rows[1:]:
+        if len(row) > name_index and row[name_index]:
+            models.append(ModelRecord(row[name_index], "minimax"))
+    return models
+
+
 def _fetch(url: str) -> str:
     request = Request(url, headers={"User-Agent": USER_AGENT})
     try:
@@ -167,16 +192,22 @@ def _fetch(url: str) -> str:
         raise RuntimeError(f"Failed to fetch {url}: {error}") from error
 
 
-def _write_config(output: Path, go_models: list[ModelRecord], zen_models: list[ModelRecord]) -> None:
+def _write_config(
+    output: Path,
+    go_models: list[ModelRecord],
+    zen_models: list[ModelRecord],
+    minimax_models: list[ModelRecord],
+) -> None:
     config = {
         "auth_file": "~/.local/share/opencode/auth.json",
         "endpoints": {
             "zen": {"base_url": "https://opencode.ai/zen/v1", "auth_provider": "opencode-go"},
             "go": {"base_url": "https://opencode.ai/zen/go/v1", "auth_provider": "opencode-go"},
+            "minimax": {"base_url": "https://api.minimaxi.com/v1", "auth_provider": "minimax-cn-coding-plan"},
         },
         "models": [
             {"name": model.name, "endpoint": model.endpoint}
-            for model in [*go_models, *zen_models]
+            for model in [*go_models, *zen_models, *minimax_models]
         ],
         "extractor": {
             "max_retries": 2,
@@ -192,19 +223,21 @@ def _write_config(output: Path, go_models: list[ModelRecord], zen_models: list[M
 
 
 def main() -> int:  # noqa: BROAD_EXCEPT_OK
-    parser = argparse.ArgumentParser(description="Update config/opencode_models.yaml from OpenCode docs")
+    parser = argparse.ArgumentParser(description="Update config/opencode_models.yaml from OpenCode/MiniMax docs")
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--go-url", default=GO_DOC_URL)
     parser.add_argument("--zen-url", default=ZEN_DOC_URL)
+    parser.add_argument("--minimax-url", default=MINIMAX_DOC_URL)
     args = parser.parse_args()
     try:
         go_models = extract_models(_fetch(args.go_url), "go")
         zen_models = extract_models(_fetch(args.zen_url), "zen")
-        _write_config(args.output, go_models, zen_models)
+        minimax_models = extract_minimax_models(_fetch(args.minimax_url))
+        _write_config(args.output, go_models, zen_models, minimax_models)
     except (RuntimeError, ValueError) as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
-    print(f"wrote {len(go_models)} Go models and {len(zen_models)} free Zen models to {args.output}")
+    print(f"wrote {len(go_models)} Go models, {len(zen_models)} free Zen models, {len(minimax_models)} MiniMax models to {args.output}")
     return 0
 
 
