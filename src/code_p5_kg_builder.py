@@ -529,10 +529,12 @@ class KGBuilder:
         *,
         model: Optional[str] = None,
         client: Optional[OpenAI] = None,
+        thinking: Optional[dict] = None,
     ) -> str:
         """调用 LLM 获取响应。
 
         默认使用 self.model + self.client; 也可显式传入 (用于 merge 任务用独立 client)。
+        thinking: 透传 extra_body={"thinking": ...}, 例如 {"type": "disabled"}。
         """
         use_model = model or self.model
         use_client = client or self.client
@@ -541,12 +543,15 @@ class KGBuilder:
                 "KGBuilder 尚未完成 LLM 初始化, 请先调用 builder.post_init(config)。"
             )
         tokens = max_tokens or self.max_tokens
-        response = use_client.chat.completions.create(
-            model=use_model,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,
-            max_tokens=tokens,
-        )
+        kwargs = {
+            "model": use_model,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.3,
+            "max_tokens": tokens,
+        }
+        if thinking is not None:
+            kwargs["extra_body"] = {"thinking": thinking}
+        response = use_client.chat.completions.create(**kwargs)
 
         msg = response.choices[0].message
         content = msg.content
@@ -580,12 +585,19 @@ class KGBuilder:
         *,
         model: Optional[str] = None,
         client: Optional[OpenAI] = None,
+        thinking: Optional[dict] = None,
     ) -> str:
-        """带指数退避重试的 LLM 调用 (model/client 可选, 透传给 _call_llm)"""
+        """带指数退避重试的 LLM 调用 (model/client/thinking 可选, 透传给 _call_llm)"""
         last_error = None
         for attempt in range(self.max_retries):
             try:
-                return self._call_llm(prompt, max_tokens, model=model, client=client)
+                return self._call_llm(
+                    prompt,
+                    max_tokens,
+                    model=model,
+                    client=client,
+                    thinking=thinking,
+                )
             except Exception as e:
                 last_error = e
                 if attempt < self.max_retries - 1:
@@ -1227,6 +1239,7 @@ class KGBuilder:
                 max_tokens=self.merge_max_tokens,
                 model=self.merge_model,
                 client=self.merge_client,
+                thinking={"type": "disabled"},
             )
             output_upper = output.strip().upper()
             return "MERGE" in output_upper
@@ -1397,6 +1410,7 @@ class KGBuilder:
                     max_tokens=batch_tokens,
                     model=self.merge_model,
                     client=self.merge_client,
+                    thinking={"type": "disabled"},
                 )
                 results, total_decisions = self._parse_batch_merge_response(output, pairs)
 
