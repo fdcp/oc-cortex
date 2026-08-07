@@ -19,25 +19,48 @@ from code_p1_models import Session, Turn, ToolCall
 # Part 解析
 # ============================================================
 
+_BUILTIN_TOOLS = frozenset({
+    "bash",
+    "read", "write", "edit",
+    "glob", "grep", "list",
+    "webfetch", "websearch",
+    "task", "todowrite", "question",
+    "skill", "plan", "patch", "lsp",
+    "batch", "invalid",
+    "background_cancel", "background_output",
+    "call_omo_agent",
+    "look_at",
+    "read_mcp_resource", "list_mcp_resources",
+    "list_mcp_resource_templates", "skill_mcp",
+})
+
+
 def _parse_tool_part(part_data: dict) -> Optional[ToolCall]:
     """
     从 type=tool 的 part 解析出 ToolCall
     结构: {
       "type": "tool",
-      "tool": "bash" | "write" | "read" | "edit" | ...,
+      "tool": "bash" | "read" | "write" | "edit" | "webfetch"
+            | "<mcp_server>_<tool>" | ...,
       "callID": "...",
       "state": {
         "status": "completed",
-        "input": { "command": "..." } | { "filePath": "...", "content": "..." },
+        "input": { ... 工具参数, 形态因工具而异 ... },
         "output": "...",
         "metadata": { "exit": 0, ... }
       }
     }
+
+    工具分类与字段映射:
+      - bash          : type=bash,      summary=cmd
+      - webfetch      : type=tool_call, action="webfetch: <url>", target=url
+      - 其他内置工具   : type=tool_call, action="<tool>: <file_path>", target=file_path
+      - MCP 工具       : type=mcp_call,  action="<tool>(<key params>)", target=tool_name
     """
     state = part_data.get("state", {})
-    inp = state.get("input", {})
+    inp = state.get("input", {}) or {}
     output = state.get("output", "")
-    metadata = state.get("metadata", {})
+    metadata = state.get("metadata", {}) or {}
     tool_name = part_data.get("tool", "unknown")
 
     # 判断成功/失败
@@ -47,7 +70,9 @@ def _parse_tool_part(part_data: dict) -> Optional[ToolCall]:
     else:
         ok = state.get("status") == "completed"
 
-    # 按工具类型映射
+    output_truncated = output[:2000] if isinstance(output, str) and output else None
+    error_truncated = output[:500] if (isinstance(output, str) and not ok and output) else None
+
     if tool_name == "bash":
         cmd = inp.get("command", "")
         description = inp.get("description") or part_data.get("title", "")
@@ -56,11 +81,35 @@ def _parse_tool_part(part_data: dict) -> Optional[ToolCall]:
             cmd=cmd,
             action=description,
             ok=ok,
-            output=output[:2000] if output else None,
-            error=output[:500] if not ok and output else None,
+            output=output_truncated,
+            error=error_truncated,
         )
-    else:
-        # write / read / edit / glob / grep / 其他
+
+    if tool_name == "webfetch":
+        url = inp.get("url", "")
+        action_desc = f"webfetch: {url}" if url else "webfetch"
+        return ToolCall(
+            type="tool_call",
+            action=action_desc,
+            target=url or None,
+            ok=ok,
+            output=output_truncated,
+            error=error_truncated,
+        )
+
+    if tool_name == "skill":
+        name = inp.get("name", "")
+        action_desc = f"skill: {name}" if name else "skill"
+        return ToolCall(
+            type="tool_call",
+            action=action_desc,
+            target=name or None,
+            ok=ok,
+            output=output_truncated,
+            error=error_truncated,
+        )
+
+    if tool_name in _BUILTIN_TOOLS:
         file_path = inp.get("filePath") or inp.get("path") or inp.get("file_path")
         action_desc = part_data.get("title") or tool_name
         if file_path:
@@ -70,9 +119,30 @@ def _parse_tool_part(part_data: dict) -> Optional[ToolCall]:
             action=action_desc,
             target=file_path,
             ok=ok,
-            output=output[:2000] if output else None,
-            error=output[:500] if not ok and output else None,
+            output=output_truncated,
+            error=error_truncated,
         )
+
+    action_desc = tool_name
+    if inp:
+        scalar_params = []
+        for k, v in inp.items():
+            if isinstance(v, (str, int, float, bool)):
+                s = str(v)
+                if len(s) > 60:
+                    s = s[:57] + "..."
+                scalar_params.append(f"{k}={s}")
+        if scalar_params:
+            action_desc = f"{tool_name}({', '.join(scalar_params)})"
+
+    return ToolCall(
+        type="mcp_call",
+        action=action_desc,
+        target=tool_name,
+        ok=ok,
+        output=output_truncated,
+        error=error_truncated,
+    )
 
 
 def _extract_text_from_parts(parts_data: list[dict]) -> str:
