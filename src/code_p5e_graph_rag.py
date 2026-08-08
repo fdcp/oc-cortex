@@ -125,6 +125,7 @@ class GraphRAGSearcher:
         bfs_depth: int = 1,
         max_expand_nodes: int = 30,
         max_graph_tasks: int = 50,
+        rerank_multiplier: float = 2.0,
     ):
         """
         Args:
@@ -134,13 +135,24 @@ class GraphRAGSearcher:
             bfs_depth: BFS 扩散深度
             max_expand_nodes: BFS 最大扩散节点数
             max_graph_tasks: 图谱扩散最多引入的 task 数
+            rerank_multiplier: rerank 输入候选倍数 (>= 1.0)。
+                控制 vector 粗排召回的 task 数 = top_k * rerank_multiplier,
+                rerank 阶段再从这批候选里精排 top_k。
+                - 1.0: 最少, 仅 top_k, 几乎完全依赖 rerank 重排
+                - 2.0: 默认, 平衡 (历史行为)
+                - 5.0: 跟 CLI 一致, 召回更全但 rerank 更慢
         """
+        if rerank_multiplier < 1.0:
+            raise ValueError(
+                f"rerank_multiplier 必须 >= 1.0, 当前: {rerank_multiplier}"
+            )
         self.searcher = searcher
         self.db = kg_db
         self.graph_weight = graph_weight
         self.bfs_depth = bfs_depth
         self.max_expand_nodes = max_expand_nodes
         self.max_graph_tasks = max_graph_tasks
+        self.rerank_multiplier = rerank_multiplier
 
     def search(
         self,
@@ -165,10 +177,12 @@ class GraphRAGSearcher:
 
         # Stage 1: 向量检索
         t_vec = time.time()
+        # 按 rerank_multiplier 多取, 至少 top_k (防止 < 1.0 截到 0)
+        vector_top_k = max(int(top_k * self.rerank_multiplier), top_k)
         vector_results = self.searcher.search(
             query=query,
-            top_k=top_k * 2,       # 多取一些给后续合并
-            skip_rerank=True,       # 延迟 rerank，合并后统一做
+            top_k=vector_top_k,     # 给后续合并留 buffer
+            skip_rerank=True,       # 延迟 rerank, 合并后统一做
         )
         debug["vector_results"] = len(vector_results)
         debug["vector_time_ms"] = int((time.time() - t_vec) * 1000)
