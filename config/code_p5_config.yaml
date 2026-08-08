@@ -7,12 +7,12 @@ phase2:
 # LLM (同 Phase 2, OpenCode Zen)
 # 注意: api_key_env / base_url 已移除, 由 opencode_models.yaml 提供
 llm:
-  triple_model: "nemotron-3-ultra-free"   # Triple Extraction 使用的模型
-  entity_model: "hy3"  # Entity Extraction 使用的模型
+  triple_model: "MiniMax-M3" #"nemotron-3-ultra-free"   # Triple Extraction 使用的模型
+  entity_model: "MiniMax-M3"  #"hy3"  # Entity Extraction 使用的模型
   # 上面两个字段是运行时的实际值, KGBuilder.post_init() 会按 extraction_mode 选其中一个
   # 若某个字段缺失, 回退到 model 字段; 若 model 也缺, 默认 "deepseek-v4-flash-free"
   model: "hy3"         # 兜底默认值 (triple_model / entity_model 未配时)
-  merge_model: "deepseek-v4-flash-free"  # 实体合并 (alignment) 用的轻量模型
+  merge_model: "MiniMax-M3"              # 实体合并 (alignment), 走 MiniMax Token Plan 端点
                                       # 合并本质是 MERGE/KEEP 二分类, reasoning 模型 (如 hy3)
                                       # 用不上还会浪费 max_tokens, 用轻量模型更稳更快
   max_retries: 3
@@ -24,7 +24,8 @@ llm:
                            # 连 thinking 都放不下, 频繁返回空内容, 漏掉大量本该合并的实体对
   merge_batch_size: 20      # 批量合并确认: 每批发送的实体对数
   merge_batch_enable: false  # 是否启用批量合并确认 (false=逐条确认, 更稳定)
-  concurrency: 4            # 并发线程数
+  concurrency: 1            # 并发线程数
+  rate_limit_per_sec: 1.0   # 线程级速率限制, 多并发自动错开 (防 429 雪崩, Token Plan 推荐 1.0~2.0)
 
 # OpenCode 模型池配置: 提供 base_url 和 api_key (通过 auth.json)
 # 路径支持相对路径 (优先 CWD, 找不到再退到项目根) 或绝对路径

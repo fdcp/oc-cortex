@@ -10,6 +10,7 @@ import re
 import time
 import hashlib
 import pickle
+import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
@@ -31,6 +32,40 @@ if TYPE_CHECKING:
 # 默认 Zen 端点 (opencode_models.yaml 加载失败时回退)
 DEFAULT_FALLBACK_BASE_URL = "https://opencode.ai/zen/v1"
 DEFAULT_FALLBACK_API_KEY_ENV = "OPENCODE_ZEN_API_KEY"
+
+
+# ============================================================
+# 线程级速率限制器
+# ============================================================
+
+class _LLMRateLimiter:
+    """线程级速率限制器,所有 LLM 调用共享一个令牌桶。
+
+    简单实现: 每次 acquire() 时, 若距上次调用 < min_interval, sleep 补齐。
+    N 个并发线程会自然错开, 不会再瞬间打爆 rate limit。
+
+    典型用法:
+        limiter = _LLMRateLimiter(rate_per_sec=2.0)  # 至少 0.5s 间隔
+        for _ in range(N):
+            t = threading.Thread(target=worker, args=(limiter,))
+            t.start()
+    """
+
+    def __init__(self, rate_per_sec: float):
+        if rate_per_sec <= 0:
+            raise ValueError(f"rate_per_sec 必须 > 0, 当前: {rate_per_sec}")
+        self.min_interval = 1.0 / rate_per_sec
+        self._lock = threading.Lock()
+        self._last_call_ts = 0.0
+
+    def acquire(self) -> None:
+        """获取令牌: 若距上次调用不足 min_interval, sleep 补齐"""
+        with self._lock:
+            now = time.time()
+            wait = self._last_call_ts + self.min_interval - now
+            if wait > 0:
+                time.sleep(wait)
+            self._last_call_ts = time.time()
 
 
 # ============================================================
@@ -261,6 +296,7 @@ class KGBuilder:
         merge_batch_size: int = 20,
         merge_batch_enable: bool = False,
         concurrency: int = 4,
+        rate_limit_per_sec: float = 2.0,            # 新增: 线程级速率限制, 默认 2 req/s
         embedding_model: str = "BAAI/bge-small-zh-v1.5",
         embedding_dim: int = 512,
         embedding_batch_size: int = 32,
@@ -282,6 +318,9 @@ class KGBuilder:
         self.alignment_threshold = alignment_threshold
         self.entities_collection = entities_collection
         self.embedding_dim = embedding_dim
+        # 线程级速率限制器, 所有 LLM 调用 (含 merge) 共享一个令牌桶
+        self.rate_limiter = _LLMRateLimiter(rate_limit_per_sec)
+        logger.info(f"LLM 速率限制: {rate_limit_per_sec} req/s (并发 {self.concurrency} 自动错开)")
 
         # 延迟到 post_init() 初始化的字段
         self._extraction_mode_param = extraction_mode  # 仅作为优先级最高的覆盖值
@@ -587,9 +626,16 @@ class KGBuilder:
         client: Optional[OpenAI] = None,
         thinking: Optional[dict] = None,
     ) -> str:
-        """带指数退避重试的 LLM 调用 (model/client/thinking 可选, 透传给 _call_llm)"""
+        """带指数退避重试的 LLM 调用 (model/client/thinking 可选, 透传给 _call_llm)。
+
+        - 调用前先 acquire 速率限制令牌 (rate_limiter), 多线程自动错开
+        - 429 / rate_limit_error / FreeUsageLimitError 走长退避 (30s 起步, 指数: 30/60/120)
+        - 其他错误走短退避 (2s 起步, 指数: 2/4/8)
+        """
         last_error = None
         for attempt in range(self.max_retries):
+            # 每次重试前都重新 acquire 一次令牌
+            self.rate_limiter.acquire()
             try:
                 return self._call_llm(
                     prompt,
@@ -601,9 +647,24 @@ class KGBuilder:
             except Exception as e:
                 last_error = e
                 if attempt < self.max_retries - 1:
-                    wait_time = 2 ** (attempt + 1)
+                    # 区分 rate_limit 类错误, 走不同的退避策略
+                    err_str = str(e).lower()
+                    is_rate_limit = (
+                        "rate_limit" in err_str
+                        or "429" in err_str
+                        or "2062" in err_str
+                        or "freeusagelimit" in err_str
+                        or "ratelimitexceeded" in err_str
+                    )
+                    if is_rate_limit:
+                        # 30s 起步, 指数退避: 30 / 60 / 120
+                        wait_time = 30 * (2 ** attempt)
+                    else:
+                        # 2s 起步, 指数退避: 2 / 4 / 8
+                        wait_time = 2 ** (attempt + 1)
+                    err_kind = "rate_limit" if is_rate_limit else "其他错误"
                     logger.warning(
-                        f"LLM 调用失败 (尝试 {attempt + 1}/{self.max_retries}): {e}, "
+                        f"LLM 调用失败 (尝试 {attempt + 1}/{self.max_retries}, {err_kind}): {e}, "
                         f"{wait_time}s 后重试"
                     )
                     time.sleep(wait_time)

@@ -179,6 +179,7 @@ def main():
         merge_batch_size=config.get("llm.merge_batch_size", 20),
         merge_batch_enable=config.get("llm.merge_batch_enable", False),
         concurrency=concurrency,
+        rate_limit_per_sec=config.get("llm.rate_limit_per_sec", 2.0),
         embedding_model=config.get("embedding.model", "BAAI/bge-small-zh-v1.5"),
         embedding_dim=config.get("embedding.dim", 512),
         embedding_batch_size=config.get("embedding.batch_size", 32),
