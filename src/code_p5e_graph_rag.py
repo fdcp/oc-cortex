@@ -13,6 +13,7 @@ import time
 from loguru import logger
 from openai import OpenAI
 
+from code_p1_utils import build_retrieval_query
 from code_p4_searcher import SessionSearcher, SessionSearchResult
 from code_p5e_db import KGDatabase
 from code_update_prompt_utils import load_prompt
@@ -126,6 +127,7 @@ class GraphRAGSearcher:
         max_expand_nodes: int = 30,
         max_graph_tasks: int = 50,
         rerank_multiplier: float = 2.0,
+        query_instruction: str = "",
     ):
         """
         Args:
@@ -141,6 +143,11 @@ class GraphRAGSearcher:
                 - 1.0: 最少, 仅 top_k, 几乎完全依赖 rerank 重排
                 - 2.0: 默认, 平衡 (历史行为)
                 - 5.0: 跟 CLI 一致, 召回更全但 rerank 更慢
+            query_instruction: BGE embedding 的 query instruction 前缀。
+                跟 code_p4_search_cli.py 保持一致, 推荐设为
+                config.code_p3_config.yaml 的 query_instruction_for_retrieval。
+                只对 vector 检索生效 (rerank 和 LLM 实体抽取用原始 query,
+                避免 instruction 干扰它们各自的处理逻辑)。
         """
         if rerank_multiplier < 1.0:
             raise ValueError(
@@ -153,6 +160,7 @@ class GraphRAGSearcher:
         self.max_expand_nodes = max_expand_nodes
         self.max_graph_tasks = max_graph_tasks
         self.rerank_multiplier = rerank_multiplier
+        self.query_instruction = query_instruction
 
     def search(
         self,
@@ -179,8 +187,11 @@ class GraphRAGSearcher:
         t_vec = time.time()
         # 按 rerank_multiplier 多取, 至少 top_k (防止 < 1.0 截到 0)
         vector_top_k = max(int(top_k * self.rerank_multiplier), top_k)
+        # BGE embedding 需要 query instruction 前缀 (跟 CLI 对齐);
+        # rerank 和 LLM 实体抽取仍用原始 query, 不拼接 instruction
+        retrieval_query = build_retrieval_query(query, self.query_instruction)
         vector_results = self.searcher.search(
-            query=query,
+            query=retrieval_query,
             top_k=vector_top_k,     # 给后续合并留 buffer
             skip_rerank=True,       # 延迟 rerank, 合并后统一做
         )
