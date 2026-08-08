@@ -3,10 +3,15 @@ Phase 5 可视化: pyvis 交互式知识图谱
 生成 HTML 文件, 可在浏览器中查看
 
 用法:
-  python code_p5_visualize.py
-  python code_p5_visualize.py --input ./output/knowledge_graph.gpickle
-  python code_p5_visualize.py --input ./output/knowledge_graph.json --format json
-  python code_p5_visualize.py --max-nodes 200
+  # 默认: 自动探测 output/triple/ 或 output/entity/ 下的图谱, HTML 输出到同目录
+  python3 src/code_p5_visualize.py
+
+  # 显式指定图谱 (HTML 默认会写到同目录)
+  python3 src/code_p5_visualize.py --input output/triple/knowledge_graph.gpickle
+  python3 src/code_p5_visualize.py --input output/entity/knowledge_graph.json --format json
+
+  # 调参数 / 换物理引擎
+  python3 src/code_p5_visualize.py --max-nodes 200 --drop-isolated --physics barnesHut
 """
 import argparse
 import pickle
@@ -338,11 +343,40 @@ def load_graph(input_path: str, fmt: str = "auto") -> nx.MultiDiGraph:
 # CLI
 # ============================================================
 
+def _resolve_input_path(user_input: str | None) -> str:
+    """解析 --input:
+    - 用户显式传了直接用
+    - 没传则按 P5 产物目录约定探测: output/triple/ → output/entity/ (.gpickle 优先, .json 兜底)
+    """
+    if user_input:
+        return user_input
+    candidates = [
+        "output/triple/knowledge_graph.gpickle",
+        "output/entity/knowledge_graph.gpickle",
+        "output/triple/knowledge_graph.json",
+        "output/entity/knowledge_graph.json",
+    ]
+    for path in candidates:
+        if Path(path).exists():
+            return path
+    raise FileNotFoundError(
+        "未找到 P5 产物。请先跑 `python3 src/code_p5_main.py` 生成图谱, "
+        "或显式传 --input 指定路径。"
+    )
+
+
+def _resolve_output_path(user_output: str | None, input_path: str) -> str:
+    """解析 --output: 用户没传则跟 --input 同目录 (避免污染 output/ 根目录)"""
+    if user_output:
+        return user_output
+    return str(Path(input_path).parent / "knowledge_graph.html")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Phase 5: 知识图谱可视化")
     parser.add_argument(
-        "--input", default="./output/knowledge_graph.gpickle",
-        help="图谱文件路径 (.gpickle 或 .json)",
+        "--input", default=None,
+        help="图谱文件路径 (.gpickle 或 .json); 不传时自动探测 output/triple/ 或 output/entity/",
     )
     parser.add_argument(
         "--format", default="auto",
@@ -350,8 +384,8 @@ def main():
         help="文件格式",
     )
     parser.add_argument(
-        "--output", default="./output/knowledge_graph.html",
-        help="HTML 输出路径",
+        "--output", default=None,
+        help="HTML 输出路径; 不传时跟 --input 同目录 (避免污染 output/ 根目录)",
     )
     parser.add_argument(
         "--max-nodes", type=int, default=500,
@@ -376,15 +410,24 @@ def main():
     )
     args = parser.parse_args()
 
+    # 解析输入输出路径 (自动探测 / 同目录派生)
+    try:
+        input_path = _resolve_input_path(args.input)
+    except FileNotFoundError as e:
+        logger.error(str(e))
+        sys.exit(1)
+    output_path = _resolve_output_path(args.output, input_path)
+    logger.info(f"输入: {input_path}")
+    logger.info(f"输出: {output_path}")
+
     # 加载图谱
-    logger.info(f"加载图谱: {args.input}")
-    G = load_graph(args.input, args.format)
+    G = load_graph(input_path, args.format)
     logger.info(f"节点: {G.number_of_nodes()}, 边: {G.number_of_edges()}")
 
     # 可视化
     visualize_graph(
         G,
-        output_path=args.output,
+        output_path=output_path,
         height=args.height,
         width=args.width,
         physics=args.physics,
