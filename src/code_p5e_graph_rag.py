@@ -183,27 +183,42 @@ class GraphRAGSearcher:
         t0 = time.time()
         debug = {}
 
-        # Stage 1: 向量检索
-        t_vec = time.time()
-        # 按 rerank_multiplier 多取, 至少 top_k (防止 < 1.0 截到 0)
-        vector_top_k = max(int(top_k * self.rerank_multiplier), top_k)
         # BGE embedding 需要 query instruction 前缀 (跟 CLI 对齐);
         # rerank 和 LLM 实体抽取仍用原始 query, 不拼接 instruction
         retrieval_query = build_retrieval_query(query, self.query_instruction)
+
+        if not use_graph_rag:
+            # 不启用图谱扩散, 走纯向量路径
+            # 直接调 searcher.search (skip_rerank=not use_reranker),
+            # 跟 code_p4_search_cli.run_single_search 结构完全一致
+            # (rerank 在 searcher 内部完成, 不走 GraphRAG 自己的 _rerank)
+            results = self.searcher.search(
+                query=retrieval_query,
+                top_k=top_k,
+                skip_rerank=not use_reranker,
+            )
+            
+            debug["vector_results"] = len(results)
+            debug["top_k"] = top_k
+            debug["retrieval_query"] = retrieval_query
+            debug["total_time_ms"] = int((time.time() - t0) * 1000)
+            
+            return results[:top_k], debug
+
+        # Stage 1: 向量检索 (use_graph_rag=True 才走)
+        t_vec = time.time()
+        # 按 rerank_multiplier 多取, 至少 top_k (防止 < 1.0 截到 0)
+        vector_top_k = max(int(top_k * self.rerank_multiplier), top_k)
         vector_results = self.searcher.search(
             query=retrieval_query,
             top_k=vector_top_k,     # 给后续合并留 buffer
             skip_rerank=True,       # 延迟 rerank, 合并后统一做
         )
         debug["vector_results"] = len(vector_results)
+        debug["retrieval_query"] = retrieval_query
+        # debug["res"] = vector_results
+        debug["top_k"] = vector_top_k
         debug["vector_time_ms"] = int((time.time() - t_vec) * 1000)
-
-        if not use_graph_rag:
-            # 不启用图谱扩散，直接 rerank 返回
-            if use_reranker and vector_results:
-                vector_results = self._rerank(vector_results, query, top_k)
-            debug["total_time_ms"] = int((time.time() - t0) * 1000)
-            return vector_results[:top_k], debug
 
         # Stage 2: 图谱扩散
         t_graph = time.time()
@@ -323,7 +338,11 @@ class GraphRAGSearcher:
         query: str,
         top_k: int,
     ) -> list[SessionSearchResult]:
-        """复用 SessionSearcher 的 reranker"""
+        """Graph 路径专用 rerank: 拼 label: summary 增强语义, 多取 top_k*2 给图谱留 buffer。
+
+        注意: use_graph_rag=False 路径不走这个方法, 它直接调
+        self.searcher.search() 跟 code_p4_search_cli 结构完全一致。
+        """
         if not self.searcher.reranker:
             return candidates
 

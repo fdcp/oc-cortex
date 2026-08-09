@@ -365,7 +365,10 @@ class SessionSearcher:
 
         if skip_rerank:
             results = []
-            for c in candidates[:top_k]:
+            # 不再 candidates[:top_k] 截断, 返回 n_candidates 全量
+            # 调用方负责最终 [:top_k] 截断 (跟 skip_rerank=False 路径的
+            # "全部 n_candidates 喂给 rerank" 保持一致语义)
+            for c in candidates:
                 task_id = c.payload.get("task_id", "")
                 task = self.task_map.get(task_id)
                 if not task:
