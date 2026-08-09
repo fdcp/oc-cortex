@@ -392,6 +392,8 @@ class SessionSearcher:
         # 阶段 5: Reranker 精排
         documents = [c.payload.get("task_summary", "") for c in candidates]
         reranked = self.reranker.rank(query, documents, top_k=top_k)
+        # print(f"  Reranker 精排: {len(reranked)} 结果")
+        print(f"  Vec:Rerank: {len(reranked)} candidates, top_k={top_k}, query='{query}'")
 
         # 阶段 6: 展开 chunk 详情
         results = []

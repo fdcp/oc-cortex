@@ -76,7 +76,7 @@ graph_rag:
   bfs_depth: 1              # BFS 扩散深度 (1=一跳邻居, 2=二跳)
   max_expand_nodes: 30      # BFS 最大扩散节点数
   max_graph_tasks: 50       # 图谱扩散最多引入的 task 数
-  graph_weight: 0.3         # 图谱扩散结果的权重加成
+  graph_channel_weight: 0.3  # 图谱通道在外层 RRF 的权重 (1-graph_channel_weight 给向量)
 
 logging:
   level: "INFO"

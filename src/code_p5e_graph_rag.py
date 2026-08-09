@@ -2,10 +2,22 @@
 Phase 5 Extension: Graph-RAG 搜索模块
 在 Phase 4 搜索器基础上集成知识图谱扩散，实现 Graph-RAG 增强检索。
 
-流程:
-  Query → 实体抽取 → 图谱 BFS 扩散 → 扩散 Task 加入候选池 → 与向量检索合并 → Reranker → Top-K
+流程 (v2):
+  Query → 实体抽取 → 图谱 BFS 扩散 → 反 IDF 累加 → graph_results
+       → 向量检索 (内部两级 RRF) → vector_results
+       → 外层加权 RRF: hybrid = (1 - gw) / (k + rank_v) + gw / (k + rank_g)
+       → Reranker → Top-K
+
+设计要点:
+  - graph_channel_weight (默认 0.3): 图谱通道在外层 RRF 的权重,
+    向量通道权重 = 1 - graph_channel_weight
+  - 反 IDF: 每个 entity 贡献 = log(1 + N / task_count), N = 全局 task 数,
+    稀有 (task_count 小) 的实体 > 热门实体
+  - 外层 RRF 纯 rank-based, 不依赖绝对分数量级, 自然消解 vector/graph 量纲差
+  - Rerank 阶段输入为 SessionSearchResult 列表 (已含 chunks, 不需要二次展开)
 """
 import json
+import math
 import os
 import re
 import time
@@ -116,13 +128,16 @@ def extract_query_entities(
 # ============================================================
 
 class GraphRAGSearcher:
-    """Graph-RAG 增强搜索器：向量检索 + 图谱扩散 + Reranker"""
+    """Graph-RAG 增强搜索器：向量检索 + 图谱扩散 + 外层加权 RRF + Reranker"""
+
+    # 外层 RRF 常数, 跟内层 RRF (k=60) 保持一致
+    _OUTER_RRF_K = 30
 
     def __init__(
         self,
         searcher: SessionSearcher,
         kg_db: KGDatabase,
-        graph_weight: float = 0.3,
+        graph_channel_weight: float = 0.3,
         bfs_depth: int = 1,
         max_expand_nodes: int = 30,
         max_graph_tasks: int = 50,
@@ -133,34 +148,48 @@ class GraphRAGSearcher:
         Args:
             searcher: Phase 4 SessionSearcher 实例
             kg_db: KGDatabase 实例
-            graph_weight: 图谱扩散结果的权重加成
+            graph_channel_weight: 图谱通道在外层 RRF 的权重, 取值 [0, 1]。
+                决定 graph_results / vector_results 在融合时的相对重要性。
+                - 0.0: 完全忽略图谱 (退化为纯向量)
+                - 0.3 (默认): 历史行为, 偏向量
+                - 0.5: 两路平衡
+                - 1.0: 完全信任图谱
             bfs_depth: BFS 扩散深度
             max_expand_nodes: BFS 最大扩散节点数
             max_graph_tasks: 图谱扩散最多引入的 task 数
             rerank_multiplier: rerank 输入候选倍数 (>= 1.0)。
                 控制 vector 粗排召回的 task 数 = top_k * rerank_multiplier,
                 rerank 阶段再从这批候选里精排 top_k。
-                - 1.0: 最少, 仅 top_k, 几乎完全依赖 rerank 重排
-                - 2.0: 默认, 平衡 (历史行为)
-                - 5.0: 跟 CLI 一致, 召回更全但 rerank 更慢
             query_instruction: BGE embedding 的 query instruction 前缀。
                 跟 code_p4_search_cli.py 保持一致, 推荐设为
                 config.code_p3_config.yaml 的 query_instruction_for_retrieval。
                 只对 vector 检索生效 (rerank 和 LLM 实体抽取用原始 query,
                 避免 instruction 干扰它们各自的处理逻辑)。
         """
+        if not 0.0 <= graph_channel_weight <= 1.0:
+            raise ValueError(
+                f"graph_channel_weight 必须在 [0, 1] 区间, 当前: {graph_channel_weight}"
+            )
         if rerank_multiplier < 1.0:
             raise ValueError(
                 f"rerank_multiplier 必须 >= 1.0, 当前: {rerank_multiplier}"
             )
         self.searcher = searcher
         self.db = kg_db
-        self.graph_weight = graph_weight
+        self.graph_channel_weight = graph_channel_weight
         self.bfs_depth = bfs_depth
         self.max_expand_nodes = max_expand_nodes
         self.max_graph_tasks = max_graph_tasks
         self.rerank_multiplier = rerank_multiplier
         self.query_instruction = query_instruction
+
+        # 缓存全局 task 数 (反 IDF 的分母 N)
+        # 假定 searcher 生命周期内 searcher.tasks 不变;如需更新可手动重置
+        self._total_tasks = len(searcher.tasks)
+
+    # ------------------------------------------------------------
+    # 主流程
+    # ------------------------------------------------------------
 
     def search(
         self,
@@ -197,12 +226,12 @@ class GraphRAGSearcher:
                 top_k=top_k,
                 skip_rerank=not use_reranker,
             )
-            
+
             debug["vector_results"] = len(results)
             debug["top_k"] = top_k
             debug["retrieval_query"] = retrieval_query
             debug["total_time_ms"] = int((time.time() - t0) * 1000)
-            
+
             return results[:top_k], debug
 
         # Stage 1: 向量检索 (use_graph_rag=True 才走)
@@ -216,11 +245,9 @@ class GraphRAGSearcher:
         )
         debug["vector_results"] = len(vector_results)
         debug["retrieval_query"] = retrieval_query
-        # debug["res"] = vector_results
-        debug["top_k"] = vector_top_k
         debug["vector_time_ms"] = int((time.time() - t_vec) * 1000)
 
-        # Stage 2: 图谱扩散
+        # Stage 2: 图谱扩散 + 反 IDF 累加
         t_graph = time.time()
         query_entities = extract_query_entities(query)
         debug["query_entities"] = query_entities
@@ -238,7 +265,7 @@ class GraphRAGSearcher:
         seed_entities = list(set(seed_entities))
         debug["seed_entities"] = seed_entities
 
-        graph_results = []
+        graph_results: list[SessionSearchResult] = []
         if seed_entities:
             expanded = self.db.bfs_expand(
                 seed_entities,
@@ -247,42 +274,51 @@ class GraphRAGSearcher:
             )
             debug["expanded_entities"] = len(expanded)
 
-            # 收集扩散实体关联的 task
+            # 反 IDF 累加: log(1 + N / task_count)
+            # 稀有 entity (task_count 小) 贡献大, 热门 hub 被打压
+            total_tasks = max(self._total_tasks, 1)  # 防御: 空语料除 0
             task_scores: dict[str, dict] = {}  # task_id -> {score, entities}
             for entity_name in expanded:
                 node = self.db.get_node(entity_name)
                 if not node:
                     continue
+                tc = max(node["task_count"], 1)  # 防御
+                contrib = math.log(1 + total_tasks / tc)
                 for tid in node["source_tasks"]:
                     if tid not in task_scores:
                         task_scores[tid] = {"score": 0.0, "entities": []}
-                    task_scores[tid]["score"] += self.graph_weight * (node["task_count"] / 10.0)
+                    task_scores[tid]["score"] += contrib
                     task_scores[tid]["entities"].append(entity_name)
 
-            # 构建图谱候选 Task
+            # 构建图谱候选 Task (按累加分降序, 截到 max_graph_tasks)
+            # 同时补 chunks, 让 graph-only 结果也能进 rerank
             all_tasks = {t.task_id: t for t in self.searcher.tasks}
             for tid, info in sorted(task_scores.items(), key=lambda x: -x[1]["score"]):
-                if tid not in all_tasks:
-                    continue
                 if len(graph_results) >= self.max_graph_tasks:
                     break
+                if tid not in all_tasks:
+                    continue
                 task = all_tasks[tid]
+                # 补 chunks: 让图谱召回的 task 也能给用户看原文
+                chunk_details = self.searcher._expand_chunks(task.chunk_ids)
                 graph_results.append(SessionSearchResult(
                     task_id=task.task_id,
                     session_id=task.session_id,
                     task_label=task.task_label,
                     task_summary=task.task_summary,
                     rerank_score=0.0,
-                    hybrid_score=info["score"],
-                    chunks=[],
+                    hybrid_score=info["score"],   # 仅用于排序, 最终 hybrid 由外层 RRF 覆盖
+                    chunks=chunk_details,
                 ))
             debug["graph_candidates"] = len(graph_results)
 
         debug["graph_time_ms"] = int((time.time() - t_graph) * 1000)
 
-        # Stage 3: 合并候选池 (去重，保留最高分)
-        merged = self._merge_candidates(vector_results, graph_results)
+        # Stage 3: 外层加权 RRF 融合
+        merged = self._outer_rrf(vector_results, graph_results, k=self._OUTER_RRF_K)
         debug["merged_candidates"] = len(merged)
+        debug["outer_rrf_k"] = self._OUTER_RRF_K
+        debug["graph_channel_weight"] = self.graph_channel_weight
 
         # Stage 4: Reranker
         t_rerank = time.time()
@@ -309,28 +345,67 @@ class GraphRAGSearcher:
 
         return results, debug
 
-    def _merge_candidates(
+    # ------------------------------------------------------------
+    # 外层加权 RRF (纯函数式, 易测试)
+    # ------------------------------------------------------------
+
+    def _outer_rrf(
         self,
         vector_results: list[SessionSearchResult],
         graph_results: list[SessionSearchResult],
+        k: int = 60,
     ) -> list[SessionSearchResult]:
-        """合并向量和图谱候选，去重保留高分。"""
-        seen: dict[str, SessionSearchResult] = {}
+        """外层加权 RRF 融合 (vector + graph 两路, 纯 rank-based)。
 
-        # 先放向量结果
+        公式:
+            RRF(t) = (1 - gw) / (k + rank_v(t)) + gw / (k + rank_g(t))
+            其中 rank_v / rank_g 是 task 在各自通道列表中的位置 (1-based);
+            不在的通道视为 rank = +∞ (贡献 0)。
+
+        Args:
+            vector_results: 向量检索结果, 已按内部 RRF 分降序
+            graph_results: 图谱扩散结果, 已按反 IDF 累加分降序
+            k: RRF 常数 (默认 60, 跟内层 RRF 一致)
+
+        Returns:
+            融合后的结果, 按 hybrid_score (外层 RRF 分) 降序,
+            保留原 SessionSearchResult 的 chunks (graph 独有则用 graph 版本,
+            共同出现则优先用 vector 版本——因为 vector 通常带更完整的 chunks)。
+        """
+        INF = float("inf")
+        rank_v = {r.task_id: i + 1 for i, r in enumerate(vector_results)}
+        rank_g = {r.task_id: i + 1 for i, r in enumerate(graph_results)}
+
+        # 收集所有候选 (vector 优先, graph 独有作为补充)
+        result_by_id: dict[str, SessionSearchResult] = {}
         for r in vector_results:
-            if r.task_id not in seen or r.hybrid_score > seen[r.task_id].hybrid_score:
-                seen[r.task_id] = r
-
-        # 再放图谱结果 (加成后的分数可能更高)
+            result_by_id[r.task_id] = r
         for r in graph_results:
-            if r.task_id not in seen or r.hybrid_score > seen[r.task_id].hybrid_score:
-                seen[r.task_id] = r
-            elif r.task_id in seen:
-                # 两个来源都有 → 加分
-                seen[r.task_id].hybrid_score += r.hybrid_score * 0.5
+            if r.task_id not in result_by_id:
+                result_by_id[r.task_id] = r
 
-        return sorted(seen.values(), key=lambda x: -x.hybrid_score)
+        gw = self.graph_channel_weight
+        fused: list[SessionSearchResult] = []
+        for tid, src in result_by_id.items():
+            rv = rank_v.get(tid, INF)
+            rg = rank_g.get(tid, INF)
+            rrf = (1.0 - gw) / (k + rv) + gw / (k + rg)
+            fused.append(SessionSearchResult(
+                task_id=src.task_id,
+                session_id=src.session_id,
+                task_label=src.task_label,
+                task_summary=src.task_summary,
+                rerank_score=0.0,
+                hybrid_score=rrf,
+                chunks=src.chunks,
+            ))
+
+        fused.sort(key=lambda x: -x.hybrid_score)
+        return fused
+
+    # ------------------------------------------------------------
+    # Rerank
+    # ------------------------------------------------------------
 
     def _rerank(
         self,
@@ -338,7 +413,15 @@ class GraphRAGSearcher:
         query: str,
         top_k: int,
     ) -> list[SessionSearchResult]:
-        """Graph 路径专用 rerank: 拼 label: summary 增强语义, 多取 top_k*2 给图谱留 buffer。
+        """Graph 路径专用 rerank: 用 task_summary 作为 rerank 文本。
+
+        设计说明 (v2):
+          - 直接取 top_k (不再 *2), 因为外层 RRF 排序已经够准,
+            不需要给 reranker 额外的 buffer
+          - 老的 top_k*2 是为了给带 bug 的 _merge_candidates 兜底,
+            现在 RRF 加性 + rank-based 已经把那个 bug 解决了
+          - 只用 task_summary, 不拼 label: label 太短 (5-15 字) 信息密度低,
+            rerank 容易被 "标签词命中" 这种表面信号带偏
 
         注意: use_graph_rag=False 路径不走这个方法, 它直接调
         self.searcher.search() 跟 code_p4_search_cli 结构完全一致。
@@ -346,9 +429,11 @@ class GraphRAGSearcher:
         if not self.searcher.reranker:
             return candidates
 
-        texts = [f"{c.task_label}: {c.task_summary}" for c in candidates]
-        rerank_results = self.searcher.reranker.rank(query, texts, top_k=top_k * 2)
-
+        texts = [c.task_summary for c in candidates]
+        rerank_results = self.searcher.reranker.rank(query, texts, top_k=top_k)
+        print(
+            f"Rerank: {len(rerank_results)} candidates, top_k={top_k}, query='{query}'"
+        )
         reranked = []
         for rr in rerank_results:
             orig = candidates[rr.index]
