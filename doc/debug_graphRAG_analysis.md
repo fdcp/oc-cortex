@@ -385,3 +385,218 @@ entity 模式稳定在 15-23s 区间。
 2. rerank 输入截断 (top-20) 减少噪声影响
 3. graph_channel_weight 默认从 0.3 提到 0.4-0.5, 让图谱信号更敢表达
 
+
+## DB: `triple`
+
+### Query: `GPU的对比和选型`  *(file: triple_GPU的对比和选型.json)*
+- 抽取: `['GPU']` → 种子 `['GPU']` → BFS 3 节点
+
+**Stage 5: 向量检索 top-5 (粗排)**
+
+| # | hybrid_score | label |
+|---|--------------|-------|
+| 1 | 0.0323 | AllReduce算法原理与历史溯源 |
+| 2 | 0.0310 | GPU算力对比与选型分析 |
+| 3 | 0.0307 | NVIDIA SP与Ulysses并行策略对比 |
+| 4 | 0.0303 | Roofline模型算术强度推导 |
+| 5 | 0.0302 | 开发浮点数格式转换与教学网页 |
+
+**Stage 4: 图谱扩散 top-5 (反 IDF 累加)**
+
+| # | score | n_ent | task_id |
+|---|-------|-------|---------|
+| 1 | 7.61 | 2 | `ses_0c5b6171bfferME7He2F8G6UuJ_T2` |
+| 2 | 4.34 | 1 | `ses_0ca8b3533ffeRk0KWh2cSqkKOa_T1` |
+| 3 | 3.27 | 1 | `ses_0c5b6171bfferME7He2F8G6UuJ_T3` |
+| 4 | 3.27 | 1 | `ses_0c9e4a359ffeGDSrVSG2jNVB6n_T1` |
+
+**Stage 8: 最终 Top-5 (RRF + Rerank)**
+
+| # | src | rerank | hybrid | v_rank | g_rank | label |
+|---|-----|--------|--------|--------|--------|-------|
+| 1 | vector | 0.8932 | 0.0167 | 12 | None | NeMo Megatron Bridge定位与价值辨析 |
+| 2 | vector | 0.8366 | 0.0090 | 48 | None | FSDP与SDPA概念澄清 |
+| 3 | vector | 0.7098 | 0.0149 | 17 | None | FA1与FA2底层实现及并行类比 |
+| 4 | vector | 0.6002 | 0.0088 | 50 | None | 模型可用性确认 |
+| 5 | vector | 0.5244 | 0.0101 | 39 | None | 梳理 opencode 会话分布及属性 |
+
+---
+
+### Query: `序列并行(Sequence_Parallel_SP)`  *(file: triple_序列并行_Sequence_Parallel_SP_.json)*
+- 抽取: `['序列并行', 'Sequence Parallel', 'SP']` → 种子 `['序列并行', 'SP', 'Sequence Parallelism']` → BFS 19 节点
+
+**Stage 5: 向量检索 top-5 (粗排)**
+
+| # | hybrid_score | label |
+|---|--------------|-------|
+| 1 | 0.0325 | SP原理剖析与Mermaid图解迭代 |
+| 2 | 0.0310 | RoPE预计算函数实现解析 |
+| 3 | 0.0306 | NVIDIA SP与Ulysses并行策略对比 |
+| 4 | 0.0302 | 并行训练尾部填充代码解析 |
+| 5 | 0.0286 | FA状态变量Shape澄清 |
+
+**Stage 4: 图谱扩散 top-5 (反 IDF 累加)**
+
+| # | score | n_ent | task_id |
+|---|-------|-------|---------|
+| 1 | 34.07 | 8 | `ses_12c6bd8dfffevT51PypMW2v5Mx_T1` |
+| 2 | 27.29 | 7 | `ses_0a16b26dcffewGBp0akSLB5IZG_T1` |
+| 3 | 14.94 | 4 | `ses_12c6bd8dfffevT51PypMW2v5Mx_T2` |
+| 4 | 11.28 | 3 | `ses_0e8898453ffeS7ByDo9zjP8Z8h_T2` |
+| 5 | 8.69 | 2 | `ses_0c5b6171bfferME7He2F8G6UuJ_T4` |
+
+**Stage 8: 最终 Top-5 (RRF + Rerank)**
+
+| # | src | rerank | hybrid | v_rank | g_rank | label |
+|---|-----|--------|--------|--------|--------|-------|
+| 1 | both | 0.9974 | 0.0323 | 1 | 1 | SP原理剖析与Mermaid图解迭代 |
+| 2 | both | 0.8205 | 0.0303 | 3 | 3 | NVIDIA SP与Ulysses并行策略对比 |
+| 3 | both | 0.5583 | 0.0294 | 4 | 4 | 并行训练尾部填充代码解析 |
+| 4 | vector | 0.3558 | 0.0130 | 24 | None | 技术笔记静态站点整合与本地实施 |
+| 5 | vector | 0.2147 | 0.0101 | 39 | None | Repo改动分析与Commit规划 |
+
+---
+
+### Query: `flashattention的原理和历史`  *(file: triple_flashattention的原理和历史.json)*
+- 抽取: `['flashattention']` → 种子 `['FlashAttention-2 工作划分', 'FlashAttention-2', 'FlashAttention']` → BFS 29 节点
+
+**Stage 5: 向量检索 top-5 (粗排)**
+
+| # | hybrid_score | label |
+|---|--------------|-------|
+| 1 | 0.0313 | FA状态变量Shape澄清 |
+| 2 | 0.0306 | SP原理剖析与Mermaid图解迭代 |
+| 3 | 0.0296 | 并行训练尾部填充代码解析 |
+| 4 | 0.0296 | FA1与FA2底层实现及并行类比 |
+| 5 | 0.0289 | Roofline模型算术强度推导 |
+
+**Stage 4: 图谱扩散 top-5 (反 IDF 累加)**
+
+| # | score | n_ent | task_id |
+|---|-------|-------|---------|
+| 1 | 51.45 | 12 | `ses_0c5b6171bfferME7He2F8G6UuJ_T4` |
+| 2 | 46.03 | 11 | `ses_0c5b6171bfferME7He2F8G6UuJ_T2` |
+| 3 | 19.29 | 5 | `ses_0c5b6171bfferME7He2F8G6UuJ_T3` |
+| 4 | 16.30 | 4 | `ses_0c9e4a359ffeGDSrVSG2jNVB6n_T1` |
+| 5 | 4.34 | 1 | `ses_12c6bd8dfffevT51PypMW2v5Mx_T1` |
+
+**Stage 8: 最终 Top-5 (RRF + Rerank)**
+
+| # | src | rerank | hybrid | v_rank | g_rank | label |
+|---|-----|--------|--------|--------|--------|-------|
+| 1 | vector | 0.8245 | 0.0179 | 9 | None | NeMo Megatron Bridge定位与价值辨析 |
+| 2 | vector | 0.5588 | 0.0184 | 8 | None | ZeRO显存优化原理与通信推导 |
+| 3 | vector | 0.2926 | 0.0095 | 44 | None | 整合优化专利交底书生成Ver2 |
+| 4 | vector | 0.2628 | 0.0194 | 6 | None | 技术笔记静态站点整合与本地实施 |
+| 5 | vector | 0.2613 | 0.0143 | 19 | None | 重构消息编号系统增加轮次与局部编号 |
+
+---
+
+
+## DB: `entity`
+
+### Query: `GPU的对比和选型`  *(file: entity_GPU的对比和选型.json)*
+- 抽取: `['GPU']` → 种子 `['GPU']` → BFS 27 节点
+
+**Stage 5: 向量检索 top-5 (粗排)**
+
+| # | hybrid_score | label |
+|---|--------------|-------|
+| 1 | 0.0323 | AllReduce算法原理与历史溯源 |
+| 2 | 0.0310 | GPU算力对比与选型分析 |
+| 3 | 0.0307 | NVIDIA SP与Ulysses并行策略对比 |
+| 4 | 0.0303 | Roofline模型算术强度推导 |
+| 5 | 0.0302 | 开发浮点数格式转换与教学网页 |
+
+**Stage 4: 图谱扩散 top-5 (反 IDF 累加)**
+
+| # | score | n_ent | task_id |
+|---|-------|-------|---------|
+| 1 | 39.93 | 10 | `ses_053c0ac72ffe883RpIvqU1LUEw_T3` |
+| 2 | 34.07 | 8 | `ses_0ca8b3533ffeRk0KWh2cSqkKOa_T1` |
+| 3 | 33.00 | 8 | `ses_0c5b6171bfferME7He2F8G6UuJ_T2` |
+| 4 | 10.21 | 3 | `ses_053c0ac72ffe883RpIvqU1LUEw_T2` |
+| 5 | 6.93 | 2 | `ses_0c5b6171bfferME7He2F8G6UuJ_T3` |
+
+**Stage 8: 最终 Top-5 (RRF + Rerank)**
+
+| # | src | rerank | hybrid | v_rank | g_rank | label |
+|---|-----|--------|--------|--------|--------|-------|
+| 1 | both | 0.9433 | 0.0295 | 3 | 6 | NVIDIA SP与Ulysses并行策略对比 |
+| 2 | both | 0.8783 | 0.0238 | 16 | 5 | FA状态变量Shape澄清 |
+| 3 | vector | 0.8366 | 0.0090 | 48 | None | FSDP与SDPA概念澄清 |
+| 4 | vector | 0.8032 | 0.0175 | 10 | None | P5测试脚本对比与能力确认 |
+| 5 | vector | 0.6002 | 0.0088 | 50 | None | 模型可用性确认 |
+
+---
+
+### Query: `序列并行(Sequence_Parallel_SP)`  *(file: entity_序列并行_Sequence_Parallel_SP_.json)*
+- 抽取: `['序列并行', 'Sequence Parallel', 'SP']` → 种子 `['序列并行', 'SP', 'Sequence Parallelism']` → BFS 30 节点
+
+**Stage 5: 向量检索 top-5 (粗排)**
+
+| # | hybrid_score | label |
+|---|--------------|-------|
+| 1 | 0.0325 | SP原理剖析与Mermaid图解迭代 |
+| 2 | 0.0310 | RoPE预计算函数实现解析 |
+| 3 | 0.0306 | NVIDIA SP与Ulysses并行策略对比 |
+| 4 | 0.0302 | 并行训练尾部填充代码解析 |
+| 5 | 0.0286 | FA状态变量Shape澄清 |
+
+**Stage 4: 图谱扩散 top-5 (反 IDF 累加)**
+
+| # | score | n_ent | task_id |
+|---|-------|-------|---------|
+| 1 | 49.69 | 12 | `ses_12c6bd8dfffevT51PypMW2v5Mx_T1` |
+| 2 | 41.00 | 10 | `ses_0c5b6171bfferME7He2F8G6UuJ_T4` |
+| 3 | 24.03 | 6 | `ses_0a16b26dcffewGBp0akSLB5IZG_T1` |
+| 4 | 14.94 | 4 | `ses_12c6bd8dfffevT51PypMW2v5Mx_T2` |
+| 5 | 4.56 | 2 | `ses_0a53b6807ffex4xr4a0wNdi5EQ_T1` |
+
+**Stage 8: 最终 Top-5 (RRF + Rerank)**
+
+| # | src | rerank | hybrid | v_rank | g_rank | label |
+|---|-----|--------|--------|--------|--------|-------|
+| 1 | both | 0.9974 | 0.0323 | 1 | 1 | SP原理剖析与Mermaid图解迭代 |
+| 2 | vector | 0.9797 | 0.0189 | 7 | None | Roofline模型算术强度推导 |
+| 3 | both | 0.9442 | 0.0206 | 26 | 7 | Session 历史追溯与总结 |
+| 4 | vector | 0.8804 | 0.0219 | 2 | None | RoPE预计算函数实现解析 |
+| 5 | both | 0.8205 | 0.0300 | 3 | 4 | NVIDIA SP与Ulysses并行策略对比 |
+
+---
+
+### Query: `flashattention的原理和历史`  *(file: entity_flashattention的原理和历史.json)*
+- 抽取: `['flashattention']` → 种子 `['FlashAttention-2', 'FlashAttention-1', 'FlashAttention']` → BFS 30 节点
+
+**Stage 5: 向量检索 top-5 (粗排)**
+
+| # | hybrid_score | label |
+|---|--------------|-------|
+| 1 | 0.0313 | FA状态变量Shape澄清 |
+| 2 | 0.0306 | SP原理剖析与Mermaid图解迭代 |
+| 3 | 0.0296 | 并行训练尾部填充代码解析 |
+| 4 | 0.0296 | FA1与FA2底层实现及并行类比 |
+| 5 | 0.0289 | Roofline模型算术强度推导 |
+
+**Stage 4: 图谱扩散 top-5 (反 IDF 累加)**
+
+| # | score | n_ent | task_id |
+|---|-------|-------|---------|
+| 1 | 41.00 | 10 | `ses_0c5b6171bfferME7He2F8G6UuJ_T4` |
+| 2 | 33.00 | 8 | `ses_0c5b6171bfferME7He2F8G6UuJ_T3` |
+| 3 | 33.00 | 8 | `ses_0c5b6171bfferME7He2F8G6UuJ_T2` |
+| 4 | 20.65 | 5 | `ses_0c9e4a359ffeGDSrVSG2jNVB6n_T1` |
+| 5 | 7.61 | 2 | `ses_053c0ac72ffe883RpIvqU1LUEw_T3` |
+
+**Stage 8: 最终 Top-5 (RRF + Rerank)**
+
+| # | src | rerank | hybrid | v_rank | g_rank | label |
+|---|-----|--------|--------|--------|--------|-------|
+| 1 | vector | 0.8245 | 0.0179 | 9 | None | NeMo Megatron Bridge定位与价值辨析 |
+| 2 | vector | 0.6960 | 0.0119 | 29 | None | Session 历史追溯与总结 |
+| 3 | vector | 0.4610 | 0.0115 | 31 | None | 编写优化器基础指南v1 |
+| 4 | vector | 0.3193 | 0.0091 | 47 | None | 分析 omo 模型配置及影响 |
+| 5 | vector | 0.2628 | 0.0194 | 6 | None | 技术笔记静态站点整合与本地实施 |
+
+---
+
