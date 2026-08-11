@@ -600,3 +600,101 @@ entity 模式稳定在 15-23s 区间。
 
 ---
 
+
+---
+
+# 附录: GPU query 融合失效的根因分析 (用户追问)
+
+> 用户疑问: "图谱占比 0.3, 不应该这个结果"
+> 实际上, **外层 RRF 阶段表现正确**, 真正的失效发生在 **Rerank 阶段**。
+
+## 1. 重新跑一遍 RRF (验证)
+
+外层 RRF 公式 (gw=0.3, k=30):
+- vector top-5 (只 vector 通道) RRF: `0.7/(30+v_rank)` → 0.0226, 0.0219, 0.0212, 0.0206, 0.0200
+- graph 命中 task 加上 graph 通道: `0.7/(30+v_rank) + 0.3/(30+g_rank)` → 0.0303, 0.0294
+
+**外层 RRF 后排序**:
+
+| RRF 排名 | task | v_rank | g_rank | RRF | 来源 |
+|---------|------|--------|--------|-----|------|
+| 1 | Roofline模型算术强度推导 | 4 | 1 | 0.0303 | graph+vector |
+| 2 | 开发浮点数格式转换 | 5 | 2 | 0.0294 | graph+vector |
+| 3 | AllReduce算法原理 | 1 | - | 0.0226 | vector |
+| 4 | GPU算力对比与选型分析 | 2 | - | 0.0219 | vector |
+| 5 | NVIDIA SP与Ulysses | 3 | - | 0.0212 | vector |
+
+✅ **RRF 阶段行为正确** — vector top-5 中前 3 个 (AllReduce, GPU算力, NVIDIA SP) 都进 RRF 前 5, 图谱通道靠双通道命中 (Roofline, 浮点转换) 拉了 2 个进来。
+
+## 2. Rerank 阶段: 顺序被完全推翻
+
+**Rerank 之后 (50 候选 → 5)**:
+
+| Final # | task | v_rank | rerank_score | RRF (RRF 排名) |
+|---------|------|--------|--------------|----------------|
+| 1 | NeMo Megatron Bridge | 12 | 0.893 | 0.017 (#13) |
+| 2 | FSDP与SDPA | 48 | 0.837 | 0.009 (#42) |
+| 3 | FA1与FA2 | 17 | 0.710 | 0.015 (#21) |
+| 4 | 模型可用性确认 | 50 | 0.600 | 0.009 (#50) |
+| 5 | 梳理 opencode | 39 | 0.524 | 0.010 (#33) |
+
+❌ **Rerank 完全无视 RRF 排序** — Final Top-5 的 v_rank 是 [12, 48, 17, 50, 39], 几乎都是向量排名靠后的 task, RRF 分数 0.009-0.017 远低于 vector top-5 的 0.022+。
+
+## 3. 为什么 Rerank 把"GPU算力"踢出 Top-5
+
+直接调 `Qwen3Reranker` 重新打分, 单独对比这 10 个候选:
+
+| 排名 | label | rerank_score | 类型 |
+|------|-------|--------------|------|
+| 1 | FSDP与SDPA概念澄清 | **0.9797** | final #2 |
+| 2 | NVIDIA SP与Ulysses | 0.9433 | vector #3 |
+| 3 | 模型可用性确认 | 0.0981 | final #4 |
+| 4 | 开发浮点数转换 | 0.0401 | vector #5 |
+| 5 | **GPU算力对比与选型分析** | **0.0278** | vector #2 |
+| 6 | FA1与FA2 | 0.0223 | final #3 |
+| 7 | Roofline | 0.0062 | vector #4 |
+| 8 | AllReduce | 0.0044 | vector #1 |
+| 9 | **NeMo Megatron Bridge** | **0.0001** | final #1 |
+| 10 | 梳理 opencode | 0.0000 | final #5 |
+
+**惊人发现**: 我重新跑 10 候选 Rerank, **"GPU算力对比" 排第 5 (0.028), "NeMo Megatron Bridge" 排倒数第 2 (0.0001)**。这跟原始 final 完全相反!
+
+## 4. 根因: Rerank 候选截断 + 顺序偏置
+
+当我用 vector top-10 跑 Rerank, 选出来的 top-5 是: NVIDIA SP / P5测试 / 浮点转换 / ZeRO / GPU算力。**没有 NeMo Megatron Bridge**。
+
+但 GraphRAG 真实跑的是 50 候选 (vector 全 50), 选出的 top-5 全是 v_rank=12-50, **包含 NeMo Megatron Bridge**。
+
+这就说明:
+1. **Rerank 在 10 候选 vs 50 候选下行为不同** — 大候选池里 Qwen3-Reranker 倾向于"长文本+复杂概念", 把 NeMo Megatron Bridge 这类"概念辨析" 推上去
+2. **Rerank 完全无视 RRF 排序** — 它独立打分, 不考虑 RRF 已经做了"channel balance"
+3. **GW=0.3 在 Rerank 面前无效** — 既然 Rerank 选 5 个全是 vector-only, graph_channel_weight 根本不影响最终 Top-5
+
+## 5. 对"图谱占比 0.3" 的回答
+
+**用户疑问**: "图谱占比 0.3, 不应该这个结果"
+
+**真实情况**:
+- graph_channel_weight=0.3 (vector 拿 0.7) 在 **RRF 阶段**工作正确: vector top-5 排在 RRF 前 5
+- 但 **Rerank 阶段** 完全覆盖了 RRF 排序, 把 vector 排名 12-50 的 task 推上 final
+- 也就是说, **rerank 才是 GraphRAG 质量的决定因素, RRF 排序基本被 rerank 推翻了**
+
+**调 GW=0.3 → 0.5 不会有改善**, 因为 rerank 不看 RRF 分数。
+
+**真正需要修的**:
+1. **Rerank 输入截断**: 只 rerank vector+graph 共同候选 或 vector top-20, 防止长尾噪声
+2. **RRF+Rerank 分数融合**: `final = α·rerank + (1-α)·RRF`, α < 1 让 RRF 仍有发言权
+3. **Query 改写**: "GPU 的对比" 改写为 "GPU 硬件 选型 V100 H100", 避免 Qwen3-Reranker 把它误判为"GPU 训练系统"
+4. **Rerank 候选打分检查**: 在 GraphRAG 加 `_rerank_pre_filter` 阶段, 去掉 RRF 排名最差的 N 个再 rerank
+
+## 6. 总结表
+
+| 阶段 | 行为 | vector top-5 命运 |
+|------|------|------------------|
+| Vector 检索 | 召回 50 候选 | AllReduce, **GPU算力**, NVIDIA SP, Roofline, 浮点转换 |
+| RRF 融合 | 排序 | ✅ Top-5 中有 3-4 个 vector top-5 |
+| **Rerank** | **50 → 5** | **❌ 全部踢出, 换成 v_rank 12-50** |
+| Final | Top-5 | NeMo Megatron Bridge, FSDP, FA1, 模型可用性, opencode |
+
+**核心结论**: GraphRAG 的瓶颈不在 RRF 权重调参, 而在 Rerank 行为 — 它独立判断、独立覆盖, 跟 RRF 排序完全脱钩。
+
