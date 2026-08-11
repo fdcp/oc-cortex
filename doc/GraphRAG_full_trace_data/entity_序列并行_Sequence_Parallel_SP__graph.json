@@ -1,0 +1,1764 @@
+{
+  "query": "序列并行(Sequence Parallel,SP)",
+  "use_graph_rag": true,
+  "top_k": 5,
+  "rerank_multiplier": 1.0,
+  "graph_channel_weight": 0.3,
+  "outer_rrf_k": 30,
+  "bfs_depth": 1,
+  "max_expand_nodes": 30,
+  "max_graph_tasks": 50,
+  "stages": {
+    "1_llm_entity_extraction": {
+      "input": {
+        "query": "序列并行(Sequence Parallel,SP)",
+        "model": "hy3",
+        "max_tokens": 2000,
+        "temperature": 0.1
+      },
+      "output": [
+        "序列并行",
+        "Sequence Parallel",
+        "SP"
+      ],
+      "n_extracted": 3,
+      "elapsed_ms": 17570
+    },
+    "2_seed_entity_match": {
+      "input": {
+        "extracted_entities": [
+          "序列并行",
+          "Sequence Parallel",
+          "SP"
+        ]
+      },
+      "output_seed_entities": [
+        "序列并行",
+        "SP",
+        "Sequence Parallelism"
+      ],
+      "match_details": [
+        {
+          "extracted": "序列并行",
+          "matched": "序列并行",
+          "match_type": "exact",
+          "task_count": 2
+        },
+        {
+          "extracted": "Sequence Parallel",
+          "matched": "Sequence Parallelism",
+          "match_type": "fuzzy",
+          "task_count": 1
+        },
+        {
+          "extracted": "SP",
+          "matched": "SP",
+          "match_type": "exact",
+          "task_count": 1
+        }
+      ],
+      "exact_count": 2,
+      "fuzzy_count": 1,
+      "elapsed_ms": 2
+    },
+    "3_bfs_expand": {
+      "input": {
+        "seed_entities": [
+          "序列并行",
+          "SP",
+          "Sequence Parallelism"
+        ],
+        "depth": 1,
+        "max_nodes": 30
+      },
+      "output_expanded": [
+        "All-Gather",
+        "CUDA",
+        "Embedding层",
+        "FlashAttention-1",
+        "FlashAttention-2",
+        "K block",
+        "LayerNorm",
+        "Megatron-LM",
+        "Mermaid",
+        "Mermaid渲染问题",
+        "OpenCode",
+        "RMSNorm",
+        "Ring Attention",
+        "SP",
+        "Sequence Parallelism",
+        "TP",
+        "Ulysses",
+        "atomicAdd",
+        "col-parallel",
+        "col-parallel切分",
+        "opencode.db",
+        "syncwarp",
+        "warp",
+        "分布式训练",
+        "反向传播",
+        "大模型分布式训练",
+        "大模型分布式训练并行",
+        "序列并行",
+        "张量并行",
+        "激活内存优化"
+      ],
+      "n_expanded": 30,
+      "edges_traversed_count": "见 Stage 4 详细 (从 expanded 拉所有节点的 source_tasks)",
+      "elapsed_ms": 3
+    },
+    "4_inverse_idf_accumulate": {
+      "input": {
+        "expanded_entities_count": 30,
+        "total_tasks_global_N": 76,
+        "max_graph_tasks": 50,
+        "formula": "task_score = sum over its entities: log(1 + N/task_count)"
+      },
+      "output": {
+        "n_unique_graph_tasks": 29,
+        "n_graph_candidates_after_truncate": 29,
+        "per_entity_contrib_all": [
+          {
+            "entity": "warp",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "激活内存优化",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "atomicAdd",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "Sequence Parallelism",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "FlashAttention-2",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "K block",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "Embedding层",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "RMSNorm",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "反向传播",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "张量并行",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "FlashAttention-1",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "Mermaid",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "syncwarp",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "LayerNorm",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "CUDA",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "col-parallel切分",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "col-parallel",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "Mermaid渲染问题",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "TP",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "大模型分布式训练并行",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "大模型分布式训练",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "SP",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "Ulysses",
+            "task_count": 2,
+            "formula": "log(1 + 76/2) = 3.663562",
+            "idf_contrib": 3.6636,
+            "n_source_tasks": 2
+          },
+          {
+            "entity": "Megatron-LM",
+            "task_count": 2,
+            "formula": "log(1 + 76/2) = 3.663562",
+            "idf_contrib": 3.6636,
+            "n_source_tasks": 2
+          },
+          {
+            "entity": "Ring Attention",
+            "task_count": 2,
+            "formula": "log(1 + 76/2) = 3.663562",
+            "idf_contrib": 3.6636,
+            "n_source_tasks": 2
+          },
+          {
+            "entity": "序列并行",
+            "task_count": 2,
+            "formula": "log(1 + 76/2) = 3.663562",
+            "idf_contrib": 3.6636,
+            "n_source_tasks": 2
+          },
+          {
+            "entity": "All-Gather",
+            "task_count": 3,
+            "formula": "log(1 + 76/3) = 3.270836",
+            "idf_contrib": 3.2708,
+            "n_source_tasks": 3
+          },
+          {
+            "entity": "分布式训练",
+            "task_count": 3,
+            "formula": "log(1 + 76/3) = 3.270836",
+            "idf_contrib": 3.2708,
+            "n_source_tasks": 3
+          },
+          {
+            "entity": "opencode.db",
+            "task_count": 4,
+            "formula": "log(1 + 76/4) = 2.995732",
+            "idf_contrib": 2.9957,
+            "n_source_tasks": 4
+          },
+          {
+            "entity": "OpenCode",
+            "task_count": 20,
+            "formula": "log(1 + 76/20) = 1.568616",
+            "idf_contrib": 1.5686,
+            "n_source_tasks": 20
+          }
+        ],
+        "per_task_score_all": [
+          {
+            "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+            "score": 49.6922,
+            "n_entities": 12,
+            "entities": [
+              "激活内存优化",
+              "Embedding层",
+              "RMSNorm",
+              "张量并行",
+              "Megatron-LM",
+              "Mermaid",
+              "LayerNorm",
+              "All-Gather",
+              "col-parallel切分",
+              "col-parallel",
+              "Mermaid渲染问题",
+              "序列并行"
+            ]
+          },
+          {
+            "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T4",
+            "score": 41.0046,
+            "n_entities": 10,
+            "entities": [
+              "warp",
+              "atomicAdd",
+              "FlashAttention-2",
+              "K block",
+              "FlashAttention-1",
+              "syncwarp",
+              "CUDA",
+              "分布式训练",
+              "Ring Attention",
+              "序列并行"
+            ]
+          },
+          {
+            "task_id": "ses_0a16b26dcffewGBp0akSLB5IZG_T1",
+            "score": 24.0345,
+            "n_entities": 6,
+            "entities": [
+              "Ulysses",
+              "opencode.db",
+              "TP",
+              "大模型分布式训练并行",
+              "大模型分布式训练",
+              "SP"
+            ]
+          },
+          {
+            "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+            "score": 14.9418,
+            "n_entities": 4,
+            "entities": [
+              "Sequence Parallelism",
+              "Ulysses",
+              "All-Gather",
+              "Ring Attention"
+            ]
+          },
+          {
+            "task_id": "ses_0a53b6807ffex4xr4a0wNdi5EQ_T1",
+            "score": 4.5643,
+            "n_entities": 2,
+            "entities": [
+              "OpenCode",
+              "opencode.db"
+            ]
+          },
+          {
+            "task_id": "ses_0a53b6807ffex4xr4a0wNdi5EQ_T2",
+            "score": 4.5643,
+            "n_entities": 2,
+            "entities": [
+              "OpenCode",
+              "opencode.db"
+            ]
+          },
+          {
+            "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T20",
+            "score": 4.5643,
+            "n_entities": 2,
+            "entities": [
+              "OpenCode",
+              "opencode.db"
+            ]
+          },
+          {
+            "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T3",
+            "score": 4.3438,
+            "n_entities": 1,
+            "entities": [
+              "反向传播"
+            ]
+          },
+          {
+            "task_id": "ses_0e8898453ffeS7ByDo9zjP8Z8h_T2",
+            "score": 3.6636,
+            "n_entities": 1,
+            "entities": [
+              "Megatron-LM"
+            ]
+          },
+          {
+            "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T2",
+            "score": 3.2708,
+            "n_entities": 1,
+            "entities": [
+              "All-Gather"
+            ]
+          },
+          {
+            "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T1",
+            "score": 3.2708,
+            "n_entities": 1,
+            "entities": [
+              "分布式训练"
+            ]
+          },
+          {
+            "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T3",
+            "score": 3.2708,
+            "n_entities": 1,
+            "entities": [
+              "分布式训练"
+            ]
+          },
+          {
+            "task_id": "ses_04e86c806ffepxGVpAy3W5zsD9_T1",
+            "score": 1.5686,
+            "n_entities": 1,
+            "entities": [
+              "OpenCode"
+            ]
+          },
+          {
+            "task_id": "ses_04b86396effeR5frMxXdiRtezt_T1",
+            "score": 1.5686,
+            "n_entities": 1,
+            "entities": [
+              "OpenCode"
+            ]
+          },
+          {
+            "task_id": "ses_04edfa1f2ffey5A7mn4t5lm1YW_T2",
+            "score": 1.5686,
+            "n_entities": 1,
+            "entities": [
+              "OpenCode"
+            ]
+          },
+          {
+            "task_id": "ses_072ebc268ffe227bGpbCtWbM97_T1",
+            "score": 1.5686,
+            "n_entities": 1,
+            "entities": [
+              "OpenCode"
+            ]
+          },
+          {
+            "task_id": "ses_0ca8a24d9ffeHoz0wYkhYDDO4w_T1",
+            "score": 1.5686,
+            "n_entities": 1,
+            "entities": [
+              "OpenCode"
+            ]
+          },
+          {
+            "task_id": "ses_04d77c8caffexlaTbA0HPB87oY_T2",
+            "score": 1.5686,
+            "n_entities": 1,
+            "entities": [
+              "OpenCode"
+            ]
+          },
+          {
+            "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T3",
+            "score": 1.5686,
+            "n_entities": 1,
+            "entities": [
+              "OpenCode"
+            ]
+          },
+          {
+            "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T9",
+            "score": 1.5686,
+            "n_entities": 1,
+            "entities": [
+              "OpenCode"
+            ]
+          },
+          {
+            "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T11",
+            "score": 1.5686,
+            "n_entities": 1,
+            "entities": [
+              "OpenCode"
+            ]
+          },
+          {
+            "task_id": "ses_0a16b26dcffewGBp0akSLB5IZG_T2",
+            "score": 1.5686,
+            "n_entities": 1,
+            "entities": [
+              "OpenCode"
+            ]
+          },
+          {
+            "task_id": "ses_0ec02cc6dffeH1O7QFPSrptpla_T1",
+            "score": 1.5686,
+            "n_entities": 1,
+            "entities": [
+              "OpenCode"
+            ]
+          },
+          {
+            "task_id": "ses_10772d114fferNiLEcTQ8YNd5k_T1",
+            "score": 1.5686,
+            "n_entities": 1,
+            "entities": [
+              "OpenCode"
+            ]
+          },
+          {
+            "task_id": "ses_10772d114fferNiLEcTQ8YNd5k_T2",
+            "score": 1.5686,
+            "n_entities": 1,
+            "entities": [
+              "OpenCode"
+            ]
+          },
+          {
+            "task_id": "ses_10772d114fferNiLEcTQ8YNd5k_T3",
+            "score": 1.5686,
+            "n_entities": 1,
+            "entities": [
+              "OpenCode"
+            ]
+          },
+          {
+            "task_id": "ses_04d77c8caffexlaTbA0HPB87oY_T1",
+            "score": 1.5686,
+            "n_entities": 1,
+            "entities": [
+              "OpenCode"
+            ]
+          },
+          {
+            "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T4",
+            "score": 1.5686,
+            "n_entities": 1,
+            "entities": [
+              "OpenCode"
+            ]
+          },
+          {
+            "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T5",
+            "score": 1.5686,
+            "n_entities": 1,
+            "entities": [
+              "OpenCode"
+            ]
+          }
+        ]
+      },
+      "elapsed_ms": 3
+    },
+    "5a_dense_tasks": {
+      "input": {
+        "query": "序列并行(Sequence Parallel,SP)",
+        "collection": "tasks",
+        "top_k": 25
+      },
+      "n_results": 25,
+      "top10": [
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+          "score": 0.607789,
+          "label": "SP原理剖析与Mermaid图解迭代"
+        },
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+          "score": 0.580236,
+          "label": "NVIDIA SP与Ulysses并行策略对比"
+        },
+        {
+          "task_id": "ses_0e8898453ffeS7ByDo9zjP8Z8h_T2",
+          "score": 0.567755,
+          "label": "并行训练尾部填充代码解析"
+        },
+        {
+          "task_id": "ses_0c4e0312affeUm1WYU03ISPgU2_T1",
+          "score": 0.543441,
+          "label": "RoPE预计算函数实现解析"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T12",
+          "score": 0.524237,
+          "label": "GraphRAG业界应用调研"
+        },
+        {
+          "task_id": "ses_04d77c8caffexlaTbA0HPB87oY_T2",
+          "score": 0.521965,
+          "label": "OMO 配置文件优化"
+        },
+        {
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T7",
+          "score": 0.516161,
+          "label": "解释系统运行原理与完善文档"
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T3",
+          "score": 0.51132,
+          "label": "FA状态变量Shape澄清"
+        },
+        {
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T3",
+          "score": 0.507456,
+          "label": "环境配置梳理与脚本修复"
+        },
+        {
+          "task_id": "ses_072ebc268ffe227bGpbCtWbM97_T4",
+          "score": 0.503453,
+          "label": "重构消息编号系统增加轮次与局部编号"
+        }
+      ]
+    },
+    "5b_chunks_summary_aggregate": {
+      "input": {
+        "query": "序列并行(Sequence Parallel,SP)",
+        "method": "sparse",
+        "top_k_chunks": 75
+      },
+      "n_chunk_hits": 75,
+      "n_task_after_agg": 38,
+      "top10": [
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+          "score": 16.898124,
+          "label": "SP原理剖析与Mermaid图解迭代"
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T4",
+          "score": 13.072333,
+          "label": "FA1与FA2底层实现及并行类比"
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T3",
+          "score": 12.415622,
+          "label": "FA状态变量Shape澄清"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T18",
+          "score": 12.078942,
+          "label": "专利交底书格式迭代优化"
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T2",
+          "score": 11.159937,
+          "label": "Roofline模型算术强度推导"
+        },
+        {
+          "task_id": "ses_04d77c8caffexlaTbA0HPB87oY_T1",
+          "score": 9.020554,
+          "label": "OMO 多 Agent 模型配置诊断与优化"
+        },
+        {
+          "task_id": "ses_0c4e0312affeUm1WYU03ISPgU2_T1",
+          "score": 8.805523,
+          "label": "RoPE预计算函数实现解析"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T20",
+          "score": 8.597393,
+          "label": "Session 历史追溯与总结"
+        },
+        {
+          "task_id": "ses_0a16b26dcffewGBp0akSLB5IZG_T1",
+          "score": 8.489758,
+          "label": "跨工作区查询历史 Session"
+        },
+        {
+          "task_id": "ses_04edfa1f2ffey5A7mn4t5lm1YW_T1",
+          "score": 7.920415,
+          "label": "修复 gen 脚本跨平台兼容性"
+        }
+      ]
+    },
+    "5c_chunks_cleaned_text_aggregate": {
+      "input": {
+        "query": "序列并行(Sequence Parallel,SP)",
+        "method": "bm25",
+        "top_k_chunks": 75
+      },
+      "n_chunk_hits": 75,
+      "n_task_after_agg": 41,
+      "top10": [
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T4",
+          "score": 34.069375,
+          "label": "FA1与FA2底层实现及并行类比"
+        },
+        {
+          "task_id": "ses_0e8898453ffeS7ByDo9zjP8Z8h_T2",
+          "score": 28.306052,
+          "label": "并行训练尾部填充代码解析"
+        },
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+          "score": 25.59724,
+          "label": "SP原理剖析与Mermaid图解迭代"
+        },
+        {
+          "task_id": "ses_0a16b26dcffewGBp0akSLB5IZG_T1",
+          "score": 23.053645,
+          "label": "跨工作区查询历史 Session"
+        },
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T3",
+          "score": 19.634294,
+          "label": "NeMo Megatron Bridge定位与价值辨析"
+        },
+        {
+          "task_id": "ses_0ca8a24d9ffeHoz0wYkhYDDO4w_T2",
+          "score": 16.331242,
+          "label": "技术笔记静态站点整合与本地实施"
+        },
+        {
+          "task_id": "ses_0c4845647ffea08jfnkY5ArLEG_T1",
+          "score": 16.06157,
+          "label": "GPU算力对比与选型分析"
+        },
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+          "score": 16.060104,
+          "label": "NVIDIA SP与Ulysses并行策略对比"
+        },
+        {
+          "task_id": "ses_14a9ad327ffejgP9Qba8jnwIVI_T1",
+          "score": 15.208129,
+          "label": "解析 Data Collator 机制"
+        },
+        {
+          "task_id": "ses_0c4e0312affeUm1WYU03ISPgU2_T1",
+          "score": 14.94912,
+          "label": "RoPE预计算函数实现解析"
+        }
+      ]
+    },
+    "5d_chunk_rrf_fuse": {
+      "input": {
+        "summary_task_n": 38,
+        "sparse_task_n": 41,
+        "fuse_k": 60,
+        "formula": "RRF(d) = 1/(60 + rank_d),  score = sum(1/(k+rank))"
+      },
+      "n_fused": 56,
+      "top10": [
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T4",
+          "rrf_score": 0.032522,
+          "label": "FA1与FA2底层实现及并行类比"
+        },
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+          "rrf_score": 0.032266,
+          "label": "SP原理剖析与Mermaid图解迭代"
+        },
+        {
+          "task_id": "ses_0a16b26dcffewGBp0akSLB5IZG_T1",
+          "rrf_score": 0.030118,
+          "label": "跨工作区查询历史 Session"
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T2",
+          "rrf_score": 0.029469,
+          "label": "Roofline模型算术强度推导"
+        },
+        {
+          "task_id": "ses_0c4e0312affeUm1WYU03ISPgU2_T1",
+          "rrf_score": 0.029211,
+          "label": "RoPE预计算函数实现解析"
+        },
+        {
+          "task_id": "ses_0c4845647ffea08jfnkY5ArLEG_T1",
+          "rrf_score": 0.02901,
+          "label": "GPU算力对比与选型分析"
+        },
+        {
+          "task_id": "ses_04d77c8caffexlaTbA0HPB87oY_T1",
+          "rrf_score": 0.02885,
+          "label": "OMO 多 Agent 模型配置诊断与优化"
+        },
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T3",
+          "rrf_score": 0.028543,
+          "label": "NeMo Megatron Bridge定位与价值辨析"
+        },
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+          "rrf_score": 0.028405,
+          "label": "NVIDIA SP与Ulysses并行策略对比"
+        },
+        {
+          "task_id": "ses_0e8898453ffeS7ByDo9zjP8Z8h_T2",
+          "rrf_score": 0.028324,
+          "label": "并行训练尾部填充代码解析"
+        }
+      ]
+    },
+    "5e_final_rrf_fuse": {
+      "input": {
+        "dense_n": 25,
+        "chunk_fused_n": 56,
+        "fuse_k": 60,
+        "n_candidates_target": 25
+      },
+      "n_candidates": 25,
+      "top10": [
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+          "rrf_score": 0.032522,
+          "label": "SP原理剖析与Mermaid图解迭代"
+        },
+        {
+          "task_id": "ses_0c4e0312affeUm1WYU03ISPgU2_T1",
+          "rrf_score": 0.03101,
+          "label": "RoPE预计算函数实现解析"
+        },
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+          "rrf_score": 0.030622,
+          "label": "NVIDIA SP与Ulysses并行策略对比"
+        },
+        {
+          "task_id": "ses_0e8898453ffeS7ByDo9zjP8Z8h_T2",
+          "rrf_score": 0.030159,
+          "label": "并行训练尾部填充代码解析"
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T3",
+          "rrf_score": 0.028595,
+          "label": "FA状态变量Shape澄清"
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T2",
+          "rrf_score": 0.02739,
+          "label": "Roofline模型算术强度推导"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T5",
+          "rrf_score": 0.026743,
+          "label": "澄清图谱构建流程及模型职责"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T18",
+          "rrf_score": 0.026743,
+          "label": "专利交底书格式迭代优化"
+        },
+        {
+          "task_id": "ses_04d77c8caffexlaTbA0HPB87oY_T2",
+          "rrf_score": 0.025568,
+          "label": "OMO 配置文件优化"
+        },
+        {
+          "task_id": "ses_04edfa1f2ffey5A7mn4t5lm1YW_T1",
+          "rrf_score": 0.025182,
+          "label": "修复 gen 脚本跨平台兼容性"
+        }
+      ]
+    },
+    "5_vector_search_total": {
+      "input": {
+        "query": "序列并行(Sequence Parallel,SP)",
+        "vector_top_k": 5,
+        "candidate_multiplier_internal": 5,
+        "fuse_k": 60
+      },
+      "n_candidates_returned": 25,
+      "elapsed_ms": 24
+    },
+    "6_outer_rrf_merge": {
+      "input": {
+        "vector_candidates_n": 25,
+        "graph_candidates_n": 29,
+        "graph_channel_weight": 0.3,
+        "outer_rrf_k": 30,
+        "formula": "RRF(t) = (1-0.3)/(30 + rank_v) + 0.3/(30 + rank_g),  不在通道视为 rank=+inf"
+      },
+      "n_merged": 43,
+      "merged_full": [
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+          "v_rank": 1,
+          "g_rank": 1,
+          "v_rrf_score": 0.032522,
+          "g_raw_score": 49.6922,
+          "outer_rrf": 0.032258,
+          "label": "SP原理剖析与Mermaid图解迭代"
+        },
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+          "v_rank": 3,
+          "g_rank": 4,
+          "v_rrf_score": 0.030622,
+          "g_raw_score": 14.9418,
+          "outer_rrf": 0.030036,
+          "label": "NVIDIA SP与Ulysses并行策略对比"
+        },
+        {
+          "task_id": "ses_0e8898453ffeS7ByDo9zjP8Z8h_T2",
+          "v_rank": 4,
+          "g_rank": 9,
+          "v_rrf_score": 0.030159,
+          "g_raw_score": 3.6636,
+          "outer_rrf": 0.028281,
+          "label": "并行训练尾部填充代码解析"
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T3",
+          "v_rank": 5,
+          "g_rank": 8,
+          "v_rrf_score": 0.028595,
+          "g_raw_score": 4.3438,
+          "outer_rrf": 0.027895,
+          "label": "FA状态变量Shape澄清"
+        },
+        {
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T2",
+          "v_rank": 11,
+          "g_rank": 10,
+          "v_rrf_score": 0.024725,
+          "g_raw_score": 3.2708,
+          "outer_rrf": 0.024573,
+          "label": "ZeRO显存优化原理与通信推导"
+        },
+        {
+          "task_id": "ses_04d77c8caffexlaTbA0HPB87oY_T2",
+          "v_rank": 9,
+          "g_rank": 18,
+          "v_rrf_score": 0.025568,
+          "g_raw_score": 1.5686,
+          "outer_rrf": 0.024199,
+          "label": "OMO 配置文件优化"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T5",
+          "v_rank": 7,
+          "g_rank": 29,
+          "v_rrf_score": 0.026743,
+          "g_raw_score": 1.5686,
+          "outer_rrf": 0.024004,
+          "label": "澄清图谱构建流程及模型职责"
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T4",
+          "v_rank": 24,
+          "g_rank": 2,
+          "v_rrf_score": 0.016393,
+          "g_raw_score": 41.0046,
+          "outer_rrf": 0.022338,
+          "label": "FA1与FA2底层实现及并行类比"
+        },
+        {
+          "task_id": "ses_0c4e0312affeUm1WYU03ISPgU2_T1",
+          "v_rank": 2,
+          "g_rank": null,
+          "v_rrf_score": 0.03101,
+          "g_raw_score": null,
+          "outer_rrf": 0.021875,
+          "label": "RoPE预计算函数实现解析"
+        },
+        {
+          "task_id": "ses_0a16b26dcffewGBp0akSLB5IZG_T1",
+          "v_rank": 25,
+          "g_rank": 3,
+          "v_rrf_score": 0.015873,
+          "g_raw_score": 24.0345,
+          "outer_rrf": 0.021818,
+          "label": "跨工作区查询历史 Session"
+        },
+        {
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T3",
+          "v_rank": 23,
+          "g_rank": 12,
+          "v_rrf_score": 0.021355,
+          "g_raw_score": 3.2708,
+          "outer_rrf": 0.02035,
+          "label": "AllReduce算法原理与历史溯源"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T11",
+          "v_rank": 19,
+          "g_rank": 21,
+          "v_rrf_score": 0.022873,
+          "g_raw_score": 1.5686,
+          "outer_rrf": 0.020168,
+          "label": "Repo架构定位确认"
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T2",
+          "v_rank": 6,
+          "g_rank": null,
+          "v_rrf_score": 0.02739,
+          "g_raw_score": null,
+          "outer_rrf": 0.019444,
+          "label": "Roofline模型算术强度推导"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T18",
+          "v_rank": 8,
+          "g_rank": null,
+          "v_rrf_score": 0.026743,
+          "g_raw_score": null,
+          "outer_rrf": 0.018421,
+          "label": "专利交底书格式迭代优化"
+        },
+        {
+          "task_id": "ses_04edfa1f2ffey5A7mn4t5lm1YW_T1",
+          "v_rank": 10,
+          "g_rank": null,
+          "v_rrf_score": 0.025182,
+          "g_raw_score": null,
+          "outer_rrf": 0.0175,
+          "label": "修复 gen 脚本跨平台兼容性"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T7",
+          "v_rank": 12,
+          "g_rank": null,
+          "v_rrf_score": 0.024394,
+          "g_raw_score": null,
+          "outer_rrf": 0.016667,
+          "label": "规划 P5 稀疏向量改造方案"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T12",
+          "v_rank": 13,
+          "g_rank": null,
+          "v_rrf_score": 0.024157,
+          "g_raw_score": null,
+          "outer_rrf": 0.016279,
+          "label": "GraphRAG业界应用调研"
+        },
+        {
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T6",
+          "v_rank": 14,
+          "g_rank": null,
+          "v_rrf_score": 0.02399,
+          "g_raw_score": null,
+          "outer_rrf": 0.015909,
+          "label": "实现内容指纹与增量处理机制"
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T1",
+          "v_rank": 15,
+          "g_rank": null,
+          "v_rrf_score": 0.023796,
+          "g_raw_score": null,
+          "outer_rrf": 0.015556,
+          "label": "FSDP与SDPA概念澄清"
+        },
+        {
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T7",
+          "v_rank": 16,
+          "g_rank": null,
+          "v_rrf_score": 0.023546,
+          "g_raw_score": null,
+          "outer_rrf": 0.015217,
+          "label": "解释系统运行原理与完善文档"
+        },
+        {
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T3",
+          "v_rank": 17,
+          "g_rank": null,
+          "v_rrf_score": 0.023421,
+          "g_raw_score": null,
+          "outer_rrf": 0.014894,
+          "label": "环境配置梳理与脚本修复"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T4",
+          "v_rank": 18,
+          "g_rank": null,
+          "v_rrf_score": 0.023037,
+          "g_raw_score": null,
+          "outer_rrf": 0.014583,
+          "label": "P5实体对齐机制与配置解析"
+        },
+        {
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T5",
+          "v_rank": 20,
+          "g_rank": null,
+          "v_rrf_score": 0.022704,
+          "g_raw_score": null,
+          "outer_rrf": 0.014,
+          "label": "P2增量运行功能开发"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T6",
+          "v_rank": 21,
+          "g_rank": null,
+          "v_rrf_score": 0.022436,
+          "g_raw_score": null,
+          "outer_rrf": 0.013725,
+          "label": "评估 Dense Embedding 替换方案"
+        },
+        {
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T1",
+          "v_rank": 22,
+          "g_rank": null,
+          "v_rrf_score": 0.022183,
+          "g_raw_score": null,
+          "outer_rrf": 0.013462,
+          "label": "P1文档配置对齐与提交"
+        },
+        {
+          "task_id": "ses_0a53b6807ffex4xr4a0wNdi5EQ_T1",
+          "v_rank": null,
+          "g_rank": 5,
+          "v_rrf_score": null,
+          "g_raw_score": 4.5643,
+          "outer_rrf": 0.008571,
+          "label": "梳理 opencode 会话分布及属性"
+        },
+        {
+          "task_id": "ses_0a53b6807ffex4xr4a0wNdi5EQ_T2",
+          "v_rank": null,
+          "g_rank": 6,
+          "v_rrf_score": null,
+          "g_raw_score": 4.5643,
+          "outer_rrf": 0.008333,
+          "label": "确认 MiniMax Code 底层架构"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T20",
+          "v_rank": null,
+          "g_rank": 7,
+          "v_rrf_score": null,
+          "g_raw_score": 4.5643,
+          "outer_rrf": 0.008108,
+          "label": "Session 历史追溯与总结"
+        },
+        {
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T1",
+          "v_rank": null,
+          "g_rank": 11,
+          "v_rrf_score": null,
+          "g_raw_score": 3.2708,
+          "outer_rrf": 0.007317,
+          "label": "DDP训练流程与参数同步机制"
+        },
+        {
+          "task_id": "ses_04e86c806ffepxGVpAy3W5zsD9_T1",
+          "v_rank": null,
+          "g_rank": 13,
+          "v_rrf_score": null,
+          "g_raw_score": 1.5686,
+          "outer_rrf": 0.006977,
+          "label": "梳理 opencode 工具分类"
+        },
+        {
+          "task_id": "ses_04b86396effeR5frMxXdiRtezt_T1",
+          "v_rank": null,
+          "g_rank": 14,
+          "v_rrf_score": null,
+          "g_raw_score": 1.5686,
+          "outer_rrf": 0.006818,
+          "label": "排查 opencode 中 Copilot 模型不可见问题"
+        },
+        {
+          "task_id": "ses_04edfa1f2ffey5A7mn4t5lm1YW_T2",
+          "v_rank": null,
+          "g_rank": 15,
+          "v_rrf_score": null,
+          "g_raw_score": 1.5686,
+          "outer_rrf": 0.006667,
+          "label": "配置 gitignore 并提交代码"
+        },
+        {
+          "task_id": "ses_072ebc268ffe227bGpbCtWbM97_T1",
+          "v_rank": null,
+          "g_rank": 16,
+          "v_rrf_score": null,
+          "g_raw_score": 1.5686,
+          "outer_rrf": 0.006522,
+          "label": "对话数据高可读性转换与渲染"
+        },
+        {
+          "task_id": "ses_0ca8a24d9ffeHoz0wYkhYDDO4w_T1",
+          "v_rank": null,
+          "g_rank": 17,
+          "v_rrf_score": null,
+          "g_raw_score": 1.5686,
+          "outer_rrf": 0.006383,
+          "label": "工具能力确认与 Pages 方案咨询"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T3",
+          "v_rank": null,
+          "g_rank": 19,
+          "v_rrf_score": null,
+          "g_raw_score": 1.5686,
+          "outer_rrf": 0.006122,
+          "label": "opencode skill加载排查与修复"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T9",
+          "v_rank": null,
+          "g_rank": 20,
+          "v_rrf_score": null,
+          "g_raw_score": 1.5686,
+          "outer_rrf": 0.006,
+          "label": "MCP模块功能与架构分析"
+        },
+        {
+          "task_id": "ses_0a16b26dcffewGBp0akSLB5IZG_T2",
+          "v_rank": null,
+          "g_rank": 22,
+          "v_rrf_score": null,
+          "g_raw_score": 1.5686,
+          "outer_rrf": 0.005769,
+          "label": "调研免费模型及当前状态"
+        },
+        {
+          "task_id": "ses_0ec02cc6dffeH1O7QFPSrptpla_T1",
+          "v_rank": null,
+          "g_rank": 23,
+          "v_rrf_score": null,
+          "g_raw_score": 1.5686,
+          "outer_rrf": 0.00566,
+          "label": "澄清 OpenCode /fork 命令"
+        },
+        {
+          "task_id": "ses_10772d114fferNiLEcTQ8YNd5k_T1",
+          "v_rank": null,
+          "g_rank": 24,
+          "v_rrf_score": null,
+          "g_raw_score": 1.5686,
+          "outer_rrf": 0.005556,
+          "label": "安装 tmux 与 omo 插件"
+        },
+        {
+          "task_id": "ses_10772d114fferNiLEcTQ8YNd5k_T2",
+          "v_rank": null,
+          "g_rank": 25,
+          "v_rrf_score": null,
+          "g_raw_score": 1.5686,
+          "outer_rrf": 0.005455,
+          "label": "分析 omo 模型配置及影响"
+        },
+        {
+          "task_id": "ses_10772d114fferNiLEcTQ8YNd5k_T3",
+          "v_rank": null,
+          "g_rank": 26,
+          "v_rrf_score": null,
+          "g_raw_score": 1.5686,
+          "outer_rrf": 0.005357,
+          "label": "排查 codegraph MCP 注册机制"
+        },
+        {
+          "task_id": "ses_04d77c8caffexlaTbA0HPB87oY_T1",
+          "v_rank": null,
+          "g_rank": 27,
+          "v_rrf_score": null,
+          "g_raw_score": 1.5686,
+          "outer_rrf": 0.005263,
+          "label": "OMO 多 Agent 模型配置诊断与优化"
+        },
+        {
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T4",
+          "v_rank": null,
+          "g_rank": 28,
+          "v_rrf_score": null,
+          "g_raw_score": 1.5686,
+          "outer_rrf": 0.005172,
+          "label": "P2模型配置与超时排查"
+        }
+      ],
+      "elapsed_ms": 0
+    },
+    "7_rerank_full": {
+      "input": {
+        "query": "序列并行(Sequence Parallel,SP)",
+        "n_candidates_in": 43,
+        "top_k": 5,
+        "reranker_model": "Qwen/Qwen3-Reranker-0.6B"
+      },
+      "output": {
+        "rerank_input_n": 43,
+        "rerank_input_task_ids": [
+          "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+          "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+          "ses_0e8898453ffeS7ByDo9zjP8Z8h_T2",
+          "ses_0c5b6171bfferME7He2F8G6UuJ_T3",
+          "ses_053c0ac72ffe883RpIvqU1LUEw_T2",
+          "ses_04d77c8caffexlaTbA0HPB87oY_T2",
+          "ses_0870d73a7ffehev1FO7HA2HSze_T5",
+          "ses_0c5b6171bfferME7He2F8G6UuJ_T4",
+          "ses_0c4e0312affeUm1WYU03ISPgU2_T1",
+          "ses_0a16b26dcffewGBp0akSLB5IZG_T1",
+          "ses_053c0ac72ffe883RpIvqU1LUEw_T3",
+          "ses_0870d73a7ffehev1FO7HA2HSze_T11",
+          "ses_0c5b6171bfferME7He2F8G6UuJ_T2",
+          "ses_0870d73a7ffehev1FO7HA2HSze_T18",
+          "ses_04edfa1f2ffey5A7mn4t5lm1YW_T1",
+          "ses_0870d73a7ffehev1FO7HA2HSze_T7",
+          "ses_0870d73a7ffehev1FO7HA2HSze_T12",
+          "ses_04b987deaffeKfDUR5b1Y99vcx_T6",
+          "ses_0c5b6171bfferME7He2F8G6UuJ_T1",
+          "ses_04b987deaffeKfDUR5b1Y99vcx_T7",
+          "ses_04b987deaffeKfDUR5b1Y99vcx_T3",
+          "ses_0870d73a7ffehev1FO7HA2HSze_T4",
+          "ses_04b987deaffeKfDUR5b1Y99vcx_T5",
+          "ses_0870d73a7ffehev1FO7HA2HSze_T6",
+          "ses_04b987deaffeKfDUR5b1Y99vcx_T1",
+          "ses_0a53b6807ffex4xr4a0wNdi5EQ_T1",
+          "ses_0a53b6807ffex4xr4a0wNdi5EQ_T2",
+          "ses_0870d73a7ffehev1FO7HA2HSze_T20",
+          "ses_053c0ac72ffe883RpIvqU1LUEw_T1",
+          "ses_04e86c806ffepxGVpAy3W5zsD9_T1",
+          "ses_04b86396effeR5frMxXdiRtezt_T1",
+          "ses_04edfa1f2ffey5A7mn4t5lm1YW_T2",
+          "ses_072ebc268ffe227bGpbCtWbM97_T1",
+          "ses_0ca8a24d9ffeHoz0wYkhYDDO4w_T1",
+          "ses_0870d73a7ffehev1FO7HA2HSze_T3",
+          "ses_0870d73a7ffehev1FO7HA2HSze_T9",
+          "ses_0a16b26dcffewGBp0akSLB5IZG_T2",
+          "ses_0ec02cc6dffeH1O7QFPSrptpla_T1",
+          "ses_10772d114fferNiLEcTQ8YNd5k_T1",
+          "ses_10772d114fferNiLEcTQ8YNd5k_T2",
+          "ses_10772d114fferNiLEcTQ8YNd5k_T3",
+          "ses_04d77c8caffexlaTbA0HPB87oY_T1",
+          "ses_04b987deaffeKfDUR5b1Y99vcx_T4"
+        ],
+        "rerank_input_labels": [
+          "SP原理剖析与Mermaid图解迭代",
+          "NVIDIA SP与Ulysses并行策略对比",
+          "并行训练尾部填充代码解析",
+          "FA状态变量Shape澄清",
+          "ZeRO显存优化原理与通信推导",
+          "OMO 配置文件优化",
+          "澄清图谱构建流程及模型职责",
+          "FA1与FA2底层实现及并行类比",
+          "RoPE预计算函数实现解析",
+          "跨工作区查询历史 Session",
+          "AllReduce算法原理与历史溯源",
+          "Repo架构定位确认",
+          "Roofline模型算术强度推导",
+          "专利交底书格式迭代优化",
+          "修复 gen 脚本跨平台兼容性",
+          "规划 P5 稀疏向量改造方案",
+          "GraphRAG业界应用调研",
+          "实现内容指纹与增量处理机制",
+          "FSDP与SDPA概念澄清",
+          "解释系统运行原理与完善文档",
+          "环境配置梳理与脚本修复",
+          "P5实体对齐机制与配置解析",
+          "P2增量运行功能开发",
+          "评估 Dense Embedding 替换方案",
+          "P1文档配置对齐与提交",
+          "梳理 opencode 会话分布及属性",
+          "确认 MiniMax Code 底层架构",
+          "Session 历史追溯与总结",
+          "DDP训练流程与参数同步机制",
+          "梳理 opencode 工具分类",
+          "排查 opencode 中 Copilot 模型不可见问题",
+          "配置 gitignore 并提交代码",
+          "对话数据高可读性转换与渲染",
+          "工具能力确认与 Pages 方案咨询",
+          "opencode skill加载排查与修复",
+          "MCP模块功能与架构分析",
+          "调研免费模型及当前状态",
+          "澄清 OpenCode /fork 命令",
+          "安装 tmux 与 omo 插件",
+          "分析 omo 模型配置及影响",
+          "排查 codegraph MCP 注册机制",
+          "OMO 多 Agent 模型配置诊断与优化",
+          "P2模型配置与超时排查"
+        ],
+        "rerank_scores": [
+          {
+            "orig_index": 0,
+            "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+            "label": "SP原理剖析与Mermaid图解迭代",
+            "rerank_score": 0.997368
+          },
+          {
+            "orig_index": 34,
+            "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T3",
+            "label": "opencode skill加载排查与修复",
+            "rerank_score": 0.948537
+          },
+          {
+            "orig_index": 14,
+            "task_id": "ses_04edfa1f2ffey5A7mn4t5lm1YW_T1",
+            "label": "修复 gen 脚本跨平台兼容性",
+            "rerank_score": 0.894237
+          },
+          {
+            "orig_index": 1,
+            "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+            "label": "NVIDIA SP与Ulysses并行策略对比",
+            "rerank_score": 0.820469
+          },
+          {
+            "orig_index": 38,
+            "task_id": "ses_10772d114fferNiLEcTQ8YNd5k_T1",
+            "label": "安装 tmux 与 omo 插件",
+            "rerank_score": 0.622459
+          },
+          {
+            "orig_index": 2,
+            "task_id": "ses_0e8898453ffeS7ByDo9zjP8Z8h_T2",
+            "label": "并行训练尾部填充代码解析",
+            "rerank_score": 0.558327
+          },
+          {
+            "orig_index": 29,
+            "task_id": "ses_04e86c806ffepxGVpAy3W5zsD9_T1",
+            "label": "梳理 opencode 工具分类",
+            "rerank_score": 0.355551
+          },
+          {
+            "orig_index": 10,
+            "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T3",
+            "label": "AllReduce算法原理与历史溯源",
+            "rerank_score": 0.338077
+          },
+          {
+            "orig_index": 9,
+            "task_id": "ses_0a16b26dcffewGBp0akSLB5IZG_T1",
+            "label": "跨工作区查询历史 Session",
+            "rerank_score": 0.197135
+          },
+          {
+            "orig_index": 24,
+            "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T1",
+            "label": "P1文档配置对齐与提交",
+            "rerank_score": 0.175538
+          },
+          {
+            "orig_index": 8,
+            "task_id": "ses_0c4e0312affeUm1WYU03ISPgU2_T1",
+            "label": "RoPE预计算函数实现解析",
+            "rerank_score": 0.161849
+          },
+          {
+            "orig_index": 39,
+            "task_id": "ses_10772d114fferNiLEcTQ8YNd5k_T2",
+            "label": "分析 omo 模型配置及影响",
+            "rerank_score": 0.087564
+          },
+          {
+            "orig_index": 6,
+            "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T5",
+            "label": "澄清图谱构建流程及模型职责",
+            "rerank_score": 0.080647
+          },
+          {
+            "orig_index": 32,
+            "task_id": "ses_072ebc268ffe227bGpbCtWbM97_T1",
+            "label": "对话数据高可读性转换与渲染",
+            "rerank_score": 0.073763
+          },
+          {
+            "orig_index": 19,
+            "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T7",
+            "label": "解释系统运行原理与完善文档",
+            "rerank_score": 0.073165
+          },
+          {
+            "orig_index": 26,
+            "task_id": "ses_0a53b6807ffex4xr4a0wNdi5EQ_T2",
+            "label": "确认 MiniMax Code 底层架构",
+            "rerank_score": 0.038756
+          },
+          {
+            "orig_index": 36,
+            "task_id": "ses_0a16b26dcffewGBp0akSLB5IZG_T2",
+            "label": "调研免费模型及当前状态",
+            "rerank_score": 0.026355
+          },
+          {
+            "orig_index": 22,
+            "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T5",
+            "label": "P2增量运行功能开发",
+            "rerank_score": 0.022629
+          },
+          {
+            "orig_index": 25,
+            "task_id": "ses_0a53b6807ffex4xr4a0wNdi5EQ_T1",
+            "label": "梳理 opencode 会话分布及属性",
+            "rerank_score": 0.017045
+          },
+          {
+            "orig_index": 12,
+            "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T2",
+            "label": "Roofline模型算术强度推导",
+            "rerank_score": 0.015785
+          },
+          {
+            "orig_index": 4,
+            "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T2",
+            "label": "ZeRO显存优化原理与通信推导",
+            "rerank_score": 0.013428
+          },
+          {
+            "orig_index": 30,
+            "task_id": "ses_04b86396effeR5frMxXdiRtezt_T1",
+            "label": "排查 opencode 中 Copilot 模型不可见问题",
+            "rerank_score": 0.00598
+          },
+          {
+            "orig_index": 17,
+            "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T6",
+            "label": "实现内容指纹与增量处理机制",
+            "rerank_score": 0.00514
+          },
+          {
+            "orig_index": 20,
+            "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T3",
+            "label": "环境配置梳理与脚本修复",
+            "rerank_score": 0.004646
+          },
+          {
+            "orig_index": 3,
+            "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T3",
+            "label": "FA状态变量Shape澄清",
+            "rerank_score": 0.003483
+          },
+          {
+            "orig_index": 7,
+            "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T4",
+            "label": "FA1与FA2底层实现及并行类比",
+            "rerank_score": 0.003483
+          },
+          {
+            "orig_index": 18,
+            "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T1",
+            "label": "FSDP与SDPA概念澄清",
+            "rerank_score": 0.003483
+          },
+          {
+            "orig_index": 31,
+            "task_id": "ses_04edfa1f2ffey5A7mn4t5lm1YW_T2",
+            "label": "配置 gitignore 并提交代码",
+            "rerank_score": 0.003483
+          },
+          {
+            "orig_index": 33,
+            "task_id": "ses_0ca8a24d9ffeHoz0wYkhYDDO4w_T1",
+            "label": "工具能力确认与 Pages 方案咨询",
+            "rerank_score": 0.003483
+          },
+          {
+            "orig_index": 40,
+            "task_id": "ses_10772d114fferNiLEcTQ8YNd5k_T3",
+            "label": "排查 codegraph MCP 注册机制",
+            "rerank_score": 0.003483
+          },
+          {
+            "orig_index": 42,
+            "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T4",
+            "label": "P2模型配置与超时排查",
+            "rerank_score": 0.003483
+          },
+          {
+            "orig_index": 15,
+            "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T7",
+            "label": "规划 P5 稀疏向量改造方案",
+            "rerank_score": 0.001701
+          },
+          {
+            "orig_index": 28,
+            "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T1",
+            "label": "DDP训练流程与参数同步机制",
+            "rerank_score": 0.000667
+          },
+          {
+            "orig_index": 23,
+            "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T6",
+            "label": "评估 Dense Embedding 替换方案",
+            "rerank_score": 7e-05
+          },
+          {
+            "orig_index": 5,
+            "task_id": "ses_04d77c8caffexlaTbA0HPB87oY_T2",
+            "label": "OMO 配置文件优化",
+            "rerank_score": 3.6e-05
+          },
+          {
+            "orig_index": 16,
+            "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T12",
+            "label": "GraphRAG业界应用调研",
+            "rerank_score": 3.6e-05
+          },
+          {
+            "orig_index": 27,
+            "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T20",
+            "label": "Session 历史追溯与总结",
+            "rerank_score": 1.8e-05
+          },
+          {
+            "orig_index": 11,
+            "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T11",
+            "label": "Repo架构定位确认",
+            "rerank_score": 1.6e-05
+          },
+          {
+            "orig_index": 35,
+            "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T9",
+            "label": "MCP模块功能与架构分析",
+            "rerank_score": 1.3e-05
+          },
+          {
+            "orig_index": 41,
+            "task_id": "ses_04d77c8caffexlaTbA0HPB87oY_T1",
+            "label": "OMO 多 Agent 模型配置诊断与优化",
+            "rerank_score": 1.3e-05
+          },
+          {
+            "orig_index": 37,
+            "task_id": "ses_0ec02cc6dffeH1O7QFPSrptpla_T1",
+            "label": "澄清 OpenCode /fork 命令",
+            "rerank_score": 9e-06
+          },
+          {
+            "orig_index": 21,
+            "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T4",
+            "label": "P5实体对齐机制与配置解析",
+            "rerank_score": 8e-06
+          },
+          {
+            "orig_index": 13,
+            "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T18",
+            "label": "专利交底书格式迭代优化",
+            "rerank_score": 5e-06
+          }
+        ],
+        "top5_task_ids": [
+          "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+          "ses_0870d73a7ffehev1FO7HA2HSze_T3",
+          "ses_04edfa1f2ffey5A7mn4t5lm1YW_T1",
+          "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+          "ses_10772d114fferNiLEcTQ8YNd5k_T1"
+        ]
+      },
+      "elapsed_ms": 16588
+    },
+    "8_source_distribution": {
+      "top5_task_ids": [
+        "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+        "ses_0870d73a7ffehev1FO7HA2HSze_T3",
+        "ses_04edfa1f2ffey5A7mn4t5lm1YW_T1",
+        "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+        "ses_10772d114fferNiLEcTQ8YNd5k_T1"
+      ],
+      "source_distribution": {
+        "vector": 1,
+        "graph": 2,
+        "both": 2,
+        "neither": 0
+      }
+    }
+  },
+  "final_top_k": [
+    {
+      "rank": 1,
+      "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+      "label": "SP原理剖析与Mermaid图解迭代",
+      "task_summary": "背景与目标：为深入理解 Megatron-LM 序列并行 (SP) 机制，系统梳理了 TP=2 场景下 SP 的张量切分、通信原语及激活内存优化原理，并迭代输出高兼容性的 Mermaid 架构图解。\n核心产出与关键决策：明确了 SP 区域外（LayerNorm等）按 seq 切分可省 TP 倍激活内存，区域内按 head 切分；纠正了 all-gather 与 RMSNorm 的执行顺序（RMSNorm 在前更省内存），并确认 Embedding 层采用 col-parallel 切分。针对 Mermaid 渲染问题，决策采用 ASCII 标签、扁平化 subgraph 及拆分图层等策略，产出 v3 版稳定渲染文档。\n结论与意义：产出了包含 1-layer 和 2-layer 完整流程的 SP 原理图文档，厘清了 SP 通信量与纯 TP 相同但大幅节省激活内存的核心优势，为长序列大模型训练的并行策略选型提供了直观的理论与视觉参考。",
+      "rerank_score": 0.997368,
+      "outer_rrf_score": 0.032258,
+      "v_rank": 1,
+      "g_rank": 1,
+      "g_raw_score": 49.6922
+    },
+    {
+      "rank": 2,
+      "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T3",
+      "label": "opencode skill加载排查与修复",
+      "task_summary": "背景与目标：为解决项目自定义 opencode skill (`phase2-model-benchmark`) 无法被平台自动加载的问题，排查加载路径并设计修复方案。核心产出与关键决策：确认 skill 目录结构合规，但因未放置在默认扫描路径 `.opencode/skills/` 下导致失效。决定采用软链接方案（`ln -s ../skills .opencode/skills`）进行修复，在验证 opencode 成功识别后，规划将该 symlink 以 Git 120000 模式入库，以保证跨机器环境的一致性。结论与意义：以最小侵入性解决了项目级 skill 的加载问题，同时兼顾了 Git 版本控制与团队协作的便利性。",
+      "rerank_score": 0.948537,
+      "outer_rrf_score": 0.006122,
+      "v_rank": null,
+      "g_rank": 19,
+      "g_raw_score": 1.5686
+    },
+    {
+      "rank": 3,
+      "task_id": "ses_04edfa1f2ffey5A7mn4t5lm1YW_T1",
+      "label": "修复 gen 脚本跨平台兼容性",
+      "task_summary": "为解决 `gen_running_sessions.sh` 因硬编码路径和 Linux 专用 API 导致在 macOS 下失效的问题，对脚本进行了跨平台重构。核心改动包括：使用 `${HOME}` 替代硬编码路径，通过 `os.environ` 向 Python heredoc 传递变量，并实现兼容 Linux (`/proc`) 和 macOS/BSD (`lsof`) 的 `get_cwd()` 函数。最终脚本在双平台语法及实测均通过，彻底消除平台依赖，具备稳定的跨平台运行能力。",
+      "rerank_score": 0.894237,
+      "outer_rrf_score": 0.0175,
+      "v_rank": 10,
+      "g_rank": null,
+      "g_raw_score": null
+    },
+    {
+      "rank": 4,
+      "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+      "label": "NVIDIA SP与Ulysses并行策略对比",
+      "task_summary": "背景与目标：针对 8 GPU (TP=2, SP=4) 场景，澄清 Tensor Parallelism 与 Sequence Parallelism 的正交关系，并深度对比 NVIDIA SP 与 Ulysses 两种序列并行实现方案的通信机制与适用边界。\n核心产出与关键决策：确认 TP（切 head）与 SP（切 seq）完全正交。在 SP 实现上，NVIDIA SP 使用 all-gather/reduce-scatter，Ulysses 使用 all-to-all 进行 seq 与 head 的互换。决策明确两者在单一 attention 块内互斥，但在整个模型中可混合使用（如 attention 内用 Ulysses，非 attention 区域用 NVIDIA SP）。\n结论与意义：指出生产环境中主流倾向于纯 Ulysses 或 ring attention，NVIDIA SP 逐渐减少。该分析为多卡长序列训练时的通信原语选型和 hybrid 并行架构设计提供了清晰的理论指导。",
+      "rerank_score": 0.820469,
+      "outer_rrf_score": 0.030036,
+      "v_rank": 3,
+      "g_rank": 4,
+      "g_raw_score": 14.9418
+    },
+    {
+      "rank": 5,
+      "task_id": "ses_10772d114fferNiLEcTQ8YNd5k_T1",
+      "label": "安装 tmux 与 omo 插件",
+      "task_summary": "通过 Homebrew 安装终端复用器 tmux (v3.6b)，并使用 bunx 非交互模式安装 oh-my-openagent (omo) 插件，配置 OpenCode 平台，禁用付费模型，将默认 fallback 模型设为免费的 opencode/gpt-5-nano。",
+      "rerank_score": 0.622459,
+      "outer_rrf_score": 0.005556,
+      "v_rank": null,
+      "g_rank": 24,
+      "g_raw_score": 1.5686
+    }
+  ],
+  "source_distribution": {
+    "vector": 1,
+    "graph": 2,
+    "both": 2,
+    "neither": 0
+  },
+  "wall_ms": 34193,
+  "db": "entity"
+}

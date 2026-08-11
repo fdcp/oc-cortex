@@ -1,0 +1,1251 @@
+{
+  "query": "flashattention的原理和历史",
+  "use_graph_rag": true,
+  "top_k": 5,
+  "rerank_multiplier": 1.0,
+  "graph_channel_weight": 0.3,
+  "outer_rrf_k": 30,
+  "bfs_depth": 1,
+  "max_expand_nodes": 30,
+  "max_graph_tasks": 50,
+  "stages": {
+    "1_llm_entity_extraction": {
+      "input": {
+        "query": "flashattention的原理和历史",
+        "model": "hy3",
+        "max_tokens": 2000,
+        "temperature": 0.1
+      },
+      "output": [
+        "flashattention"
+      ],
+      "n_extracted": 1,
+      "elapsed_ms": 13973
+    },
+    "2_seed_entity_match": {
+      "input": {
+        "extracted_entities": [
+          "flashattention"
+        ]
+      },
+      "output_seed_entities": [
+        "FlashAttention-2 工作划分",
+        "FlashAttention",
+        "FlashAttention-2"
+      ],
+      "match_details": [
+        {
+          "extracted": "flashattention",
+          "matched": "FlashAttention",
+          "match_type": "fuzzy",
+          "task_count": 3
+        },
+        {
+          "extracted": "flashattention",
+          "matched": "FlashAttention-2 工作划分",
+          "match_type": "fuzzy",
+          "task_count": 1
+        },
+        {
+          "extracted": "flashattention",
+          "matched": "FlashAttention-2",
+          "match_type": "fuzzy",
+          "task_count": 1
+        }
+      ],
+      "exact_count": 0,
+      "fuzzy_count": 3,
+      "elapsed_ms": 3
+    },
+    "3_bfs_expand": {
+      "input": {
+        "seed_entities": [
+          "FlashAttention-2 工作划分",
+          "FlashAttention",
+          "FlashAttention-2"
+        ],
+        "depth": 1,
+        "max_nodes": 30
+      },
+      "output_expanded": [
+        "BF16 混合精度训练",
+        "BF16混合精度训练指南",
+        "CUDA",
+        "Compute-Bound",
+        "FlashAttention",
+        "FlashAttention-1",
+        "FlashAttention-2",
+        "FlashAttention-2 工作划分",
+        "GPU",
+        "GPU算力",
+        "HBM访问",
+        "K block",
+        "N² HBM访问",
+        "Online Softmax",
+        "Ring Attention",
+        "Roofline模型",
+        "Tiling",
+        "atomicAdd",
+        "head_dim=256",
+        "online softmax",
+        "syncwarp",
+        "warp 粒度序列并行",
+        "√(Nd)/4",
+        "反向传播",
+        "同步阻塞",
+        "序列并行",
+        "数值稳定性",
+        "标准Attention",
+        "训练加速三件套"
+      ],
+      "n_expanded": 29,
+      "edges_traversed_count": "见 Stage 4 详细 (从 expanded 拉所有节点的 source_tasks)",
+      "elapsed_ms": 2
+    },
+    "4_inverse_idf_accumulate": {
+      "input": {
+        "expanded_entities_count": 29,
+        "total_tasks_global_N": 76,
+        "max_graph_tasks": 50,
+        "formula": "task_score = sum over its entities: log(1 + N/task_count)"
+      },
+      "output": {
+        "n_unique_graph_tasks": 5,
+        "n_graph_candidates_after_truncate": 5,
+        "per_entity_contrib_all": [
+          {
+            "entity": "√(Nd)/4",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "N² HBM访问",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "HBM访问",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "BF16 混合精度训练",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "atomicAdd",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "标准Attention",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "训练加速三件套",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "Compute-Bound",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "FlashAttention-2",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "Roofline模型",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "K block",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "FlashAttention-1",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "head_dim=256",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "syncwarp",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "数值稳定性",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "CUDA",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "GPU",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "Tiling",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "GPU算力",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "同步阻塞",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "FlashAttention-2 工作划分",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "Ring Attention",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "序列并行",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "online softmax",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "warp 粒度序列并行",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "BF16混合精度训练指南",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "Online Softmax",
+            "task_count": 2,
+            "formula": "log(1 + 76/2) = 3.663562",
+            "idf_contrib": 3.6636,
+            "n_source_tasks": 2
+          },
+          {
+            "entity": "反向传播",
+            "task_count": 2,
+            "formula": "log(1 + 76/2) = 3.663562",
+            "idf_contrib": 3.6636,
+            "n_source_tasks": 2
+          },
+          {
+            "entity": "FlashAttention",
+            "task_count": 3,
+            "formula": "log(1 + 76/3) = 3.270836",
+            "idf_contrib": 3.2708,
+            "n_source_tasks": 3
+          }
+        ],
+        "per_task_score_all": [
+          {
+            "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T4",
+            "score": 51.4454,
+            "n_entities": 12,
+            "entities": [
+              "atomicAdd",
+              "FlashAttention-2",
+              "K block",
+              "反向传播",
+              "FlashAttention-1",
+              "head_dim=256",
+              "syncwarp",
+              "CUDA",
+              "同步阻塞",
+              "FlashAttention-2 工作划分",
+              "Ring Attention",
+              "warp 粒度序列并行"
+            ]
+          },
+          {
+            "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T2",
+            "score": 46.0286,
+            "n_entities": 11,
+            "entities": [
+              "√(Nd)/4",
+              "N² HBM访问",
+              "Online Softmax",
+              "HBM访问",
+              "标准Attention",
+              "Compute-Bound",
+              "Roofline模型",
+              "GPU",
+              "Tiling",
+              "GPU算力",
+              "FlashAttention"
+            ]
+          },
+          {
+            "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T3",
+            "score": 19.2856,
+            "n_entities": 5,
+            "entities": [
+              "Online Softmax",
+              "反向传播",
+              "数值稳定性",
+              "FlashAttention",
+              "online softmax"
+            ]
+          },
+          {
+            "task_id": "ses_0c9e4a359ffeGDSrVSG2jNVB6n_T1",
+            "score": 16.3023,
+            "n_entities": 4,
+            "entities": [
+              "BF16 混合精度训练",
+              "训练加速三件套",
+              "FlashAttention",
+              "BF16混合精度训练指南"
+            ]
+          },
+          {
+            "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+            "score": 4.3438,
+            "n_entities": 1,
+            "entities": [
+              "序列并行"
+            ]
+          }
+        ]
+      },
+      "elapsed_ms": 2
+    },
+    "5a_dense_tasks": {
+      "input": {
+        "query": "flashattention的原理和历史",
+        "collection": "tasks",
+        "top_k": 25
+      },
+      "n_results": 25,
+      "top10": [
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T2",
+          "score": 0.670087,
+          "label": "Roofline模型算术强度推导"
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T4",
+          "score": 0.646087,
+          "label": "FA1与FA2底层实现及并行类比"
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T3",
+          "score": 0.621872,
+          "label": "FA状态变量Shape澄清"
+        },
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+          "score": 0.57624,
+          "label": "SP原理剖析与Mermaid图解迭代"
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T1",
+          "score": 0.573254,
+          "label": "FSDP与SDPA概念澄清"
+        },
+        {
+          "task_id": "ses_0e8898453ffeS7ByDo9zjP8Z8h_T2",
+          "score": 0.560798,
+          "label": "并行训练尾部填充代码解析"
+        },
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T3",
+          "score": 0.538753,
+          "label": "NeMo Megatron Bridge定位与价值辨析"
+        },
+        {
+          "task_id": "ses_072ebc268ffe227bGpbCtWbM97_T1",
+          "score": 0.533478,
+          "label": "对话数据高可读性转换与渲染"
+        },
+        {
+          "task_id": "ses_0ca8a24d9ffeHoz0wYkhYDDO4w_T2",
+          "score": 0.530849,
+          "label": "技术笔记静态站点整合与本地实施"
+        },
+        {
+          "task_id": "ses_0c4e0312affeUm1WYU03ISPgU2_T1",
+          "score": 0.529475,
+          "label": "RoPE预计算函数实现解析"
+        }
+      ]
+    },
+    "5b_chunks_summary_aggregate": {
+      "input": {
+        "query": "flashattention的原理和历史",
+        "method": "sparse",
+        "top_k_chunks": 75
+      },
+      "n_chunk_hits": 75,
+      "n_task_after_agg": 42,
+      "top10": [
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T15",
+          "score": 6.12745,
+          "label": "恢复误删文件与清理Git历史"
+        },
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+          "score": 6.027021,
+          "label": "SP原理剖析与Mermaid图解迭代"
+        },
+        {
+          "task_id": "ses_0c4845647ffea08jfnkY5ArLEG_T2",
+          "score": 5.75975,
+          "label": "A800拓扑诊断与NCCL调优"
+        },
+        {
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T2",
+          "score": 5.231549,
+          "label": "ZeRO显存优化原理与通信推导"
+        },
+        {
+          "task_id": "ses_0c99b81bcffeAwdzQ0s8zld82L_T2",
+          "score": 5.123829,
+          "label": "编写优化器进阶指南v2"
+        },
+        {
+          "task_id": "ses_0ec02cc6dffeH1O7QFPSrptpla_T1",
+          "score": 5.032759,
+          "label": "澄清 OpenCode /fork 命令"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T11",
+          "score": 4.721769,
+          "label": "Repo架构定位确认"
+        },
+        {
+          "task_id": "ses_0e8898453ffeS7ByDo9zjP8Z8h_T2",
+          "score": 4.706267,
+          "label": "并行训练尾部填充代码解析"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T9",
+          "score": 4.426857,
+          "label": "MCP模块功能与架构分析"
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T4",
+          "score": 3.69367,
+          "label": "FA1与FA2底层实现及并行类比"
+        }
+      ]
+    },
+    "5c_chunks_cleaned_text_aggregate": {
+      "input": {
+        "query": "flashattention的原理和历史",
+        "method": "bm25",
+        "top_k_chunks": 75
+      },
+      "n_chunk_hits": 75,
+      "n_task_after_agg": 42,
+      "top10": [
+        {
+          "task_id": "ses_0c9e4a359ffeGDSrVSG2jNVB6n_T1",
+          "score": 10.639591,
+          "label": "BF16训练指南v4扩充"
+        },
+        {
+          "task_id": "ses_0ca8a24d9ffeHoz0wYkhYDDO4w_T2",
+          "score": 9.684211,
+          "label": "技术笔记静态站点整合与本地实施"
+        },
+        {
+          "task_id": "ses_0c99b81bcffeAwdzQ0s8zld82L_T2",
+          "score": 8.579602,
+          "label": "编写优化器进阶指南v2"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T15",
+          "score": 7.31932,
+          "label": "恢复误删文件与清理Git历史"
+        },
+        {
+          "task_id": "ses_0c4e0312affeUm1WYU03ISPgU2_T1",
+          "score": 7.206179,
+          "label": "RoPE预计算函数实现解析"
+        },
+        {
+          "task_id": "ses_0ec02cc6dffeH1O7QFPSrptpla_T1",
+          "score": 7.116017,
+          "label": "澄清 OpenCode /fork 命令"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T2",
+          "score": 6.943589,
+          "label": "Repo改动分析与Commit规划"
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T3",
+          "score": 6.902696,
+          "label": "FA状态变量Shape澄清"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T11",
+          "score": 6.654584,
+          "label": "Repo架构定位确认"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T9",
+          "score": 6.564516,
+          "label": "MCP模块功能与架构分析"
+        }
+      ]
+    },
+    "5d_chunk_rrf_fuse": {
+      "input": {
+        "summary_task_n": 42,
+        "sparse_task_n": 42,
+        "fuse_k": 60,
+        "formula": "RRF(d) = 1/(60 + rank_d),  score = sum(1/(k+rank))"
+      },
+      "n_fused": 60,
+      "top10": [
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T15",
+          "rrf_score": 0.032018,
+          "label": "恢复误删文件与清理Git历史"
+        },
+        {
+          "task_id": "ses_0c99b81bcffeAwdzQ0s8zld82L_T2",
+          "rrf_score": 0.031258,
+          "label": "编写优化器进阶指南v2"
+        },
+        {
+          "task_id": "ses_0ec02cc6dffeH1O7QFPSrptpla_T1",
+          "rrf_score": 0.030303,
+          "label": "澄清 OpenCode /fork 命令"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T11",
+          "rrf_score": 0.029418,
+          "label": "Repo架构定位确认"
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T3",
+          "rrf_score": 0.02879,
+          "label": "FA状态变量Shape澄清"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T9",
+          "rrf_score": 0.028778,
+          "label": "MCP模块功能与架构分析"
+        },
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+          "rrf_score": 0.028324,
+          "label": "SP原理剖析与Mermaid图解迭代"
+        },
+        {
+          "task_id": "ses_0c4845647ffea08jfnkY5ArLEG_T2",
+          "rrf_score": 0.026862,
+          "label": "A800拓扑诊断与NCCL调优"
+        },
+        {
+          "task_id": "ses_0e8898453ffeS7ByDo9zjP8Z8h_T2",
+          "rrf_score": 0.026754,
+          "label": "并行训练尾部填充代码解析"
+        },
+        {
+          "task_id": "ses_0ca8a24d9ffeHoz0wYkhYDDO4w_T2",
+          "rrf_score": 0.026655,
+          "label": "技术笔记静态站点整合与本地实施"
+        }
+      ]
+    },
+    "5e_final_rrf_fuse": {
+      "input": {
+        "dense_n": 25,
+        "chunk_fused_n": 60,
+        "fuse_k": 60,
+        "n_candidates_target": 25
+      },
+      "n_candidates": 25,
+      "top10": [
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T3",
+          "rrf_score": 0.031258,
+          "label": "FA状态变量Shape澄清"
+        },
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+          "rrf_score": 0.03055,
+          "label": "SP原理剖析与Mermaid图解迭代"
+        },
+        {
+          "task_id": "ses_0e8898453ffeS7ByDo9zjP8Z8h_T2",
+          "rrf_score": 0.029644,
+          "label": "并行训练尾部填充代码解析"
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T4",
+          "rrf_score": 0.029643,
+          "label": "FA1与FA2底层实现及并行类比"
+        },
+        {
+          "task_id": "ses_0ca8a24d9ffeHoz0wYkhYDDO4w_T2",
+          "rrf_score": 0.028778,
+          "label": "技术笔记静态站点整合与本地实施"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T9",
+          "rrf_score": 0.028309,
+          "label": "MCP模块功能与架构分析"
+        },
+        {
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T2",
+          "rrf_score": 0.027783,
+          "label": "ZeRO显存优化原理与通信推导"
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T2",
+          "rrf_score": 0.027505,
+          "label": "Roofline模型算术强度推导"
+        },
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T3",
+          "rrf_score": 0.027425,
+          "label": "NeMo Megatron Bridge定位与价值辨析"
+        },
+        {
+          "task_id": "ses_0c4e0312affeUm1WYU03ISPgU2_T1",
+          "rrf_score": 0.025914,
+          "label": "RoPE预计算函数实现解析"
+        }
+      ]
+    },
+    "5_vector_search_total": {
+      "input": {
+        "query": "flashattention的原理和历史",
+        "vector_top_k": 5,
+        "candidate_multiplier_internal": 5,
+        "fuse_k": 60
+      },
+      "n_candidates_returned": 25,
+      "elapsed_ms": 29
+    },
+    "6_outer_rrf_merge": {
+      "input": {
+        "vector_candidates_n": 25,
+        "graph_candidates_n": 5,
+        "graph_channel_weight": 0.3,
+        "outer_rrf_k": 30,
+        "formula": "RRF(t) = (1-0.3)/(30 + rank_v) + 0.3/(30 + rank_g),  不在通道视为 rank=+inf"
+      },
+      "n_merged": 25,
+      "merged_full": [
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T3",
+          "v_rank": 1,
+          "g_rank": 3,
+          "v_rrf_score": 0.031258,
+          "g_raw_score": 19.2856,
+          "outer_rrf": 0.031672,
+          "label": "FA状态变量Shape澄清"
+        },
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+          "v_rank": 2,
+          "g_rank": 5,
+          "v_rrf_score": 0.03055,
+          "g_raw_score": 4.3438,
+          "outer_rrf": 0.030446,
+          "label": "SP原理剖析与Mermaid图解迭代"
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T4",
+          "v_rank": 4,
+          "g_rank": 1,
+          "v_rrf_score": 0.029643,
+          "g_raw_score": 51.4454,
+          "outer_rrf": 0.030266,
+          "label": "FA1与FA2底层实现及并行类比"
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T2",
+          "v_rank": 8,
+          "g_rank": 2,
+          "v_rrf_score": 0.027505,
+          "g_raw_score": 46.0286,
+          "outer_rrf": 0.027796,
+          "label": "Roofline模型算术强度推导"
+        },
+        {
+          "task_id": "ses_0c9e4a359ffeGDSrVSG2jNVB6n_T1",
+          "v_rank": 16,
+          "g_rank": 4,
+          "v_rrf_score": 0.024752,
+          "g_raw_score": 16.3023,
+          "outer_rrf": 0.024041,
+          "label": "BF16训练指南v4扩充"
+        },
+        {
+          "task_id": "ses_0e8898453ffeS7ByDo9zjP8Z8h_T2",
+          "v_rank": 3,
+          "g_rank": null,
+          "v_rrf_score": 0.029644,
+          "g_raw_score": null,
+          "outer_rrf": 0.021212,
+          "label": "并行训练尾部填充代码解析"
+        },
+        {
+          "task_id": "ses_0ca8a24d9ffeHoz0wYkhYDDO4w_T2",
+          "v_rank": 5,
+          "g_rank": null,
+          "v_rrf_score": 0.028778,
+          "g_raw_score": null,
+          "outer_rrf": 0.02,
+          "label": "技术笔记静态站点整合与本地实施"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T9",
+          "v_rank": 6,
+          "g_rank": null,
+          "v_rrf_score": 0.028309,
+          "g_raw_score": null,
+          "outer_rrf": 0.019444,
+          "label": "MCP模块功能与架构分析"
+        },
+        {
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T2",
+          "v_rank": 7,
+          "g_rank": null,
+          "v_rrf_score": 0.027783,
+          "g_raw_score": null,
+          "outer_rrf": 0.018919,
+          "label": "ZeRO显存优化原理与通信推导"
+        },
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T3",
+          "v_rank": 9,
+          "g_rank": null,
+          "v_rrf_score": 0.027425,
+          "g_raw_score": null,
+          "outer_rrf": 0.017949,
+          "label": "NeMo Megatron Bridge定位与价值辨析"
+        },
+        {
+          "task_id": "ses_0c4e0312affeUm1WYU03ISPgU2_T1",
+          "v_rank": 10,
+          "g_rank": null,
+          "v_rrf_score": 0.025914,
+          "g_raw_score": null,
+          "outer_rrf": 0.0175,
+          "label": "RoPE预计算函数实现解析"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T13",
+          "v_rank": 11,
+          "g_rank": null,
+          "v_rrf_score": 0.025679,
+          "g_raw_score": null,
+          "outer_rrf": 0.017073,
+          "label": "MCP HTTP Server 配置与缺陷分析"
+        },
+        {
+          "task_id": "ses_04d77c8caffexlaTbA0HPB87oY_T1",
+          "v_rank": 12,
+          "g_rank": null,
+          "v_rrf_score": 0.025654,
+          "g_raw_score": null,
+          "outer_rrf": 0.016667,
+          "label": "OMO 多 Agent 模型配置诊断与优化"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T12",
+          "v_rank": 13,
+          "g_rank": null,
+          "v_rrf_score": 0.02532,
+          "g_raw_score": null,
+          "outer_rrf": 0.016279,
+          "label": "GraphRAG业界应用调研"
+        },
+        {
+          "task_id": "ses_072ebc268ffe227bGpbCtWbM97_T4",
+          "v_rank": 14,
+          "g_rank": null,
+          "v_rrf_score": 0.025166,
+          "g_raw_score": null,
+          "outer_rrf": 0.015909,
+          "label": "重构消息编号系统增加轮次与局部编号"
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T1",
+          "v_rank": 15,
+          "g_rank": null,
+          "v_rrf_score": 0.024908,
+          "g_raw_score": null,
+          "outer_rrf": 0.015556,
+          "label": "FSDP与SDPA概念澄清"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T8",
+          "v_rank": 17,
+          "g_rank": null,
+          "v_rrf_score": 0.024642,
+          "g_raw_score": null,
+          "outer_rrf": 0.014894,
+          "label": "P4与P5图谱关系分析"
+        },
+        {
+          "task_id": "ses_072ebc268ffe227bGpbCtWbM97_T1",
+          "v_rank": 18,
+          "g_rank": null,
+          "v_rrf_score": 0.024415,
+          "g_raw_score": null,
+          "outer_rrf": 0.014583,
+          "label": "对话数据高可读性转换与渲染"
+        },
+        {
+          "task_id": "ses_0ca8b3533ffeRk0KWh2cSqkKOa_T1",
+          "v_rank": 19,
+          "g_rank": null,
+          "v_rrf_score": 0.023823,
+          "g_raw_score": null,
+          "outer_rrf": 0.014286,
+          "label": "开发浮点数格式转换与教学网页"
+        },
+        {
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T1",
+          "v_rank": 20,
+          "g_rank": null,
+          "v_rrf_score": 0.023489,
+          "g_raw_score": null,
+          "outer_rrf": 0.014,
+          "label": "P1文档配置对齐与提交"
+        },
+        {
+          "task_id": "ses_10772d114fferNiLEcTQ8YNd5k_T3",
+          "v_rank": 21,
+          "g_rank": null,
+          "v_rrf_score": 0.021749,
+          "g_raw_score": null,
+          "outer_rrf": 0.013725,
+          "label": "排查 codegraph MCP 注册机制"
+        },
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+          "v_rank": 22,
+          "g_rank": null,
+          "v_rrf_score": 0.021251,
+          "g_raw_score": null,
+          "outer_rrf": 0.013462,
+          "label": "NVIDIA SP与Ulysses并行策略对比"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T4",
+          "v_rank": 23,
+          "g_rank": null,
+          "v_rrf_score": 0.021057,
+          "g_raw_score": null,
+          "outer_rrf": 0.013208,
+          "label": "P5实体对齐机制与配置解析"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T15",
+          "v_rank": 24,
+          "g_rank": null,
+          "v_rrf_score": 0.016393,
+          "g_raw_score": null,
+          "outer_rrf": 0.012963,
+          "label": "恢复误删文件与清理Git历史"
+        },
+        {
+          "task_id": "ses_0c99b81bcffeAwdzQ0s8zld82L_T2",
+          "v_rank": 25,
+          "g_rank": null,
+          "v_rrf_score": 0.016129,
+          "g_raw_score": null,
+          "outer_rrf": 0.012727,
+          "label": "编写优化器进阶指南v2"
+        }
+      ],
+      "elapsed_ms": 0
+    },
+    "7_rerank_full": {
+      "input": {
+        "query": "flashattention的原理和历史",
+        "n_candidates_in": 25,
+        "top_k": 5,
+        "reranker_model": "Qwen/Qwen3-Reranker-0.6B"
+      },
+      "output": {
+        "rerank_input_n": 25,
+        "rerank_input_task_ids": [
+          "ses_0c5b6171bfferME7He2F8G6UuJ_T3",
+          "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+          "ses_0c5b6171bfferME7He2F8G6UuJ_T4",
+          "ses_0c5b6171bfferME7He2F8G6UuJ_T2",
+          "ses_0c9e4a359ffeGDSrVSG2jNVB6n_T1",
+          "ses_0e8898453ffeS7ByDo9zjP8Z8h_T2",
+          "ses_0ca8a24d9ffeHoz0wYkhYDDO4w_T2",
+          "ses_0870d73a7ffehev1FO7HA2HSze_T9",
+          "ses_053c0ac72ffe883RpIvqU1LUEw_T2",
+          "ses_12c6bd8dfffevT51PypMW2v5Mx_T3",
+          "ses_0c4e0312affeUm1WYU03ISPgU2_T1",
+          "ses_0870d73a7ffehev1FO7HA2HSze_T13",
+          "ses_04d77c8caffexlaTbA0HPB87oY_T1",
+          "ses_0870d73a7ffehev1FO7HA2HSze_T12",
+          "ses_072ebc268ffe227bGpbCtWbM97_T4",
+          "ses_0c5b6171bfferME7He2F8G6UuJ_T1",
+          "ses_0870d73a7ffehev1FO7HA2HSze_T8",
+          "ses_072ebc268ffe227bGpbCtWbM97_T1",
+          "ses_0ca8b3533ffeRk0KWh2cSqkKOa_T1",
+          "ses_04b987deaffeKfDUR5b1Y99vcx_T1",
+          "ses_10772d114fferNiLEcTQ8YNd5k_T3",
+          "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+          "ses_0870d73a7ffehev1FO7HA2HSze_T4",
+          "ses_0870d73a7ffehev1FO7HA2HSze_T15",
+          "ses_0c99b81bcffeAwdzQ0s8zld82L_T2"
+        ],
+        "rerank_input_labels": [
+          "FA状态变量Shape澄清",
+          "SP原理剖析与Mermaid图解迭代",
+          "FA1与FA2底层实现及并行类比",
+          "Roofline模型算术强度推导",
+          "BF16训练指南v4扩充",
+          "并行训练尾部填充代码解析",
+          "技术笔记静态站点整合与本地实施",
+          "MCP模块功能与架构分析",
+          "ZeRO显存优化原理与通信推导",
+          "NeMo Megatron Bridge定位与价值辨析",
+          "RoPE预计算函数实现解析",
+          "MCP HTTP Server 配置与缺陷分析",
+          "OMO 多 Agent 模型配置诊断与优化",
+          "GraphRAG业界应用调研",
+          "重构消息编号系统增加轮次与局部编号",
+          "FSDP与SDPA概念澄清",
+          "P4与P5图谱关系分析",
+          "对话数据高可读性转换与渲染",
+          "开发浮点数格式转换与教学网页",
+          "P1文档配置对齐与提交",
+          "排查 codegraph MCP 注册机制",
+          "NVIDIA SP与Ulysses并行策略对比",
+          "P5实体对齐机制与配置解析",
+          "恢复误删文件与清理Git历史",
+          "编写优化器进阶指南v2"
+        ],
+        "rerank_scores": [
+          {
+            "orig_index": 10,
+            "task_id": "ses_0c4e0312affeUm1WYU03ISPgU2_T1",
+            "label": "RoPE预计算函数实现解析",
+            "rerank_score": 0.938124
+          },
+          {
+            "orig_index": 19,
+            "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T1",
+            "label": "P1文档配置对齐与提交",
+            "rerank_score": 0.38122
+          },
+          {
+            "orig_index": 6,
+            "task_id": "ses_0ca8a24d9ffeHoz0wYkhYDDO4w_T2",
+            "label": "技术笔记静态站点整合与本地实施",
+            "rerank_score": 0.262842
+          },
+          {
+            "orig_index": 5,
+            "task_id": "ses_0e8898453ffeS7ByDo9zjP8Z8h_T2",
+            "label": "并行训练尾部填充代码解析",
+            "rerank_score": 0.119145
+          },
+          {
+            "orig_index": 16,
+            "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T8",
+            "label": "P4与P5图谱关系分析",
+            "rerank_score": 0.100879
+          },
+          {
+            "orig_index": 2,
+            "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T4",
+            "label": "FA1与FA2底层实现及并行类比",
+            "rerank_score": 0.077239
+          },
+          {
+            "orig_index": 18,
+            "task_id": "ses_0ca8b3533ffeRk0KWh2cSqkKOa_T1",
+            "label": "开发浮点数格式转换与教学网页",
+            "rerank_score": 0.054199
+          },
+          {
+            "orig_index": 23,
+            "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T15",
+            "label": "恢复误删文件与清理Git历史",
+            "rerank_score": 0.050307
+          },
+          {
+            "orig_index": 4,
+            "task_id": "ses_0c9e4a359ffeGDSrVSG2jNVB6n_T1",
+            "label": "BF16训练指南v4扩充",
+            "rerank_score": 0.041774
+          },
+          {
+            "orig_index": 3,
+            "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T2",
+            "label": "Roofline模型算术强度推导",
+            "rerank_score": 0.018547
+          },
+          {
+            "orig_index": 21,
+            "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+            "label": "NVIDIA SP与Ulysses并行策略对比",
+            "rerank_score": 0.007121
+          },
+          {
+            "orig_index": 13,
+            "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T12",
+            "label": "GraphRAG业界应用调研",
+            "rerank_score": 0.004265
+          },
+          {
+            "orig_index": 0,
+            "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T3",
+            "label": "FA状态变量Shape澄清",
+            "rerank_score": 0.003483
+          },
+          {
+            "orig_index": 14,
+            "task_id": "ses_072ebc268ffe227bGpbCtWbM97_T4",
+            "label": "重构消息编号系统增加轮次与局部编号",
+            "rerank_score": 0.003483
+          },
+          {
+            "orig_index": 15,
+            "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T1",
+            "label": "FSDP与SDPA概念澄清",
+            "rerank_score": 0.003483
+          },
+          {
+            "orig_index": 11,
+            "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T13",
+            "label": "MCP HTTP Server 配置与缺陷分析",
+            "rerank_score": 0.002378
+          },
+          {
+            "orig_index": 22,
+            "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T4",
+            "label": "P5实体对齐机制与配置解析",
+            "rerank_score": 0.000364
+          },
+          {
+            "orig_index": 20,
+            "task_id": "ses_10772d114fferNiLEcTQ8YNd5k_T3",
+            "label": "排查 codegraph MCP 注册机制",
+            "rerank_score": 0.000346
+          },
+          {
+            "orig_index": 9,
+            "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T3",
+            "label": "NeMo Megatron Bridge定位与价值辨析",
+            "rerank_score": 0.00033
+          },
+          {
+            "orig_index": 12,
+            "task_id": "ses_04d77c8caffexlaTbA0HPB87oY_T1",
+            "label": "OMO 多 Agent 模型配置诊断与优化",
+            "rerank_score": 5.1e-05
+          },
+          {
+            "orig_index": 1,
+            "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+            "label": "SP原理剖析与Mermaid图解迭代",
+            "rerank_score": 4.8e-05
+          },
+          {
+            "orig_index": 24,
+            "task_id": "ses_0c99b81bcffeAwdzQ0s8zld82L_T2",
+            "label": "编写优化器进阶指南v2",
+            "rerank_score": 3.1e-05
+          },
+          {
+            "orig_index": 17,
+            "task_id": "ses_072ebc268ffe227bGpbCtWbM97_T1",
+            "label": "对话数据高可读性转换与渲染",
+            "rerank_score": 2.2e-05
+          },
+          {
+            "orig_index": 8,
+            "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T2",
+            "label": "ZeRO显存优化原理与通信推导",
+            "rerank_score": 1.7e-05
+          },
+          {
+            "orig_index": 7,
+            "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T9",
+            "label": "MCP模块功能与架构分析",
+            "rerank_score": 4e-06
+          }
+        ],
+        "top5_task_ids": [
+          "ses_0c4e0312affeUm1WYU03ISPgU2_T1",
+          "ses_04b987deaffeKfDUR5b1Y99vcx_T1",
+          "ses_0ca8a24d9ffeHoz0wYkhYDDO4w_T2",
+          "ses_0e8898453ffeS7ByDo9zjP8Z8h_T2",
+          "ses_0870d73a7ffehev1FO7HA2HSze_T8"
+        ]
+      },
+      "elapsed_ms": 10279
+    },
+    "8_source_distribution": {
+      "top5_task_ids": [
+        "ses_0c4e0312affeUm1WYU03ISPgU2_T1",
+        "ses_04b987deaffeKfDUR5b1Y99vcx_T1",
+        "ses_0ca8a24d9ffeHoz0wYkhYDDO4w_T2",
+        "ses_0e8898453ffeS7ByDo9zjP8Z8h_T2",
+        "ses_0870d73a7ffehev1FO7HA2HSze_T8"
+      ],
+      "source_distribution": {
+        "vector": 5,
+        "graph": 0,
+        "both": 0,
+        "neither": 0
+      }
+    }
+  },
+  "final_top_k": [
+    {
+      "rank": 1,
+      "task_id": "ses_0c4e0312affeUm1WYU03ISPgU2_T1",
+      "label": "RoPE预计算函数实现解析",
+      "task_summary": "为理解 LLaMA 风格 Transformer 中旋转位置编码（RoPE）的实现机制，分析了 `precompute_freqs_cis` 函数的完整代码逻辑与张量形状变化。核心产出：确认 `freqs` 最终 shape 为 `[seq_len, dim // 2]`，元素值为位置索引与频率的外积 `m * theta_i`，数学公式为 `freqs[m,i] = m / θ^(2i/dim)`；关键设计决策是通过 `torch.polar` 将角度转为复数旋转因子 `e^{i·m·theta_i}`，使得后续 attention 中可直接通过复数乘法 `q * freqs_cis` 完成位置编码旋转，避免了显式的三角函数计算。该实现是 RoPE 高效应用的基础预计算步骤。",
+      "rerank_score": 0.938124,
+      "outer_rrf_score": 0.0175,
+      "v_rank": 10,
+      "g_rank": null,
+      "g_raw_score": null
+    },
+    {
+      "rank": 2,
+      "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T1",
+      "label": "P1文档配置对齐与提交",
+      "task_summary": "背景与目标：P1阶段代码实际行为与项目文档、配置文件存在不一致，需进行对齐并提交相关初始化产物。\n核心产出与关键决策：审查P1源码，确认6个wired配置键与多个advisory参数，清理重复依赖。更新了`config/code_p1_config.yaml`（添加wired/advisory标签）、`config/code_p1_requirements.txt`、`doc/code_p1_README.md`及根目录`README.md`。随后分两次Git提交：一次提交init_deep生成的4个`AGENTS.md`，另一次提交P1相关的4个文档/配置文件。\n结论与意义：确保了P1阶段文档与代码的严格一致，为后续阶段提供了准确的配置参考基准。",
+      "rerank_score": 0.38122,
+      "outer_rrf_score": 0.014,
+      "v_rank": 20,
+      "g_rank": null,
+      "g_raw_score": null
+    },
+    {
+      "rank": 3,
+      "task_id": "ses_0ca8a24d9ffeHoz0wYkhYDDO4w_T2",
+      "label": "技术笔记静态站点整合与本地实施",
+      "task_summary": "背景与目标：为整合分散的 7 个独立技术笔记 HTML 页面，需将其统一托管至 GitHub Pages 构建多页静态站点。\n核心产出与关键决策：采用“复制副本+注入式导航”策略，保持原文件不动。完成了站点目录结构搭建、公共导航脚本（nav.js）与卡片式首页（index.html）开发，并通过本地 HTTP 服务验证了 12 个路径的完整性。最终完成本地 Git 初始化与提交（commit 8b9648d）。\n结论与意义：成功实现技术笔记的本地静态站点化整合，为后续部署至 GitHub Pages 奠定基础；当前推送因缺乏 GitHub 认证凭证阻塞，需用户配置 SSH 公钥或 PAT 后完成最终部署。",
+      "rerank_score": 0.262842,
+      "outer_rrf_score": 0.02,
+      "v_rank": 5,
+      "g_rank": null,
+      "g_raw_score": null
+    },
+    {
+      "rank": 4,
+      "task_id": "ses_0e8898453ffeS7ByDo9zjP8Z8h_T2",
+      "label": "并行训练尾部填充代码解析",
+      "task_summary": "背景与目标：为解决 Megatron-LM 在开启序列并行（SP）或上下文并行（CP）时，因 packed sequence 物理宽度与 `cu_seqlens` 逻辑宽度不一致导致 attention gather 产生 NaN 梯度的问题，对尾部 padding 处理代码进行审查与剖析。核心产出与关键决策：确认代码通过追加独立的 self-attending 虚拟段使 `cu_seqlens` 终点对齐物理宽度，并置零 `loss_mask` 屏蔽 loss。审查指出 `loss_mask` in-place 修改有内存污染风险，建议显式 clone，并指出虚拟段仍消耗注意力计算算力，建议长期从上游离线 packer 修复 padding 逻辑。结论与意义：该热补丁有效解决了 SP/CP 场景下 gather 越界导致的训练崩溃，且不影响真实 token 的注意力行为与 loss 计算，为大规模并行训练的数据 packing 异常提供了可靠的临时兜底方案与长期优化方向。",
+      "rerank_score": 0.119145,
+      "outer_rrf_score": 0.021212,
+      "v_rank": 3,
+      "g_rank": null,
+      "g_raw_score": null
+    },
+    {
+      "rank": 5,
+      "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T8",
+      "label": "P4与P5图谱关系分析",
+      "task_summary": "背景与目标：澄清 P4 跨 session 搜索是否利用 P5 知识图谱的架构疑问。核心产出与关键决策：通过源码分析确认 P4 完全不使用 P5 图谱，两者是平行检索管道——P4 仅依赖 P3 的 Qdrant 3 集合 + Qwen3-Reranker，图谱在 P5e（GraphRAGSearcher 做向量+ BFS 扩散+ Reranker 合并）和 P6b（决策溯源）才被消费。此设计实现职责解耦（P4 找 task、P5e 理解关系）、故障隔离（P5 失败不影响 P4）、独立基准对比。结论与意义：这是合理的工程分层而非 bug，P4 保持纯向量检索的简洁性和低启动成本（~1s vs P5e 的 3-5s），P5e 作为增强版提供图谱扩散召回。",
+      "rerank_score": 0.100879,
+      "outer_rrf_score": 0.014894,
+      "v_rank": 17,
+      "g_rank": null,
+      "g_raw_score": null
+    }
+  ],
+  "source_distribution": {
+    "vector": 5,
+    "graph": 0,
+    "both": 0,
+    "neither": 0
+  },
+  "wall_ms": 24290,
+  "db": "triple"
+}

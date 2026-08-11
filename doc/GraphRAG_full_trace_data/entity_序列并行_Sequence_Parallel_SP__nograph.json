@@ -1,0 +1,634 @@
+{
+  "query": "序列并行(Sequence Parallel,SP)",
+  "use_graph_rag": false,
+  "top_k": 5,
+  "rerank_multiplier": 1.0,
+  "graph_channel_weight": 0.3,
+  "outer_rrf_k": 30,
+  "bfs_depth": 1,
+  "max_expand_nodes": 30,
+  "max_graph_tasks": 50,
+  "stages": {
+    "5a_dense_tasks": {
+      "input": {
+        "query": "序列并行(Sequence Parallel,SP)",
+        "collection": "tasks",
+        "top_k": 25
+      },
+      "n_results": 25,
+      "top10": [
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+          "score": 0.607789,
+          "label": "SP原理剖析与Mermaid图解迭代"
+        },
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+          "score": 0.580236,
+          "label": "NVIDIA SP与Ulysses并行策略对比"
+        },
+        {
+          "task_id": "ses_0e8898453ffeS7ByDo9zjP8Z8h_T2",
+          "score": 0.567755,
+          "label": "并行训练尾部填充代码解析"
+        },
+        {
+          "task_id": "ses_0c4e0312affeUm1WYU03ISPgU2_T1",
+          "score": 0.543441,
+          "label": "RoPE预计算函数实现解析"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T12",
+          "score": 0.524237,
+          "label": "GraphRAG业界应用调研"
+        },
+        {
+          "task_id": "ses_04d77c8caffexlaTbA0HPB87oY_T2",
+          "score": 0.521965,
+          "label": "OMO 配置文件优化"
+        },
+        {
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T7",
+          "score": 0.516161,
+          "label": "解释系统运行原理与完善文档"
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T3",
+          "score": 0.51132,
+          "label": "FA状态变量Shape澄清"
+        },
+        {
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T3",
+          "score": 0.507456,
+          "label": "环境配置梳理与脚本修复"
+        },
+        {
+          "task_id": "ses_072ebc268ffe227bGpbCtWbM97_T4",
+          "score": 0.503453,
+          "label": "重构消息编号系统增加轮次与局部编号"
+        }
+      ]
+    },
+    "5b_chunks_summary_aggregate": {
+      "input": {
+        "query": "序列并行(Sequence Parallel,SP)",
+        "method": "sparse",
+        "top_k_chunks": 75
+      },
+      "n_chunk_hits": 75,
+      "n_task_after_agg": 38,
+      "top10": [
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+          "score": 16.898124,
+          "label": "SP原理剖析与Mermaid图解迭代"
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T4",
+          "score": 13.072333,
+          "label": "FA1与FA2底层实现及并行类比"
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T3",
+          "score": 12.415622,
+          "label": "FA状态变量Shape澄清"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T18",
+          "score": 12.078942,
+          "label": "专利交底书格式迭代优化"
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T2",
+          "score": 11.159937,
+          "label": "Roofline模型算术强度推导"
+        },
+        {
+          "task_id": "ses_04d77c8caffexlaTbA0HPB87oY_T1",
+          "score": 9.020554,
+          "label": "OMO 多 Agent 模型配置诊断与优化"
+        },
+        {
+          "task_id": "ses_0c4e0312affeUm1WYU03ISPgU2_T1",
+          "score": 8.805523,
+          "label": "RoPE预计算函数实现解析"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T20",
+          "score": 8.597393,
+          "label": "Session 历史追溯与总结"
+        },
+        {
+          "task_id": "ses_0a16b26dcffewGBp0akSLB5IZG_T1",
+          "score": 8.489758,
+          "label": "跨工作区查询历史 Session"
+        },
+        {
+          "task_id": "ses_04edfa1f2ffey5A7mn4t5lm1YW_T1",
+          "score": 7.920415,
+          "label": "修复 gen 脚本跨平台兼容性"
+        }
+      ]
+    },
+    "5c_chunks_cleaned_text_aggregate": {
+      "input": {
+        "query": "序列并行(Sequence Parallel,SP)",
+        "method": "bm25",
+        "top_k_chunks": 75
+      },
+      "n_chunk_hits": 75,
+      "n_task_after_agg": 41,
+      "top10": [
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T4",
+          "score": 34.069375,
+          "label": "FA1与FA2底层实现及并行类比"
+        },
+        {
+          "task_id": "ses_0e8898453ffeS7ByDo9zjP8Z8h_T2",
+          "score": 28.306052,
+          "label": "并行训练尾部填充代码解析"
+        },
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+          "score": 25.59724,
+          "label": "SP原理剖析与Mermaid图解迭代"
+        },
+        {
+          "task_id": "ses_0a16b26dcffewGBp0akSLB5IZG_T1",
+          "score": 23.053645,
+          "label": "跨工作区查询历史 Session"
+        },
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T3",
+          "score": 19.634294,
+          "label": "NeMo Megatron Bridge定位与价值辨析"
+        },
+        {
+          "task_id": "ses_0ca8a24d9ffeHoz0wYkhYDDO4w_T2",
+          "score": 16.331242,
+          "label": "技术笔记静态站点整合与本地实施"
+        },
+        {
+          "task_id": "ses_0c4845647ffea08jfnkY5ArLEG_T1",
+          "score": 16.06157,
+          "label": "GPU算力对比与选型分析"
+        },
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+          "score": 16.060104,
+          "label": "NVIDIA SP与Ulysses并行策略对比"
+        },
+        {
+          "task_id": "ses_14a9ad327ffejgP9Qba8jnwIVI_T1",
+          "score": 15.208129,
+          "label": "解析 Data Collator 机制"
+        },
+        {
+          "task_id": "ses_0c4e0312affeUm1WYU03ISPgU2_T1",
+          "score": 14.94912,
+          "label": "RoPE预计算函数实现解析"
+        }
+      ]
+    },
+    "5d_chunk_rrf_fuse": {
+      "input": {
+        "summary_task_n": 38,
+        "sparse_task_n": 41,
+        "fuse_k": 60,
+        "formula": "RRF(d) = 1/(60 + rank_d),  score = sum(1/(k+rank))"
+      },
+      "n_fused": 56,
+      "top10": [
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T4",
+          "rrf_score": 0.032522,
+          "label": "FA1与FA2底层实现及并行类比"
+        },
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+          "rrf_score": 0.032266,
+          "label": "SP原理剖析与Mermaid图解迭代"
+        },
+        {
+          "task_id": "ses_0a16b26dcffewGBp0akSLB5IZG_T1",
+          "rrf_score": 0.030118,
+          "label": "跨工作区查询历史 Session"
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T2",
+          "rrf_score": 0.029469,
+          "label": "Roofline模型算术强度推导"
+        },
+        {
+          "task_id": "ses_0c4e0312affeUm1WYU03ISPgU2_T1",
+          "rrf_score": 0.029211,
+          "label": "RoPE预计算函数实现解析"
+        },
+        {
+          "task_id": "ses_0c4845647ffea08jfnkY5ArLEG_T1",
+          "rrf_score": 0.02901,
+          "label": "GPU算力对比与选型分析"
+        },
+        {
+          "task_id": "ses_04d77c8caffexlaTbA0HPB87oY_T1",
+          "rrf_score": 0.02885,
+          "label": "OMO 多 Agent 模型配置诊断与优化"
+        },
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T3",
+          "rrf_score": 0.028543,
+          "label": "NeMo Megatron Bridge定位与价值辨析"
+        },
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+          "rrf_score": 0.028405,
+          "label": "NVIDIA SP与Ulysses并行策略对比"
+        },
+        {
+          "task_id": "ses_0e8898453ffeS7ByDo9zjP8Z8h_T2",
+          "rrf_score": 0.028324,
+          "label": "并行训练尾部填充代码解析"
+        }
+      ]
+    },
+    "5e_final_rrf_fuse": {
+      "input": {
+        "dense_n": 25,
+        "chunk_fused_n": 56,
+        "fuse_k": 60,
+        "n_candidates_target": 25
+      },
+      "n_candidates": 25,
+      "top10": [
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+          "rrf_score": 0.032522,
+          "label": "SP原理剖析与Mermaid图解迭代"
+        },
+        {
+          "task_id": "ses_0c4e0312affeUm1WYU03ISPgU2_T1",
+          "rrf_score": 0.03101,
+          "label": "RoPE预计算函数实现解析"
+        },
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+          "rrf_score": 0.030622,
+          "label": "NVIDIA SP与Ulysses并行策略对比"
+        },
+        {
+          "task_id": "ses_0e8898453ffeS7ByDo9zjP8Z8h_T2",
+          "rrf_score": 0.030159,
+          "label": "并行训练尾部填充代码解析"
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T3",
+          "rrf_score": 0.028595,
+          "label": "FA状态变量Shape澄清"
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T2",
+          "rrf_score": 0.02739,
+          "label": "Roofline模型算术强度推导"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T5",
+          "rrf_score": 0.026743,
+          "label": "澄清图谱构建流程及模型职责"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T18",
+          "rrf_score": 0.026743,
+          "label": "专利交底书格式迭代优化"
+        },
+        {
+          "task_id": "ses_04d77c8caffexlaTbA0HPB87oY_T2",
+          "rrf_score": 0.025568,
+          "label": "OMO 配置文件优化"
+        },
+        {
+          "task_id": "ses_04edfa1f2ffey5A7mn4t5lm1YW_T1",
+          "rrf_score": 0.025182,
+          "label": "修复 gen 脚本跨平台兼容性"
+        }
+      ]
+    },
+    "5_vector_search_total": {
+      "input": {
+        "query": "序列并行(Sequence Parallel,SP)",
+        "vector_top_k": 5,
+        "candidate_multiplier_internal": 5,
+        "fuse_k": 60
+      },
+      "n_candidates_returned": 25,
+      "elapsed_ms": 17
+    },
+    "7_rerank_full": {
+      "input": {
+        "query": "序列并行(Sequence Parallel,SP)",
+        "n_candidates_in": 25,
+        "top_k": 5,
+        "reranker_model": "Qwen/Qwen3-Reranker-0.6B",
+        "note": "no-graph 模式, 候选直接 = vector 50"
+      },
+      "output": {
+        "rerank_input_n": 25,
+        "rerank_input_task_ids": [
+          "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+          "ses_0c4e0312affeUm1WYU03ISPgU2_T1",
+          "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+          "ses_0e8898453ffeS7ByDo9zjP8Z8h_T2",
+          "ses_0c5b6171bfferME7He2F8G6UuJ_T3",
+          "ses_0c5b6171bfferME7He2F8G6UuJ_T2",
+          "ses_0870d73a7ffehev1FO7HA2HSze_T5",
+          "ses_0870d73a7ffehev1FO7HA2HSze_T18",
+          "ses_04d77c8caffexlaTbA0HPB87oY_T2",
+          "ses_04edfa1f2ffey5A7mn4t5lm1YW_T1",
+          "ses_053c0ac72ffe883RpIvqU1LUEw_T2",
+          "ses_0870d73a7ffehev1FO7HA2HSze_T7",
+          "ses_0870d73a7ffehev1FO7HA2HSze_T12",
+          "ses_04b987deaffeKfDUR5b1Y99vcx_T6",
+          "ses_0c5b6171bfferME7He2F8G6UuJ_T1",
+          "ses_04b987deaffeKfDUR5b1Y99vcx_T7",
+          "ses_04b987deaffeKfDUR5b1Y99vcx_T3",
+          "ses_0870d73a7ffehev1FO7HA2HSze_T4",
+          "ses_0870d73a7ffehev1FO7HA2HSze_T11",
+          "ses_04b987deaffeKfDUR5b1Y99vcx_T5",
+          "ses_0870d73a7ffehev1FO7HA2HSze_T6",
+          "ses_04b987deaffeKfDUR5b1Y99vcx_T1",
+          "ses_053c0ac72ffe883RpIvqU1LUEw_T3",
+          "ses_0c5b6171bfferME7He2F8G6UuJ_T4",
+          "ses_0a16b26dcffewGBp0akSLB5IZG_T1"
+        ],
+        "rerank_input_labels": [
+          "SP原理剖析与Mermaid图解迭代",
+          "RoPE预计算函数实现解析",
+          "NVIDIA SP与Ulysses并行策略对比",
+          "并行训练尾部填充代码解析",
+          "FA状态变量Shape澄清",
+          "Roofline模型算术强度推导",
+          "澄清图谱构建流程及模型职责",
+          "专利交底书格式迭代优化",
+          "OMO 配置文件优化",
+          "修复 gen 脚本跨平台兼容性",
+          "ZeRO显存优化原理与通信推导",
+          "规划 P5 稀疏向量改造方案",
+          "GraphRAG业界应用调研",
+          "实现内容指纹与增量处理机制",
+          "FSDP与SDPA概念澄清",
+          "解释系统运行原理与完善文档",
+          "环境配置梳理与脚本修复",
+          "P5实体对齐机制与配置解析",
+          "Repo架构定位确认",
+          "P2增量运行功能开发",
+          "评估 Dense Embedding 替换方案",
+          "P1文档配置对齐与提交",
+          "AllReduce算法原理与历史溯源",
+          "FA1与FA2底层实现及并行类比",
+          "跨工作区查询历史 Session"
+        ],
+        "rerank_scores": [
+          {
+            "orig_index": 0,
+            "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+            "label": "SP原理剖析与Mermaid图解迭代",
+            "rerank_score": 0.997368
+          },
+          {
+            "orig_index": 2,
+            "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+            "label": "NVIDIA SP与Ulysses并行策略对比",
+            "rerank_score": 0.820469
+          },
+          {
+            "orig_index": 3,
+            "task_id": "ses_0e8898453ffeS7ByDo9zjP8Z8h_T2",
+            "label": "并行训练尾部填充代码解析",
+            "rerank_score": 0.558327
+          },
+          {
+            "orig_index": 7,
+            "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T18",
+            "label": "专利交底书格式迭代优化",
+            "rerank_score": 0.258326
+          },
+          {
+            "orig_index": 24,
+            "task_id": "ses_0a16b26dcffewGBp0akSLB5IZG_T1",
+            "label": "跨工作区查询历史 Session",
+            "rerank_score": 0.2227
+          },
+          {
+            "orig_index": 22,
+            "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T3",
+            "label": "AllReduce算法原理与历史溯源",
+            "rerank_score": 0.216012
+          },
+          {
+            "orig_index": 21,
+            "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T1",
+            "label": "P1文档配置对齐与提交",
+            "rerank_score": 0.199308
+          },
+          {
+            "orig_index": 11,
+            "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T7",
+            "label": "规划 P5 稀疏向量改造方案",
+            "rerank_score": 0.153549
+          },
+          {
+            "orig_index": 23,
+            "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T4",
+            "label": "FA1与FA2底层实现及并行类比",
+            "rerank_score": 0.078926
+          },
+          {
+            "orig_index": 15,
+            "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T7",
+            "label": "解释系统运行原理与完善文档",
+            "rerank_score": 0.073165
+          },
+          {
+            "orig_index": 5,
+            "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T2",
+            "label": "Roofline模型算术强度推导",
+            "rerank_score": 0.017045
+          },
+          {
+            "orig_index": 10,
+            "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T2",
+            "label": "ZeRO显存优化原理与通信推导",
+            "rerank_score": 0.013428
+          },
+          {
+            "orig_index": 19,
+            "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T5",
+            "label": "P2增量运行功能开发",
+            "rerank_score": 0.005555
+          },
+          {
+            "orig_index": 13,
+            "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T6",
+            "label": "实现内容指纹与增量处理机制",
+            "rerank_score": 0.00514
+          },
+          {
+            "orig_index": 4,
+            "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T3",
+            "label": "FA状态变量Shape澄清",
+            "rerank_score": 0.003483
+          },
+          {
+            "orig_index": 9,
+            "task_id": "ses_04edfa1f2ffey5A7mn4t5lm1YW_T1",
+            "label": "修复 gen 脚本跨平台兼容性",
+            "rerank_score": 0.003483
+          },
+          {
+            "orig_index": 14,
+            "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T1",
+            "label": "FSDP与SDPA概念澄清",
+            "rerank_score": 0.003483
+          },
+          {
+            "orig_index": 1,
+            "task_id": "ses_0c4e0312affeUm1WYU03ISPgU2_T1",
+            "label": "RoPE预计算函数实现解析",
+            "rerank_score": 0.003295
+          },
+          {
+            "orig_index": 16,
+            "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T3",
+            "label": "环境配置梳理与脚本修复",
+            "rerank_score": 0.002801
+          },
+          {
+            "orig_index": 17,
+            "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T4",
+            "label": "P5实体对齐机制与配置解析",
+            "rerank_score": 0.002415
+          },
+          {
+            "orig_index": 8,
+            "task_id": "ses_04d77c8caffexlaTbA0HPB87oY_T2",
+            "label": "OMO 配置文件优化",
+            "rerank_score": 3.6e-05
+          },
+          {
+            "orig_index": 12,
+            "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T12",
+            "label": "GraphRAG业界应用调研",
+            "rerank_score": 3.6e-05
+          },
+          {
+            "orig_index": 6,
+            "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T5",
+            "label": "澄清图谱构建流程及模型职责",
+            "rerank_score": 1.7e-05
+          },
+          {
+            "orig_index": 18,
+            "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T11",
+            "label": "Repo架构定位确认",
+            "rerank_score": 1.6e-05
+          },
+          {
+            "orig_index": 20,
+            "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T6",
+            "label": "评估 Dense Embedding 替换方案",
+            "rerank_score": 1.1e-05
+          }
+        ],
+        "top5_task_ids": [
+          "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+          "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+          "ses_0e8898453ffeS7ByDo9zjP8Z8h_T2",
+          "ses_0870d73a7ffehev1FO7HA2HSze_T18",
+          "ses_0a16b26dcffewGBp0akSLB5IZG_T1"
+        ]
+      },
+      "elapsed_ms": 9061
+    },
+    "8_source_distribution": {
+      "top5_task_ids": [
+        "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+        "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+        "ses_0e8898453ffeS7ByDo9zjP8Z8h_T2",
+        "ses_0870d73a7ffehev1FO7HA2HSze_T18",
+        "ses_0a16b26dcffewGBp0akSLB5IZG_T1"
+      ],
+      "source_distribution": {
+        "vector": 5,
+        "graph": 0,
+        "both": 0,
+        "neither": 0
+      },
+      "note": "no-graph 模式, 全部 vector-only"
+    }
+  },
+  "final_top_k": [
+    {
+      "rank": 1,
+      "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+      "label": "SP原理剖析与Mermaid图解迭代",
+      "task_summary": "背景与目标：为深入理解 Megatron-LM 序列并行 (SP) 机制，系统梳理了 TP=2 场景下 SP 的张量切分、通信原语及激活内存优化原理，并迭代输出高兼容性的 Mermaid 架构图解。\n核心产出与关键决策：明确了 SP 区域外（LayerNorm等）按 seq 切分可省 TP 倍激活内存，区域内按 head 切分；纠正了 all-gather 与 RMSNorm 的执行顺序（RMSNorm 在前更省内存），并确认 Embedding 层采用 col-parallel 切分。针对 Mermaid 渲染问题，决策采用 ASCII 标签、扁平化 subgraph 及拆分图层等策略，产出 v3 版稳定渲染文档。\n结论与意义：产出了包含 1-layer 和 2-layer 完整流程的 SP 原理图文档，厘清了 SP 通信量与纯 TP 相同但大幅节省激活内存的核心优势，为长序列大模型训练的并行策略选型提供了直观的理论与视觉参考。",
+      "rerank_score": 0.997368,
+      "outer_rrf_score": 0.032522,
+      "v_rank": 1,
+      "g_rank": null,
+      "g_raw_score": null
+    },
+    {
+      "rank": 2,
+      "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+      "label": "NVIDIA SP与Ulysses并行策略对比",
+      "task_summary": "背景与目标：针对 8 GPU (TP=2, SP=4) 场景，澄清 Tensor Parallelism 与 Sequence Parallelism 的正交关系，并深度对比 NVIDIA SP 与 Ulysses 两种序列并行实现方案的通信机制与适用边界。\n核心产出与关键决策：确认 TP（切 head）与 SP（切 seq）完全正交。在 SP 实现上，NVIDIA SP 使用 all-gather/reduce-scatter，Ulysses 使用 all-to-all 进行 seq 与 head 的互换。决策明确两者在单一 attention 块内互斥，但在整个模型中可混合使用（如 attention 内用 Ulysses，非 attention 区域用 NVIDIA SP）。\n结论与意义：指出生产环境中主流倾向于纯 Ulysses 或 ring attention，NVIDIA SP 逐渐减少。该分析为多卡长序列训练时的通信原语选型和 hybrid 并行架构设计提供了清晰的理论指导。",
+      "rerank_score": 0.820469,
+      "outer_rrf_score": 0.030622,
+      "v_rank": 3,
+      "g_rank": null,
+      "g_raw_score": null
+    },
+    {
+      "rank": 3,
+      "task_id": "ses_0e8898453ffeS7ByDo9zjP8Z8h_T2",
+      "label": "并行训练尾部填充代码解析",
+      "task_summary": "背景与目标：为解决 Megatron-LM 在开启序列并行（SP）或上下文并行（CP）时，因 packed sequence 物理宽度与 `cu_seqlens` 逻辑宽度不一致导致 attention gather 产生 NaN 梯度的问题，对尾部 padding 处理代码进行审查与剖析。核心产出与关键决策：确认代码通过追加独立的 self-attending 虚拟段使 `cu_seqlens` 终点对齐物理宽度，并置零 `loss_mask` 屏蔽 loss。审查指出 `loss_mask` in-place 修改有内存污染风险，建议显式 clone，并指出虚拟段仍消耗注意力计算算力，建议长期从上游离线 packer 修复 padding 逻辑。结论与意义：该热补丁有效解决了 SP/CP 场景下 gather 越界导致的训练崩溃，且不影响真实 token 的注意力行为与 loss 计算，为大规模并行训练的数据 packing 异常提供了可靠的临时兜底方案与长期优化方向。",
+      "rerank_score": 0.558327,
+      "outer_rrf_score": 0.030159,
+      "v_rank": 4,
+      "g_rank": null,
+      "g_raw_score": null
+    },
+    {
+      "rank": 4,
+      "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T18",
+      "label": "专利交底书格式迭代优化",
+      "task_summary": "为完善专利交底书 docx 格式，从 Ver2 到 Ver5 进行多轮迭代优化。背景：md 转 docx 后存在代码块、页脚、公式等格式问题。核心产出：Ver2.docx 完成基础转换(269段/6图/5表)；Ver3.docx 优化 3 个算法代码块样式(浅灰底纹+边框+缩进+行距)；Ver4.docx 添加两行页脚(文档名+保密提示+居中页码)；Ver5.docx 处理 4 个公式段落(LaTeX 转 Unicode、栈式解析嵌套花括号、PUA 占位符保护转义字符)，修复 3 个解析 bug。结论：通过 4 个 Python 脚本(md2docx.py/patch_code_block.py/patch_footer.py/patch_formula.py)实现渐进式格式优化，最终 Ver5.docx 满足专利交底书格式要求。",
+      "rerank_score": 0.258326,
+      "outer_rrf_score": 0.026743,
+      "v_rank": 8,
+      "g_rank": null,
+      "g_raw_score": null
+    },
+    {
+      "rank": 5,
+      "task_id": "ses_0a16b26dcffewGBp0akSLB5IZG_T1",
+      "label": "跨工作区查询历史 Session",
+      "task_summary": "通过直接查询 opencode.db 数据库，突破默认工作区限制，成功定位并读取了属于 Mavis 工作区的历史 session（ses_12c6bd8dfffevT51PypMW2v5Mx）。确认该 session 的核心产出为 3 份关于大模型分布式训练并行（SP/TP/Ulysses/NeMo Megatron Bridge）的 Markdown 技术文档，并完整还原了从初版绘制、细节纠偏到渲染优化的技术讨论脉络。",
+      "rerank_score": 0.2227,
+      "outer_rrf_score": 0.015873,
+      "v_rank": 25,
+      "g_rank": null,
+      "g_raw_score": null
+    }
+  ],
+  "source_distribution": {
+    "vector": 5,
+    "graph": 0,
+    "both": 0,
+    "neither": 0
+  },
+  "wall_ms": 9079,
+  "db": "entity"
+}
