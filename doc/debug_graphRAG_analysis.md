@@ -265,3 +265,123 @@ python3 src/debug_graph_rag_analyze.py
 | `logs/debug_graph_rag/analysis.md` | 自动生成的多维度报告 |
 | `logs/debug_graph_rag/analysis.json` | 结构化分析数据 |
 | `doc/debug_graphRAG_analysis.md` | 本文档 (人工分析 + 改进建议) |
+
+---
+
+# 附录: 第二批 3 个 query 的针对性 case 分析
+
+> 查询: `GPU的对比和选型`, `序列并行(Sequence Parallel,SP)`, `flashattention的原理和历史`
+> 运行时间: 2026-08-12, dual DB (triple + entity)
+> 数据: `doc/debug_graph_rag_data/{triple,entity}_{query}.json`
+
+## 1. 三 query 总览 (Top-5 最终结果)
+
+### 1.1 triple DB
+
+| Query | 抽取实体 | 扩散 | 来源分布 | top-1 命中 | top-1 rerank |
+|-------|----------|------|----------|------------|--------------|
+| `GPU的对比和选型` | `['GPU']` | 3 | V=5, B=0 | NeMo Megatron Bridge 定位 | 0.89 |
+| `序列并行(Sequence Parallel,SP)` | `[序列并行, Sequence Parallel, SP]` | 19 | V=2, **B=3** | **SP原理剖析与Mermaid图解迭代** | **0.997** |
+| `flashattention的原理和历史` | `['flashattention']` | 29 | V=5, B=0 | NeMo Megatron Bridge 定位 | 0.82 |
+
+### 1.2 entity DB
+
+| Query | 抽取实体 | 扩散 | 来源分布 | top-1 命中 | top-1 rerank |
+|-------|----------|------|----------|------------|--------------|
+| `GPU的对比和选型` | `['GPU']` | 27 | V=3, B=2 | **NVIDIA SP与Ulysses并行策略对比** | 0.94 |
+| `序列并行(Sequence Parallel,SP)` | `[序列并行, Sequence Parallel, SP]` | 30 | V=2, **B=3** | **SP原理剖析与Mermaid图解迭代** | **0.997** |
+| `flashattention的原理和历史` | `['flashattention']` | 30 | V=5, B=0 | NeMo Megatron Bridge 定位 | 0.82 |
+
+## 2. 关键发现
+
+### 2.1 ✅ 序列并行 query — GraphRAG 最佳案例
+
+抽取到 3 个实体变体 (`序列并行`, `Sequence Parallel`, `SP`), fuzzy 匹配还额外找到 `Sequence Parallelism`。
+**图谱贡献显著**:
+- triple 模式: 3/5 Top-K = B (双通道命中)
+- entity 模式: 3/5 Top-K = B
+- 两次都把 **"SP原理剖析与Mermaid图解迭代"** 推到 #1, rerank 0.997 (几乎满分)
+- graph 通道拉上来的高价值 task: `并行训练尾部填充代码解析`, `NVIDIA SP与Ulysses并行策略对比`
+
+**结论**: 当用户查询含**同义词/缩写/全称**时, LLM 抽取做对了, fuzzy 匹配也对了, graph 通道就能稳定贡献 Top-K。
+
+### 2.2 ⚠️ GPU query — LLM 抽取粒度太粗
+
+LLM 抽到 `['GPU']` (仅 1 个宽泛词), 实际查询"GPU 对比和选型"应该导向 **A800/H100/H800** 等具体型号。
+- triple 模式: BFS 只扩散 **3 节点** → 4 个 graph_candidate 全是围绕 `GPU` 主题的 task, 跟"对比/选型"语义不匹配
+- vector 通道: top-5 命中 `AllReduce算法原理`, `SP原理剖析`, `FA状态变量Shape` — **没有任何一个**真在做 GPU 选型
+- entity 模式稍好 (BFS 27 节点, 2 个 both 命中), 但 top-1 仍是 `NVIDIA SP与Ulysses并行策略对比` (跟 GPU 选型半相关)
+
+**结论**: 抽取阶段是**单点失败导致整体失败**。如果 LLM 抽到 `A800, H100, H800` 三个具体型号, 整个 pipeline 会完全不一样。
+
+**建议**:
+- 优化 `QUERY_ENTITY_PROMPT`: 明确要求"抽取查询中**具体实例、型号、专有名词**; 跳过通用主题词"
+- 或者在图谱里手动 seed 一个"GPU 选型 → A800/H100/H800" 的强关联
+
+### 2.3 ❌ flashattention query — 双重失效 (图谱 & rerank)
+
+这是最让人警醒的 case:
+- LLM 抽到 `['flashattention']` (小写), fuzzy 匹配到 `FlashAttention-1, FlashAttention-2, FlashAttention` (3 个变体)
+- BFS 扩散 **29 节点**, unique_graph_tasks=5, top-1 task 得分 51.45 (n_entities=12)
+- 但 **Top-5 全部是 V (vector-only)**, graph 信号 0 贡献
+- 真正的问题: vector top-1 已经是 `FA状态变量Shape澄清` (跟"原理和历史"匹配度低), rerank 之后**更糟**:
+  - rerank 把 `NeMo Megatron Bridge定位与价值辨析` 推到 #1 (rerank=0.82)
+  - 4 个跟 FA 相关的候选 (FA状态变量Shape澄清, SP原理剖析, 并行训练尾部填充, FA1与FA2底层实现) **全部掉出 Top-5**
+
+**根因分析**:
+- `task_summary` 的向量特征不区分"原理/历史/细节/状态变量", BGE-small-zh 把所有 FlashAttention 相关 task 召回, 但区分度低 (hybrid_score 都在 0.028-0.031)
+- Qwen3-Reranker 看到 "flashattention 的原理和历史" → 偏好"广义价值/定位"类回答 (跟训练/系统话题相关) → 把 NeMo Megatron Bridge 推到第一
+- 这是 **reranker 偏置问题**: 在弱相关候选中, 它更倾向"看起来高级"的内容
+
+**结论**: GraphRAG 的有效边界是**当图谱有强相关节点**时。如果查询对象在图谱中只有弱关联 (FA 节点的 1-hop 都是"训练系统" 而不是"原理/论文"), 整条 pipeline 都会偏向错误的语义。
+
+**建议**:
+- chunks_summary 集合的 embedding 用更大模型 (BGE-large) 区分"原理/历史/实现细节"
+- reranker 输入截断 (top-20 而非 top-50) — 去掉长尾噪声
+- graph_channel_weight 提到 0.5: 让图谱信号更"敢"覆盖 rerank
+
+## 3. triple vs entity 模式对比
+
+| 维度 | triple | entity |
+|------|--------|--------|
+| 节点数 | 1211 | 687 (更少) |
+| 边数 | 3353 (稀疏) | **10757 (稠密)** |
+| BFS 扩散 | 3-29 节点 (灵活) | 27-30 节点 (易撞顶) |
+| Top-K 来源 (mean) | V=80%, B=20% | V=67%, B=33% |
+| 图谱贡献度 | 较低 | **较高** (因为边更密, 1-hop 命中更多) |
+| 典型场景 | 关系稀疏, 关注 hub 链路 | 共现稠密, 关注"同时提到 X 和 Y"的 session |
+
+**结论**:
+- **entity 模式**对"短查询 + 共现召回"更友好 (BFS 扩散 27-30 节点, 召回更广)
+- **triple 模式**对"长查询 + 关系推理"更友好 (节点少但关系明确)
+- 3 个 query 中, entity 模式在 2/3 上比 triple 给出更对题的 top-1
+
+## 4. 时延 (mean, ms)
+
+| 阶段 | triple (3 query) | entity (3 query) |
+|------|------------------|------------------|
+| LLM 实体抽取 | 31,070 | 20,277 |
+| vector 检索 | 13 | 14 |
+| graph (BFS+IDF) | 28,923 (含 LLM) | 24,817 (含 LLM) |
+| rerank | 18,955 | 20,289 |
+| **total (search)** | 47,893 | 45,123 |
+
+**观察**: triple 模式的 LLM 抽取时延波动大 (15-55s, max=55s), 跟 query 长度/复杂度相关;
+entity 模式稳定在 15-23s 区间。
+
+## 5. 总体结论
+
+| | 序列并行 | GPU | flashattention |
+|---|---------|-----|----------------|
+| 抽取质量 | ✅ 多变体 | ❌ 主题词太粗 | ⚠️ 大小写不一致 |
+| 图谱召回 | ✅ 命中 SP 家族 | ❌ 4 节点太少 | ❌ 5 节点不在 top-5 |
+| 融合效果 | ✅ 60% B | ❌ 0% B (triple) | ❌ 0% B (两边) |
+| rerank 有效 | ✅ #1 完美 | ⚠️ #1 跑偏 | ❌ 错把 Megatron 推上 |
+| 总体可用 | **⭐⭐⭐⭐⭐** | ⭐⭐ | ⭐ |
+
+**最有价值的 query**: `序列并行` — 抽取 → 模糊 → BFS → RRF → Rerank 全链路都对
+**最值得修的环节**:
+1. 抽取 prompt 引导"具体实体优先于主题词"
+2. rerank 输入截断 (top-20) 减少噪声影响
+3. graph_channel_weight 默认从 0.3 提到 0.4-0.5, 让图谱信号更敢表达
+

@@ -1,80 +1,82 @@
 {
   "totals": {
-    "records": 5,
+    "records": 6,
     "dbs": [
+      "entity",
       "triple"
     ]
   },
   "per_db": {
-    "triple": {
+    "entity": {
       "1_llm_extraction": {
-        "queries": 5,
+        "queries": 3,
         "empty_extractions": 0,
         "empty_rate": 0.0,
         "extracted_count_stats": {
-          "count": 5,
+          "count": 3,
           "min": 1.0,
-          "max": 2.0,
-          "mean": 1.6,
-          "median": 2.0
+          "max": 3.0,
+          "mean": 1.6667,
+          "median": 1.0
         },
         "examples": [
           {
-            "query": "FlashAttention 实现原理",
+            "query": "GPU的对比和选型",
             "entities": [
-              "FlashAttention"
+              "GPU"
             ]
           },
           {
-            "query": "OpenCode",
+            "query": "flashattention的原理和历史",
             "entities": [
-              "OpenCode"
+              "flashattention"
             ]
           },
           {
-            "query": "OpenCode MCP",
+            "query": "序列并行(Sequence Parallel,SP)",
             "entities": [
-              "OpenCode",
-              "MCP"
+              "序列并行",
+              "Sequence Parallel",
+              "SP"
             ]
           }
         ]
       },
       "2_seed_match": {
-        "queries": 5,
-        "no_seed_queries": 1,
-        "no_seed_rate": 0.2,
+        "queries": 3,
+        "no_seed_queries": 0,
+        "no_seed_rate": 0.0,
         "seed_count_stats": {
-          "count": 5,
-          "min": 0.0,
-          "max": 2.0,
-          "mean": 1.2,
-          "median": 1.0
+          "count": 3,
+          "min": 1.0,
+          "max": 3.0,
+          "mean": 2.3333,
+          "median": 3.0
         }
       },
       "3_bfs_expand": {
-        "queries": 5,
+        "queries": 3,
         "expanded_count_stats": {
-          "count": 5,
-          "min": 0.0,
+          "count": 3,
+          "min": 27.0,
           "max": 30.0,
-          "mean": 17.8,
-          "median": 17.0
+          "mean": 29.0,
+          "median": 30.0
         },
         "max_nodes_hit": 2
       },
       "4_idf_accumulate": {
         "unique_graph_tasks_stats": {
-          "count": 5,
-          "min": 0.0,
-          "max": 25.0,
-          "mean": 11.6,
-          "median": 6.0
+          "count": 3,
+          "min": 9.0,
+          "max": 29.0,
+          "mean": 16.3333,
+          "median": 11.0
         }
       },
       "5_vector_search": {
         "vector_results_stats": {
-          "count": 5,
+          "count": 3,
           "min": 50.0,
           "max": 50.0,
           "mean": 50.0,
@@ -83,85 +85,85 @@
       },
       "9_timing": {
         "vector_ms": {
-          "count": 5,
-          "min": 10.0,
-          "max": 13.0,
-          "mean": 11.2,
-          "median": 11.0
+          "count": 3,
+          "min": 12.0,
+          "max": 17.0,
+          "mean": 14.3333,
+          "median": 14.0
         },
         "graph_ms": {
-          "count": 5,
-          "min": 11460.0,
-          "max": 52699.0,
-          "mean": 23059.4,
-          "median": 13742.0
+          "count": 3,
+          "min": 21480.0,
+          "max": 26889.0,
+          "mean": 24817.3333,
+          "median": 26083.0
         },
         "rerank_ms": {
-          "count": 5,
-          "min": 17464.0,
-          "max": 19856.0,
-          "mean": 18656.4,
-          "median": 18713.0
+          "count": 3,
+          "min": 18881.0,
+          "max": 22687.0,
+          "mean": 20289.3333,
+          "median": 19300.0
         },
         "total_ms": {
-          "count": 5,
-          "min": 28935.0,
-          "max": 72570.0,
-          "mean": 41728.6,
-          "median": 32195.0
+          "count": 3,
+          "min": 44186.0,
+          "max": 46203.0,
+          "mean": 45122.6667,
+          "median": 44979.0
         },
         "per_stage_raw": {
           "1_llm_entity_extraction": {
-            "count": 5,
-            "min": 13387.0,
-            "max": 27385.0,
-            "mean": 19575.0,
-            "median": 18022.0
+            "count": 3,
+            "min": 15559.0,
+            "max": 23300.0,
+            "mean": 20277.3333,
+            "median": 21973.0
           },
           "2_seed_entity_match": {
-            "count": 5,
-            "min": 1.0,
-            "max": 5.0,
-            "mean": 2.0,
-            "median": 1.0
-          },
-          "3_bfs_expand": {
-            "count": 5,
-            "min": 0.0,
+            "count": 3,
+            "min": 2.0,
             "max": 3.0,
-            "mean": 1.4,
+            "mean": 2.3333,
             "median": 2.0
           },
+          "3_bfs_expand": {
+            "count": 3,
+            "min": 3.0,
+            "max": 5.0,
+            "mean": 3.6667,
+            "median": 3.0
+          },
           "4_inverse_idf_accumulate": {
-            "count": 5,
-            "min": 0.0,
-            "max": 6.0,
-            "mean": 3.2,
+            "count": 3,
+            "min": 3.0,
+            "max": 5.0,
+            "mean": 4.0,
             "median": 4.0
           },
           "5_vector_search": {
-            "count": 5,
-            "min": 19.0,
-            "max": 68.0,
-            "mean": 39.8,
-            "median": 38.0
+            "count": 3,
+            "min": 32.0,
+            "max": 86.0,
+            "mean": 54.3333,
+            "median": 45.0
           },
           "6_outer_rrf_merge": {
-            "count": 5,
-            "min": 28935.0,
-            "max": 72570.0,
-            "mean": 41728.8,
-            "median": 32195.0
+            "count": 3,
+            "min": 44187.0,
+            "max": 46204.0,
+            "mean": 45123.6667,
+            "median": 44980.0
           },
           "7_rerank": {
-            "count": 5,
-            "min": 28935.0,
-            "max": 72570.0,
-            "mean": 41728.8,
-            "median": 32195.0
+            "count": 3,
+            "min": 44187.0,
+            "max": 46204.0,
+            "mean": 45123.6667,
+            "median": 44980.0
           },
           "8_source_distribution": {
-            "count": 5,
+            "count": 3,
             "min": 0.0,
             "max": 0.0,
             "mean": 0.0,
@@ -171,103 +173,315 @@
       },
       "8_source_distribution": {
         "raw_counts": {
-          "vector": 14,
-          "graph": 1,
-          "both": 10,
+          "vector": 10,
+          "graph": 0,
+          "both": 5,
           "neither": 0
         },
-        "total_final_results": 25,
+        "total_final_results": 15,
         "percentages": {
-          "vector": 56.0,
-          "graph": 4.0,
-          "both": 40.0,
+          "vector": 66.67,
+          "graph": 0.0,
+          "both": 33.33,
           "neither": 0.0
         },
         "by_query": [
           {
-            "query": "FlashAttention 实现原理",
+            "query": "GPU的对比和选型",
             "source_distribution": {
               "vector": 3,
               "graph": 0,
               "both": 2,
               "neither": 0
             },
-            "expanded_count": 17,
+            "expanded_count": 27,
             "extracted_entities": [
-              "FlashAttention"
+              "GPU"
             ]
           },
           {
-            "query": "OpenCode",
-            "source_distribution": {
-              "vector": 1,
-              "graph": 0,
-              "both": 4,
-              "neither": 0
-            },
-            "expanded_count": 30,
-            "extracted_entities": [
-              "OpenCode"
-            ]
-          },
-          {
-            "query": "OpenCode MCP",
-            "source_distribution": {
-              "vector": 1,
-              "graph": 0,
-              "both": 4,
-              "neither": 0
-            },
-            "expanded_count": 30,
-            "extracted_entities": [
-              "OpenCode",
-              "MCP"
-            ]
-          },
-          {
-            "query": "Qwen3 Reranker 精排",
+            "query": "flashattention的原理和历史",
             "source_distribution": {
               "vector": 5,
               "graph": 0,
               "both": 0,
               "neither": 0
             },
-            "expanded_count": 0,
+            "expanded_count": 30,
             "extracted_entities": [
-              "Qwen3 Reranker",
-              "精排"
+              "flashattention"
             ]
           },
           {
-            "query": "知识图谱 实体对齐",
+            "query": "序列并行(Sequence Parallel,SP)",
             "source_distribution": {
-              "vector": 4,
-              "graph": 1,
-              "both": 0,
+              "vector": 2,
+              "graph": 0,
+              "both": 3,
               "neither": 0
             },
-            "expanded_count": 12,
+            "expanded_count": 30,
             "extracted_entities": [
-              "知识图谱",
-              "实体对齐"
+              "序列并行",
+              "Sequence Parallel",
+              "SP"
             ]
           }
         ]
       },
       "score_distribution": {
         "rerank_score": {
-          "count": 25,
-          "min": 0.4263,
-          "max": 0.9993,
-          "mean": 0.7922,
-          "median": 0.852
+          "count": 15,
+          "min": 0.2628,
+          "max": 0.9974,
+          "mean": 0.7498,
+          "median": 0.8245
         },
         "hybrid_score": {
-          "count": 25,
-          "min": 0.0086,
+          "count": 15,
+          "min": 0.0088,
           "max": 0.0323,
           "mean": 0.0188,
           "median": 0.0189
+        }
+      }
+    },
+    "triple": {
+      "1_llm_extraction": {
+        "queries": 3,
+        "empty_extractions": 0,
+        "empty_rate": 0.0,
+        "extracted_count_stats": {
+          "count": 3,
+          "min": 1.0,
+          "max": 3.0,
+          "mean": 1.6667,
+          "median": 1.0
+        },
+        "examples": [
+          {
+            "query": "GPU的对比和选型",
+            "entities": [
+              "GPU"
+            ]
+          },
+          {
+            "query": "flashattention的原理和历史",
+            "entities": [
+              "flashattention"
+            ]
+          },
+          {
+            "query": "序列并行(Sequence Parallel,SP)",
+            "entities": [
+              "序列并行",
+              "Sequence Parallel",
+              "SP"
+            ]
+          }
+        ]
+      },
+      "2_seed_match": {
+        "queries": 3,
+        "no_seed_queries": 0,
+        "no_seed_rate": 0.0,
+        "seed_count_stats": {
+          "count": 3,
+          "min": 1.0,
+          "max": 3.0,
+          "mean": 2.3333,
+          "median": 3.0
+        }
+      },
+      "3_bfs_expand": {
+        "queries": 3,
+        "expanded_count_stats": {
+          "count": 3,
+          "min": 3.0,
+          "max": 29.0,
+          "mean": 17.0,
+          "median": 19.0
+        },
+        "max_nodes_hit": 0
+      },
+      "4_idf_accumulate": {
+        "unique_graph_tasks_stats": {
+          "count": 3,
+          "min": 4.0,
+          "max": 6.0,
+          "mean": 5.0,
+          "median": 5.0
+        }
+      },
+      "5_vector_search": {
+        "vector_results_stats": {
+          "count": 3,
+          "min": 50.0,
+          "max": 50.0,
+          "mean": 50.0,
+          "median": 50.0
+        }
+      },
+      "9_timing": {
+        "vector_ms": {
+          "count": 3,
+          "min": 11.0,
+          "max": 14.0,
+          "mean": 13.0,
+          "median": 14.0
+        },
+        "graph_ms": {
+          "count": 3,
+          "min": 17007.0,
+          "max": 46145.0,
+          "mean": 28923.3333,
+          "median": 23618.0
+        },
+        "rerank_ms": {
+          "count": 3,
+          "min": 18630.0,
+          "max": 19374.0,
+          "mean": 18955.3333,
+          "median": 18862.0
+        },
+        "total_ms": {
+          "count": 3,
+          "min": 36394.0,
+          "max": 64790.0,
+          "mean": 47892.6667,
+          "median": 42494.0
+        },
+        "per_stage_raw": {
+          "1_llm_entity_extraction": {
+            "count": 3,
+            "min": 14976.0,
+            "max": 55312.0,
+            "mean": 31070.6667,
+            "median": 22924.0
+          },
+          "2_seed_entity_match": {
+            "count": 3,
+            "min": 2.0,
+            "max": 3.0,
+            "mean": 2.6667,
+            "median": 3.0
+          },
+          "3_bfs_expand": {
+            "count": 3,
+            "min": 1.0,
+            "max": 2.0,
+            "mean": 1.6667,
+            "median": 2.0
+          },
+          "4_inverse_idf_accumulate": {
+            "count": 3,
+            "min": 1.0,
+            "max": 3.0,
+            "mean": 2.0,
+            "median": 2.0
+          },
+          "5_vector_search": {
+            "count": 3,
+            "min": 36.0,
+            "max": 42.0,
+            "mean": 39.3333,
+            "median": 40.0
+          },
+          "6_outer_rrf_merge": {
+            "count": 3,
+            "min": 36394.0,
+            "max": 64791.0,
+            "mean": 47893.0,
+            "median": 42494.0
+          },
+          "7_rerank": {
+            "count": 3,
+            "min": 36394.0,
+            "max": 64791.0,
+            "mean": 47893.0,
+            "median": 42494.0
+          },
+          "8_source_distribution": {
+            "count": 3,
+            "min": 0.0,
+            "max": 0.0,
+            "mean": 0.0,
+            "median": 0.0
+          }
+        }
+      },
+      "8_source_distribution": {
+        "raw_counts": {
+          "vector": 12,
+          "graph": 0,
+          "both": 3,
+          "neither": 0
+        },
+        "total_final_results": 15,
+        "percentages": {
+          "vector": 80.0,
+          "graph": 0.0,
+          "both": 20.0,
+          "neither": 0.0
+        },
+        "by_query": [
+          {
+            "query": "GPU的对比和选型",
+            "source_distribution": {
+              "vector": 5,
+              "graph": 0,
+              "both": 0,
+              "neither": 0
+            },
+            "expanded_count": 3,
+            "extracted_entities": [
+              "GPU"
+            ]
+          },
+          {
+            "query": "flashattention的原理和历史",
+            "source_distribution": {
+              "vector": 5,
+              "graph": 0,
+              "both": 0,
+              "neither": 0
+            },
+            "expanded_count": 29,
+            "extracted_entities": [
+              "flashattention"
+            ]
+          },
+          {
+            "query": "序列并行(Sequence Parallel,SP)",
+            "source_distribution": {
+              "vector": 2,
+              "graph": 0,
+              "both": 3,
+              "neither": 0
+            },
+            "expanded_count": 19,
+            "extracted_entities": [
+              "序列并行",
+              "Sequence Parallel",
+              "SP"
+            ]
+          }
+        ]
+      },
+      "score_distribution": {
+        "rerank_score": {
+          "count": 15,
+          "min": 0.2147,
+          "max": 0.9974,
+          "mean": 0.5807,
+          "median": 0.5588
+        },
+        "hybrid_score": {
+          "count": 15,
+          "min": 0.0088,
+          "max": 0.0323,
+          "mean": 0.0169,
+          "median": 0.0149
         }
       }
     }

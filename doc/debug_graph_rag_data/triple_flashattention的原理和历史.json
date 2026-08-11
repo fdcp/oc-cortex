@@ -1,0 +1,518 @@
+{
+  "query": "flashattention的原理和历史",
+  "top_k": 5,
+  "use_reranker": true,
+  "use_graph_rag": true,
+  "graph_channel_weight": 0.3,
+  "bfs_depth": 1,
+  "max_expand_nodes": 30,
+  "max_graph_tasks": 50,
+  "rerank_multiplier": 2.0,
+  "outer_rrf_k": 30,
+  "stages": [
+    {
+      "stage": "1_llm_entity_extraction",
+      "elapsed_ms": 22924,
+      "extracted_entities": [
+        "flashattention"
+      ],
+      "count": 1
+    },
+    {
+      "stage": "2_seed_entity_match",
+      "elapsed_ms": 3,
+      "seed_entities": [
+        "FlashAttention-2 工作划分",
+        "FlashAttention-2",
+        "FlashAttention"
+      ],
+      "match_details": [
+        {
+          "extracted": "flashattention",
+          "matched": "FlashAttention",
+          "match_type": "fuzzy",
+          "task_count": 3
+        },
+        {
+          "extracted": "flashattention",
+          "matched": "FlashAttention-2 工作划分",
+          "match_type": "fuzzy",
+          "task_count": 1
+        },
+        {
+          "extracted": "flashattention",
+          "matched": "FlashAttention-2",
+          "match_type": "fuzzy",
+          "task_count": 1
+        }
+      ],
+      "exact_count": 0,
+      "fuzzy_count": 3
+    },
+    {
+      "stage": "3_bfs_expand",
+      "elapsed_ms": 2,
+      "expanded_entities": [
+        "BF16 混合精度训练",
+        "BF16混合精度训练指南",
+        "CUDA",
+        "Compute-Bound",
+        "FlashAttention",
+        "FlashAttention-1",
+        "FlashAttention-2",
+        "FlashAttention-2 工作划分",
+        "GPU",
+        "GPU算力",
+        "HBM访问",
+        "K block",
+        "N² HBM访问",
+        "Online Softmax",
+        "Ring Attention",
+        "Roofline模型",
+        "Tiling",
+        "atomicAdd",
+        "head_dim=256",
+        "online softmax",
+        "syncwarp",
+        "warp 粒度序列并行",
+        "√(Nd)/4",
+        "反向传播",
+        "同步阻塞",
+        "序列并行",
+        "数值稳定性",
+        "标准Attention",
+        "训练加速三件套"
+      ],
+      "expanded_count": 29,
+      "seed_to_expand_ratio": 9.667
+    },
+    {
+      "stage": "4_inverse_idf_accumulate",
+      "elapsed_ms": 3,
+      "total_tasks_global": 76,
+      "unique_graph_tasks": 5,
+      "graph_candidates_after_truncate": 5,
+      "top10_entity_contrib": [
+        {
+          "entity": "HBM访问",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "FlashAttention-2 工作划分",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "online softmax",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "GPU算力",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "BF16混合精度训练指南",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "Compute-Bound",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "N² HBM访问",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "Ring Attention",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "syncwarp",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "warp 粒度序列并行",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        }
+      ],
+      "top10_task_scores": [
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T4",
+          "score": 51.4454,
+          "n_entities": 12
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T2",
+          "score": 46.0286,
+          "n_entities": 11
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T3",
+          "score": 19.2856,
+          "n_entities": 5
+        },
+        {
+          "task_id": "ses_0c9e4a359ffeGDSrVSG2jNVB6n_T1",
+          "score": 16.3023,
+          "n_entities": 4
+        },
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+          "score": 4.3438,
+          "n_entities": 1
+        }
+      ],
+      "id_contrib_distribution": {
+        "count": 29,
+        "contrib_min": 3.2708,
+        "contrib_max": 4.3438,
+        "contrib_mean": 4.2599,
+        "task_count_min": 1,
+        "task_count_max": 3,
+        "task_count_mean": 1.14
+      }
+    },
+    {
+      "stage": "5_vector_search",
+      "elapsed_ms": 36,
+      "retrieval_query": "flashattention的原理和历史",
+      "vector_top_k_requested": 10,
+      "vector_results_count": 50,
+      "vector_score_stats": {
+        "count": 50,
+        "min": 0.015873,
+        "max": 0.031258,
+        "mean": 0.022938
+      },
+      "top10_vector_results": [
+        {
+          "rank": 1,
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T3",
+          "hybrid_score": 0.031258,
+          "label": "FA状态变量Shape澄清"
+        },
+        {
+          "rank": 2,
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+          "hybrid_score": 0.03055,
+          "label": "SP原理剖析与Mermaid图解迭代"
+        },
+        {
+          "rank": 3,
+          "task_id": "ses_0e8898453ffeS7ByDo9zjP8Z8h_T2",
+          "hybrid_score": 0.029644,
+          "label": "并行训练尾部填充代码解析"
+        },
+        {
+          "rank": 4,
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T4",
+          "hybrid_score": 0.029643,
+          "label": "FA1与FA2底层实现及并行类比"
+        },
+        {
+          "rank": 5,
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T2",
+          "hybrid_score": 0.028893,
+          "label": "Roofline模型算术强度推导"
+        },
+        {
+          "rank": 6,
+          "task_id": "ses_0ca8a24d9ffeHoz0wYkhYDDO4w_T2",
+          "hybrid_score": 0.028778,
+          "label": "技术笔记静态站点整合与本地实施"
+        },
+        {
+          "rank": 7,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T9",
+          "hybrid_score": 0.028309,
+          "label": "MCP模块功能与架构分析"
+        },
+        {
+          "rank": 8,
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T2",
+          "hybrid_score": 0.027783,
+          "label": "ZeRO显存优化原理与通信推导"
+        },
+        {
+          "rank": 9,
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T3",
+          "hybrid_score": 0.02669,
+          "label": "NeMo Megatron Bridge定位与价值辨析"
+        },
+        {
+          "rank": 10,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T11",
+          "hybrid_score": 0.026614,
+          "label": "Repo架构定位确认"
+        }
+      ]
+    },
+    {
+      "stage": "6_outer_rrf_merge",
+      "elapsed_ms": 42494,
+      "merged_candidates": 50,
+      "outer_rrf_k": 30,
+      "graph_channel_weight": 0.3
+    },
+    {
+      "stage": "7_rerank",
+      "elapsed_ms": 42494,
+      "rerank_time_ms": 18862,
+      "use_reranker": true,
+      "final_count": 5
+    },
+    {
+      "stage": "8_source_distribution",
+      "elapsed_ms": 0,
+      "source_dist": {
+        "vector": 5,
+        "graph": 0,
+        "both": 0,
+        "neither": 0
+      },
+      "final_results": [
+        {
+          "rank": 1,
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T3",
+          "source": "vector",
+          "rerank_score": 0.824462,
+          "hybrid_score": 0.017949,
+          "vector_rank": 9,
+          "graph_rank": null,
+          "graph_raw_score": null,
+          "label": "NeMo Megatron Bridge定位与价值辨析",
+          "summary_preview": "背景与目标：解答 NeMo Megatron Bridge 的核心定位，辨析其与 Megatron 原生 convert_checkpoint 工具的区别，并评估其在实际工程中的价值与边界。\n核心产出与关键决策：明确 Bridge 是连接 "
+        },
+        {
+          "rank": 2,
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T2",
+          "source": "vector",
+          "rerank_score": 0.558809,
+          "hybrid_score": 0.018421,
+          "vector_rank": 8,
+          "graph_rank": null,
+          "graph_raw_score": null,
+          "label": "ZeRO显存优化原理与通信推导",
+          "summary_preview": "背景与目标：为解决 DDP 在大模型训练中面临的显存冗余瓶颈，深入剖析 ZeRO 各阶段的优化原理与通信开销。核心产出与关键决策：对比 ZeRO-1/2/3 的显存占用，明确 ZeRO-2 通过 Reduce-Scatter 切分梯度并仅更"
+        },
+        {
+          "rank": 3,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T16",
+          "source": "vector",
+          "rerank_score": 0.292595,
+          "hybrid_score": 0.009459,
+          "vector_rank": 44,
+          "graph_rank": null,
+          "graph_raw_score": null,
+          "label": "整合优化专利交底书生成Ver2",
+          "summary_preview": "背景与目标：对比现有的两版专利交底书（A完整版与B简化版），整合优势内容并优化文档结构，生成最终交付版本。\n核心产出与关键决策：确认A版本（含权利要求书、伪代码等核心要素）为基础，提取B版本的紧凑章节写法和第6条创新点（因果语言模型重排序）"
+        },
+        {
+          "rank": 4,
+          "task_id": "ses_0ca8a24d9ffeHoz0wYkhYDDO4w_T2",
+          "source": "vector",
+          "rerank_score": 0.262842,
+          "hybrid_score": 0.019444,
+          "vector_rank": 6,
+          "graph_rank": null,
+          "graph_raw_score": null,
+          "label": "技术笔记静态站点整合与本地实施",
+          "summary_preview": "背景与目标：为整合分散的 7 个独立技术笔记 HTML 页面，需将其统一托管至 GitHub Pages 构建多页静态站点。\n核心产出与关键决策：采用“复制副本+注入式导航”策略，保持原文件不动。完成了站点目录结构搭建、公共导航脚本（nav"
+        },
+        {
+          "rank": 5,
+          "task_id": "ses_072ebc268ffe227bGpbCtWbM97_T4",
+          "source": "vector",
+          "rerank_score": 0.261331,
+          "hybrid_score": 0.014286,
+          "vector_rank": 19,
+          "graph_rank": null,
+          "graph_raw_score": null,
+          "label": "重构消息编号系统增加轮次与局部编号",
+          "summary_preview": "背景与目标：为提升长对话记录的阅读体验，在现有全局消息编号基础上，增加对话轮次编号与 Assistant 轮内局部编号。核心产出与关键决策：在 `build_messages()` 阶段统一计算三层编号逻辑：保留全局顺序编号（`#N`），为"
+        }
+      ]
+    },
+    {
+      "stage": "9_timing",
+      "elapsed_ms": 0,
+      "vector_time_ms": 14,
+      "graph_time_ms": 23618,
+      "rerank_time_ms": 18862,
+      "total_time_ms": 42494,
+      "per_stage_ms": [
+        {
+          "stage": "1_llm_entity_extraction",
+          "elapsed_ms": 22924
+        },
+        {
+          "stage": "2_seed_entity_match",
+          "elapsed_ms": 3
+        },
+        {
+          "stage": "3_bfs_expand",
+          "elapsed_ms": 2
+        },
+        {
+          "stage": "4_inverse_idf_accumulate",
+          "elapsed_ms": 3
+        },
+        {
+          "stage": "5_vector_search",
+          "elapsed_ms": 36
+        },
+        {
+          "stage": "6_outer_rrf_merge",
+          "elapsed_ms": 42494
+        },
+        {
+          "stage": "7_rerank",
+          "elapsed_ms": 42494
+        },
+        {
+          "stage": "8_source_distribution",
+          "elapsed_ms": 0
+        }
+      ]
+    }
+  ],
+  "query_entities": [
+    "flashattention"
+  ],
+  "seed_entities": [
+    "FlashAttention-2 工作划分",
+    "FlashAttention-2",
+    "FlashAttention"
+  ],
+  "expanded_entities": [
+    "BF16 混合精度训练",
+    "BF16混合精度训练指南",
+    "CUDA",
+    "Compute-Bound",
+    "FlashAttention",
+    "FlashAttention-1",
+    "FlashAttention-2",
+    "FlashAttention-2 工作划分",
+    "GPU",
+    "GPU算力",
+    "HBM访问",
+    "K block",
+    "N² HBM访问",
+    "Online Softmax",
+    "Ring Attention",
+    "Roofline模型",
+    "Tiling",
+    "atomicAdd",
+    "head_dim=256",
+    "online softmax",
+    "syncwarp",
+    "warp 粒度序列并行",
+    "√(Nd)/4",
+    "反向传播",
+    "同步阻塞",
+    "序列并行",
+    "数值稳定性",
+    "标准Attention",
+    "训练加速三件套"
+  ],
+  "expanded_count": 29,
+  "vector_results_count": 50,
+  "source_distribution": {
+    "vector": 5,
+    "graph": 0,
+    "both": 0,
+    "neither": 0
+  },
+  "final_results": [
+    {
+      "rank": 1,
+      "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T3",
+      "source": "vector",
+      "rerank_score": 0.824462,
+      "hybrid_score": 0.017949,
+      "vector_rank": 9,
+      "graph_rank": null,
+      "graph_raw_score": null,
+      "label": "NeMo Megatron Bridge定位与价值辨析",
+      "summary_preview": "背景与目标：解答 NeMo Megatron Bridge 的核心定位，辨析其与 Megatron 原生 convert_checkpoint 工具的区别，并评估其在实际工程中的价值与边界。\n核心产出与关键决策：明确 Bridge 是连接 "
+    },
+    {
+      "rank": 2,
+      "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T2",
+      "source": "vector",
+      "rerank_score": 0.558809,
+      "hybrid_score": 0.018421,
+      "vector_rank": 8,
+      "graph_rank": null,
+      "graph_raw_score": null,
+      "label": "ZeRO显存优化原理与通信推导",
+      "summary_preview": "背景与目标：为解决 DDP 在大模型训练中面临的显存冗余瓶颈，深入剖析 ZeRO 各阶段的优化原理与通信开销。核心产出与关键决策：对比 ZeRO-1/2/3 的显存占用，明确 ZeRO-2 通过 Reduce-Scatter 切分梯度并仅更"
+    },
+    {
+      "rank": 3,
+      "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T16",
+      "source": "vector",
+      "rerank_score": 0.292595,
+      "hybrid_score": 0.009459,
+      "vector_rank": 44,
+      "graph_rank": null,
+      "graph_raw_score": null,
+      "label": "整合优化专利交底书生成Ver2",
+      "summary_preview": "背景与目标：对比现有的两版专利交底书（A完整版与B简化版），整合优势内容并优化文档结构，生成最终交付版本。\n核心产出与关键决策：确认A版本（含权利要求书、伪代码等核心要素）为基础，提取B版本的紧凑章节写法和第6条创新点（因果语言模型重排序）"
+    },
+    {
+      "rank": 4,
+      "task_id": "ses_0ca8a24d9ffeHoz0wYkhYDDO4w_T2",
+      "source": "vector",
+      "rerank_score": 0.262842,
+      "hybrid_score": 0.019444,
+      "vector_rank": 6,
+      "graph_rank": null,
+      "graph_raw_score": null,
+      "label": "技术笔记静态站点整合与本地实施",
+      "summary_preview": "背景与目标：为整合分散的 7 个独立技术笔记 HTML 页面，需将其统一托管至 GitHub Pages 构建多页静态站点。\n核心产出与关键决策：采用“复制副本+注入式导航”策略，保持原文件不动。完成了站点目录结构搭建、公共导航脚本（nav"
+    },
+    {
+      "rank": 5,
+      "task_id": "ses_072ebc268ffe227bGpbCtWbM97_T4",
+      "source": "vector",
+      "rerank_score": 0.261331,
+      "hybrid_score": 0.014286,
+      "vector_rank": 19,
+      "graph_rank": null,
+      "graph_raw_score": null,
+      "label": "重构消息编号系统增加轮次与局部编号",
+      "summary_preview": "背景与目标：为提升长对话记录的阅读体验，在现有全局消息编号基础上，增加对话轮次编号与 Assistant 轮内局部编号。核心产出与关键决策：在 `build_messages()` 阶段统一计算三层编号逻辑：保留全局顺序编号（`#N`），为"
+    }
+  ],
+  "total_time_ms": 42494,
+  "total_wall_ms": 65465,
+  "db": "triple",
+  "db_stats": {
+    "db_path": "output/triple/knowledge_graph.db",
+    "nodes": 1211,
+    "edges": 3353,
+    "modes": 1,
+    "avg_task_count_per_entity": 1.09
+  },
+  "wall_ms": 65465
+}

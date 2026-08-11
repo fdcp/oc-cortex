@@ -1,0 +1,549 @@
+{
+  "query": "序列并行(Sequence Parallel,SP)",
+  "top_k": 5,
+  "use_reranker": true,
+  "use_graph_rag": true,
+  "graph_channel_weight": 0.3,
+  "bfs_depth": 1,
+  "max_expand_nodes": 30,
+  "max_graph_tasks": 50,
+  "rerank_multiplier": 2.0,
+  "outer_rrf_k": 30,
+  "stages": [
+    {
+      "stage": "1_llm_entity_extraction",
+      "elapsed_ms": 23300,
+      "extracted_entities": [
+        "序列并行",
+        "Sequence Parallel",
+        "SP"
+      ],
+      "count": 3
+    },
+    {
+      "stage": "2_seed_entity_match",
+      "elapsed_ms": 3,
+      "seed_entities": [
+        "序列并行",
+        "SP",
+        "Sequence Parallelism"
+      ],
+      "match_details": [
+        {
+          "extracted": "序列并行",
+          "matched": "序列并行",
+          "match_type": "exact",
+          "task_count": 2
+        },
+        {
+          "extracted": "Sequence Parallel",
+          "matched": "Sequence Parallelism",
+          "match_type": "fuzzy",
+          "task_count": 1
+        },
+        {
+          "extracted": "SP",
+          "matched": "SP",
+          "match_type": "exact",
+          "task_count": 1
+        }
+      ],
+      "exact_count": 2,
+      "fuzzy_count": 1
+    },
+    {
+      "stage": "3_bfs_expand",
+      "elapsed_ms": 5,
+      "expanded_entities": [
+        "All-Gather",
+        "CUDA",
+        "Embedding层",
+        "FlashAttention-1",
+        "FlashAttention-2",
+        "K block",
+        "LayerNorm",
+        "Megatron-LM",
+        "Mermaid",
+        "Mermaid渲染问题",
+        "OpenCode",
+        "RMSNorm",
+        "Ring Attention",
+        "SP",
+        "Sequence Parallelism",
+        "TP",
+        "Ulysses",
+        "atomicAdd",
+        "col-parallel",
+        "col-parallel切分",
+        "opencode.db",
+        "syncwarp",
+        "warp",
+        "分布式训练",
+        "反向传播",
+        "大模型分布式训练",
+        "大模型分布式训练并行",
+        "序列并行",
+        "张量并行",
+        "激活内存优化"
+      ],
+      "expanded_count": 30,
+      "seed_to_expand_ratio": 10.0
+    },
+    {
+      "stage": "4_inverse_idf_accumulate",
+      "elapsed_ms": 4,
+      "total_tasks_global": 76,
+      "unique_graph_tasks": 29,
+      "graph_candidates_after_truncate": 29,
+      "top10_entity_contrib": [
+        {
+          "entity": "RMSNorm",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "Mermaid",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "col-parallel",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "syncwarp",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "激活内存优化",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "FlashAttention-2",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "K block",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "大模型分布式训练并行",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "大模型分布式训练",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "col-parallel切分",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        }
+      ],
+      "top10_task_scores": [
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+          "score": 49.6922,
+          "n_entities": 12
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T4",
+          "score": 41.0046,
+          "n_entities": 10
+        },
+        {
+          "task_id": "ses_0a16b26dcffewGBp0akSLB5IZG_T1",
+          "score": 24.0345,
+          "n_entities": 6
+        },
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+          "score": 14.9418,
+          "n_entities": 4
+        },
+        {
+          "task_id": "ses_0a53b6807ffex4xr4a0wNdi5EQ_T1",
+          "score": 4.5643,
+          "n_entities": 2
+        },
+        {
+          "task_id": "ses_0a53b6807ffex4xr4a0wNdi5EQ_T2",
+          "score": 4.5643,
+          "n_entities": 2
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T20",
+          "score": 4.5643,
+          "n_entities": 2
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T3",
+          "score": 4.3438,
+          "n_entities": 1
+        },
+        {
+          "task_id": "ses_0e8898453ffeS7ByDo9zjP8Z8h_T2",
+          "score": 3.6636,
+          "n_entities": 1
+        },
+        {
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T1",
+          "score": 3.2708,
+          "n_entities": 1
+        }
+      ],
+      "id_contrib_distribution": {
+        "count": 30,
+        "contrib_min": 1.5686,
+        "contrib_max": 4.3438,
+        "contrib_mean": 4.0441,
+        "task_count_min": 1,
+        "task_count_max": 20,
+        "task_count_mean": 2.0
+      }
+    },
+    {
+      "stage": "5_vector_search",
+      "elapsed_ms": 45,
+      "retrieval_query": "序列并行(Sequence Parallel,SP)",
+      "vector_top_k_requested": 10,
+      "vector_results_count": 50,
+      "vector_score_stats": {
+        "count": 50,
+        "min": 0.016637,
+        "max": 0.032522,
+        "mean": 0.023338
+      },
+      "top10_vector_results": [
+        {
+          "rank": 1,
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+          "hybrid_score": 0.032522,
+          "label": "SP原理剖析与Mermaid图解迭代"
+        },
+        {
+          "rank": 2,
+          "task_id": "ses_0c4e0312affeUm1WYU03ISPgU2_T1",
+          "hybrid_score": 0.03101,
+          "label": "RoPE预计算函数实现解析"
+        },
+        {
+          "rank": 3,
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+          "hybrid_score": 0.030622,
+          "label": "NVIDIA SP与Ulysses并行策略对比"
+        },
+        {
+          "rank": 4,
+          "task_id": "ses_0e8898453ffeS7ByDo9zjP8Z8h_T2",
+          "hybrid_score": 0.030159,
+          "label": "并行训练尾部填充代码解析"
+        },
+        {
+          "rank": 5,
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T3",
+          "hybrid_score": 0.028595,
+          "label": "FA状态变量Shape澄清"
+        },
+        {
+          "rank": 6,
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T4",
+          "hybrid_score": 0.027629,
+          "label": "FA1与FA2底层实现及并行类比"
+        },
+        {
+          "rank": 7,
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T2",
+          "hybrid_score": 0.02739,
+          "label": "Roofline模型算术强度推导"
+        },
+        {
+          "rank": 8,
+          "task_id": "ses_04d77c8caffexlaTbA0HPB87oY_T2",
+          "hybrid_score": 0.026916,
+          "label": "OMO 配置文件优化"
+        },
+        {
+          "rank": 9,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T18",
+          "hybrid_score": 0.026743,
+          "label": "专利交底书格式迭代优化"
+        },
+        {
+          "rank": 10,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T5",
+          "hybrid_score": 0.02643,
+          "label": "澄清图谱构建流程及模型职责"
+        }
+      ]
+    },
+    {
+      "stage": "6_outer_rrf_merge",
+      "elapsed_ms": 44187,
+      "merged_candidates": 61,
+      "outer_rrf_k": 30,
+      "graph_channel_weight": 0.3
+    },
+    {
+      "stage": "7_rerank",
+      "elapsed_ms": 44187,
+      "rerank_time_ms": 22687,
+      "use_reranker": true,
+      "final_count": 5
+    },
+    {
+      "stage": "8_source_distribution",
+      "elapsed_ms": 0,
+      "source_dist": {
+        "vector": 2,
+        "graph": 0,
+        "both": 3,
+        "neither": 0
+      },
+      "final_results": [
+        {
+          "rank": 1,
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+          "source": "both",
+          "rerank_score": 0.997368,
+          "hybrid_score": 0.032258,
+          "vector_rank": 1,
+          "graph_rank": 1,
+          "graph_raw_score": 49.692208,
+          "label": "SP原理剖析与Mermaid图解迭代",
+          "summary_preview": "背景与目标：为深入理解 Megatron-LM 序列并行 (SP) 机制，系统梳理了 TP=2 场景下 SP 的张量切分、通信原语及激活内存优化原理，并迭代输出高兼容性的 Mermaid 架构图解。\n核心产出与关键决策：明确了 SP 区域外"
+        },
+        {
+          "rank": 2,
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T2",
+          "source": "vector",
+          "rerank_score": 0.979668,
+          "hybrid_score": 0.018919,
+          "vector_rank": 7,
+          "graph_rank": null,
+          "graph_raw_score": null,
+          "label": "Roofline模型算术强度推导",
+          "summary_preview": "背景：基于 Roofline 模型分析标准 Attention 与 FlashAttention 的性能瓶颈。核心产出：通过推导 HBM 访问量与 FLOPs，修正了 FLOPs 计数约定（1 FMA=1 FLOP）与 SRAM 约束假设，"
+        },
+        {
+          "rank": 3,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T20",
+          "source": "both",
+          "rerank_score": 0.944177,
+          "hybrid_score": 0.020608,
+          "vector_rank": 26,
+          "graph_rank": 7,
+          "graph_raw_score": 4.564348,
+          "label": "Session 历史追溯与总结",
+          "summary_preview": "追溯当前 opencode session 从创建至今的完整操作历史。背景：用户需要了解 session 全貌。核心产出：通过查询 opencode.db(ses_0870d73a7ffehev1FO7HA2HSze，258 条消息，171"
+        },
+        {
+          "rank": 4,
+          "task_id": "ses_0c4e0312affeUm1WYU03ISPgU2_T1",
+          "source": "vector",
+          "rerank_score": 0.880386,
+          "hybrid_score": 0.021875,
+          "vector_rank": 2,
+          "graph_rank": null,
+          "graph_raw_score": null,
+          "label": "RoPE预计算函数实现解析",
+          "summary_preview": "为理解 LLaMA 风格 Transformer 中旋转位置编码（RoPE）的实现机制，分析了 `precompute_freqs_cis` 函数的完整代码逻辑与张量形状变化。核心产出：确认 `freqs` 最终 shape 为 `[seq"
+        },
+        {
+          "rank": 5,
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+          "source": "both",
+          "rerank_score": 0.820469,
+          "hybrid_score": 0.030036,
+          "vector_rank": 3,
+          "graph_rank": 4,
+          "graph_raw_score": 14.941764,
+          "label": "NVIDIA SP与Ulysses并行策略对比",
+          "summary_preview": "背景与目标：针对 8 GPU (TP=2, SP=4) 场景，澄清 Tensor Parallelism 与 Sequence Parallelism 的正交关系，并深度对比 NVIDIA SP 与 Ulysses 两种序列并行实现方案的通"
+        }
+      ]
+    },
+    {
+      "stage": "9_timing",
+      "elapsed_ms": 0,
+      "vector_time_ms": 17,
+      "graph_time_ms": 21480,
+      "rerank_time_ms": 22687,
+      "total_time_ms": 44186,
+      "per_stage_ms": [
+        {
+          "stage": "1_llm_entity_extraction",
+          "elapsed_ms": 23300
+        },
+        {
+          "stage": "2_seed_entity_match",
+          "elapsed_ms": 3
+        },
+        {
+          "stage": "3_bfs_expand",
+          "elapsed_ms": 5
+        },
+        {
+          "stage": "4_inverse_idf_accumulate",
+          "elapsed_ms": 4
+        },
+        {
+          "stage": "5_vector_search",
+          "elapsed_ms": 45
+        },
+        {
+          "stage": "6_outer_rrf_merge",
+          "elapsed_ms": 44187
+        },
+        {
+          "stage": "7_rerank",
+          "elapsed_ms": 44187
+        },
+        {
+          "stage": "8_source_distribution",
+          "elapsed_ms": 0
+        }
+      ]
+    }
+  ],
+  "query_entities": [
+    "序列并行",
+    "Sequence Parallel",
+    "SP"
+  ],
+  "seed_entities": [
+    "序列并行",
+    "SP",
+    "Sequence Parallelism"
+  ],
+  "expanded_entities": [
+    "All-Gather",
+    "CUDA",
+    "Embedding层",
+    "FlashAttention-1",
+    "FlashAttention-2",
+    "K block",
+    "LayerNorm",
+    "Megatron-LM",
+    "Mermaid",
+    "Mermaid渲染问题",
+    "OpenCode",
+    "RMSNorm",
+    "Ring Attention",
+    "SP",
+    "Sequence Parallelism",
+    "TP",
+    "Ulysses",
+    "atomicAdd",
+    "col-parallel",
+    "col-parallel切分",
+    "opencode.db",
+    "syncwarp",
+    "warp",
+    "分布式训练",
+    "反向传播",
+    "大模型分布式训练",
+    "大模型分布式训练并行",
+    "序列并行",
+    "张量并行",
+    "激活内存优化"
+  ],
+  "expanded_count": 30,
+  "vector_results_count": 50,
+  "source_distribution": {
+    "vector": 2,
+    "graph": 0,
+    "both": 3,
+    "neither": 0
+  },
+  "final_results": [
+    {
+      "rank": 1,
+      "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+      "source": "both",
+      "rerank_score": 0.997368,
+      "hybrid_score": 0.032258,
+      "vector_rank": 1,
+      "graph_rank": 1,
+      "graph_raw_score": 49.692208,
+      "label": "SP原理剖析与Mermaid图解迭代",
+      "summary_preview": "背景与目标：为深入理解 Megatron-LM 序列并行 (SP) 机制，系统梳理了 TP=2 场景下 SP 的张量切分、通信原语及激活内存优化原理，并迭代输出高兼容性的 Mermaid 架构图解。\n核心产出与关键决策：明确了 SP 区域外"
+    },
+    {
+      "rank": 2,
+      "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T2",
+      "source": "vector",
+      "rerank_score": 0.979668,
+      "hybrid_score": 0.018919,
+      "vector_rank": 7,
+      "graph_rank": null,
+      "graph_raw_score": null,
+      "label": "Roofline模型算术强度推导",
+      "summary_preview": "背景：基于 Roofline 模型分析标准 Attention 与 FlashAttention 的性能瓶颈。核心产出：通过推导 HBM 访问量与 FLOPs，修正了 FLOPs 计数约定（1 FMA=1 FLOP）与 SRAM 约束假设，"
+    },
+    {
+      "rank": 3,
+      "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T20",
+      "source": "both",
+      "rerank_score": 0.944177,
+      "hybrid_score": 0.020608,
+      "vector_rank": 26,
+      "graph_rank": 7,
+      "graph_raw_score": 4.564348,
+      "label": "Session 历史追溯与总结",
+      "summary_preview": "追溯当前 opencode session 从创建至今的完整操作历史。背景：用户需要了解 session 全貌。核心产出：通过查询 opencode.db(ses_0870d73a7ffehev1FO7HA2HSze，258 条消息，171"
+    },
+    {
+      "rank": 4,
+      "task_id": "ses_0c4e0312affeUm1WYU03ISPgU2_T1",
+      "source": "vector",
+      "rerank_score": 0.880386,
+      "hybrid_score": 0.021875,
+      "vector_rank": 2,
+      "graph_rank": null,
+      "graph_raw_score": null,
+      "label": "RoPE预计算函数实现解析",
+      "summary_preview": "为理解 LLaMA 风格 Transformer 中旋转位置编码（RoPE）的实现机制，分析了 `precompute_freqs_cis` 函数的完整代码逻辑与张量形状变化。核心产出：确认 `freqs` 最终 shape 为 `[seq"
+    },
+    {
+      "rank": 5,
+      "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+      "source": "both",
+      "rerank_score": 0.820469,
+      "hybrid_score": 0.030036,
+      "vector_rank": 3,
+      "graph_rank": 4,
+      "graph_raw_score": 14.941764,
+      "label": "NVIDIA SP与Ulysses并行策略对比",
+      "summary_preview": "背景与目标：针对 8 GPU (TP=2, SP=4) 场景，澄清 Tensor Parallelism 与 Sequence Parallelism 的正交关系，并深度对比 NVIDIA SP 与 Ulysses 两种序列并行实现方案的通"
+    }
+  ],
+  "total_time_ms": 44186,
+  "total_wall_ms": 67546,
+  "db": "entity",
+  "db_stats": {
+    "db_path": "output/entity/knowledge_graph.db",
+    "nodes": 687,
+    "edges": 10757,
+    "modes": 1,
+    "avg_task_count_per_entity": 1.19
+  },
+  "wall_ms": 67546
+}
