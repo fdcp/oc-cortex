@@ -1,0 +1,483 @@
+{
+  "query": "知识图谱 实体对齐",
+  "top_k": 5,
+  "use_reranker": true,
+  "use_graph_rag": true,
+  "graph_channel_weight": 0.3,
+  "bfs_depth": 1,
+  "max_expand_nodes": 30,
+  "max_graph_tasks": 50,
+  "rerank_multiplier": 2.0,
+  "outer_rrf_k": 30,
+  "stages": [
+    {
+      "stage": "1_llm_entity_extraction",
+      "elapsed_ms": 13387,
+      "extracted_entities": [
+        "知识图谱",
+        "实体对齐"
+      ],
+      "count": 2
+    },
+    {
+      "stage": "2_seed_entity_match",
+      "elapsed_ms": 1,
+      "seed_entities": [
+        "实体对齐",
+        "知识图谱"
+      ],
+      "match_details": [
+        {
+          "extracted": "知识图谱",
+          "matched": "知识图谱",
+          "match_type": "exact",
+          "task_count": 1
+        },
+        {
+          "extracted": "实体对齐",
+          "matched": "实体对齐",
+          "match_type": "exact",
+          "task_count": 2
+        }
+      ],
+      "exact_count": 2,
+      "fuzzy_count": 0
+    },
+    {
+      "stage": "3_bfs_expand",
+      "elapsed_ms": 2,
+      "expanded_entities": [
+        "Cross-session Graph-RAG",
+        "Cross-session Graph-RAG系统",
+        "Cross-session Knowledge-Graph-augmented RAG",
+        "Dense向量召回",
+        "Embedding",
+        "LLM",
+        "P6b决策溯源",
+        "实体对齐",
+        "目标repo",
+        "知识图谱",
+        "知识抽取",
+        "统一指代"
+      ],
+      "expanded_count": 12,
+      "seed_to_expand_ratio": 6.0
+    },
+    {
+      "stage": "4_inverse_idf_accumulate",
+      "elapsed_ms": 2,
+      "total_tasks_global": 76,
+      "unique_graph_tasks": 6,
+      "graph_candidates_after_truncate": 6,
+      "top10_entity_contrib": [
+        {
+          "entity": "Cross-session Graph-RAG系统",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "Cross-session Graph-RAG",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "目标repo",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "P6b决策溯源",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "知识抽取",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "Embedding",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "知识图谱",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "Dense向量召回",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "Cross-session Knowledge-Graph-augmented RAG",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "统一指代",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        }
+      ],
+      "top10_task_scores": [
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T11",
+          "score": 29.7264,
+          "n_entities": 7
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T5",
+          "score": 15.622,
+          "n_entities": 4
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T12",
+          "score": 4.3438,
+          "n_entities": 1
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T8",
+          "score": 4.3438,
+          "n_entities": 1
+        },
+        {
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T5",
+          "score": 3.2708,
+          "n_entities": 1
+        },
+        {
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T7",
+          "score": 3.2708,
+          "n_entities": 1
+        }
+      ],
+      "id_contrib_distribution": {
+        "count": 12,
+        "contrib_min": 3.2708,
+        "contrib_max": 4.3438,
+        "contrib_mean": 4.1977,
+        "task_count_min": 1,
+        "task_count_max": 3,
+        "task_count_mean": 1.25
+      }
+    },
+    {
+      "stage": "5_vector_search",
+      "elapsed_ms": 48,
+      "retrieval_query": "知识图谱 实体对齐",
+      "vector_top_k_requested": 10,
+      "vector_results_count": 50,
+      "vector_score_stats": {
+        "count": 50,
+        "min": 0.013889,
+        "max": 0.032018,
+        "mean": 0.022771
+      },
+      "top10_vector_results": [
+        {
+          "rank": 1,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T4",
+          "hybrid_score": 0.032018,
+          "label": "P5实体对齐机制与配置解析"
+        },
+        {
+          "rank": 2,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T19",
+          "hybrid_score": 0.032002,
+          "label": "专利名称优化建议"
+        },
+        {
+          "rank": 3,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T11",
+          "hybrid_score": 0.030886,
+          "label": "Repo架构定位确认"
+        },
+        {
+          "rank": 4,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T5",
+          "hybrid_score": 0.030835,
+          "label": "澄清图谱构建流程及模型职责"
+        },
+        {
+          "rank": 5,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T8",
+          "hybrid_score": 0.03009,
+          "label": "P4与P5图谱关系分析"
+        },
+        {
+          "rank": 6,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T7",
+          "hybrid_score": 0.029437,
+          "label": "规划 P5 稀疏向量改造方案"
+        },
+        {
+          "rank": 7,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T18",
+          "hybrid_score": 0.027106,
+          "label": "专利交底书格式迭代优化"
+        },
+        {
+          "rank": 8,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T6",
+          "hybrid_score": 0.026847,
+          "label": "评估 Dense Embedding 替换方案"
+        },
+        {
+          "rank": 9,
+          "task_id": "ses_0c9e4a359ffeGDSrVSG2jNVB6n_T1",
+          "hybrid_score": 0.026289,
+          "label": "BF16训练指南v4扩充"
+        },
+        {
+          "rank": 10,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T12",
+          "hybrid_score": 0.026289,
+          "label": "GraphRAG业界应用调研"
+        }
+      ]
+    },
+    {
+      "stage": "6_outer_rrf_merge",
+      "elapsed_ms": 30532,
+      "merged_candidates": 51,
+      "outer_rrf_k": 30,
+      "graph_channel_weight": 0.3
+    },
+    {
+      "stage": "7_rerank",
+      "elapsed_ms": 30532,
+      "rerank_time_ms": 18808,
+      "use_reranker": true,
+      "final_count": 5
+    },
+    {
+      "stage": "8_source_distribution",
+      "elapsed_ms": 0,
+      "source_dist": {
+        "vector": 4,
+        "graph": 1,
+        "both": 0,
+        "neither": 0
+      },
+      "final_results": [
+        {
+          "rank": 1,
+          "task_id": "ses_16a4e11cfffe79OQe98lCUaEhp_T1",
+          "source": "vector",
+          "rerank_score": 0.956796,
+          "hybrid_score": 0.010448,
+          "vector_rank": 37,
+          "graph_rank": null,
+          "graph_raw_score": null,
+          "label": "MiniMax跨端互通解答与偏好记录",
+          "summary_preview": "解答了 MiniMax 桌面端（MiniMax Code）与手机端 APP 在账号订阅上互通但会话接力尚不明确的问题，提供了跨端同步的实操测试步骤，并通过写入 /Users/zhaoxiuwei/.mavis/memory/user.md "
+        },
+        {
+          "rank": 2,
+          "task_id": "ses_0ca8a24d9ffeHoz0wYkhYDDO4w_T1",
+          "source": "vector",
+          "rerank_score": 0.893216,
+          "hybrid_score": 0.009211,
+          "vector_rank": 46,
+          "graph_rank": null,
+          "graph_raw_score": null,
+          "label": "工具能力确认与 Pages 方案咨询",
+          "summary_preview": "确认了 opencode 的核心能力边界及当前只读模式状态，并明确了在 GitHub 个人账户添加网页的两种实现路径（通过 GitHub Pages 托管独立站点或在个人资料 README 中添加链接）。"
+        },
+        {
+          "rank": 3,
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T5",
+          "source": "graph",
+          "rerank_score": 0.887205,
+          "hybrid_score": 0.008571,
+          "vector_rank": null,
+          "graph_rank": 5,
+          "graph_raw_score": 3.270836,
+          "label": "P2增量运行功能开发",
+          "summary_preview": "背景与目标：解决P2阶段LLM调用失败后必须全量重跑的问题，实现基于Checkpoint的增量处理功能。\n核心产出与关键决策：在`src/code_p2_main.py`中引入`output/.p2_checkpoint.json`机制，记"
+        },
+        {
+          "rank": 4,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T7",
+          "source": "vector",
+          "rerank_score": 0.626124,
+          "hybrid_score": 0.019444,
+          "vector_rank": 6,
+          "graph_rank": null,
+          "graph_raw_score": null,
+          "label": "规划 P5 稀疏向量改造方案",
+          "summary_preview": "背景与目标：分析 Phase 5 实体对齐阶段未能利用 BGE-M3 等模型 Sparse 向量能力的原因，并规划混合检索改造方案。\n核心产出与关键决策：定位到根本原因是 `KGBuilder` 仅初始化了 Dense encoder，且 "
+        },
+        {
+          "rank": 5,
+          "task_id": "ses_0c99b81bcffeAwdzQ0s8zld82L_T2",
+          "source": "vector",
+          "rerank_score": 0.566019,
+          "hybrid_score": 0.012727,
+          "vector_rank": 25,
+          "graph_rank": null,
+          "graph_raw_score": null,
+          "label": "编写优化器进阶指南v2",
+          "summary_preview": "在 v1 基础上，针对 Adam/AdamW/Lion/Muon 四大核心优化器进行深度扩写，以强化数学原理、手算推导与面试问答。核心产出为 v2 版本的 Markdown 与 HTML 文件，大幅增加了硬核推导内容（如 Adam 偏差修正"
+        }
+      ]
+    },
+    {
+      "stage": "9_timing",
+      "elapsed_ms": 0,
+      "vector_time_ms": 12,
+      "graph_time_ms": 11710,
+      "rerank_time_ms": 18808,
+      "total_time_ms": 30531,
+      "per_stage_ms": [
+        {
+          "stage": "1_llm_entity_extraction",
+          "elapsed_ms": 13387
+        },
+        {
+          "stage": "2_seed_entity_match",
+          "elapsed_ms": 1
+        },
+        {
+          "stage": "3_bfs_expand",
+          "elapsed_ms": 2
+        },
+        {
+          "stage": "4_inverse_idf_accumulate",
+          "elapsed_ms": 2
+        },
+        {
+          "stage": "5_vector_search",
+          "elapsed_ms": 48
+        },
+        {
+          "stage": "6_outer_rrf_merge",
+          "elapsed_ms": 30532
+        },
+        {
+          "stage": "7_rerank",
+          "elapsed_ms": 30532
+        },
+        {
+          "stage": "8_source_distribution",
+          "elapsed_ms": 0
+        }
+      ]
+    }
+  ],
+  "query_entities": [
+    "知识图谱",
+    "实体对齐"
+  ],
+  "seed_entities": [
+    "实体对齐",
+    "知识图谱"
+  ],
+  "expanded_entities": [
+    "Cross-session Graph-RAG",
+    "Cross-session Graph-RAG系统",
+    "Cross-session Knowledge-Graph-augmented RAG",
+    "Dense向量召回",
+    "Embedding",
+    "LLM",
+    "P6b决策溯源",
+    "实体对齐",
+    "目标repo",
+    "知识图谱",
+    "知识抽取",
+    "统一指代"
+  ],
+  "expanded_count": 12,
+  "vector_results_count": 50,
+  "source_distribution": {
+    "vector": 4,
+    "graph": 1,
+    "both": 0,
+    "neither": 0
+  },
+  "final_results": [
+    {
+      "rank": 1,
+      "task_id": "ses_16a4e11cfffe79OQe98lCUaEhp_T1",
+      "source": "vector",
+      "rerank_score": 0.956796,
+      "hybrid_score": 0.010448,
+      "vector_rank": 37,
+      "graph_rank": null,
+      "graph_raw_score": null,
+      "label": "MiniMax跨端互通解答与偏好记录",
+      "summary_preview": "解答了 MiniMax 桌面端（MiniMax Code）与手机端 APP 在账号订阅上互通但会话接力尚不明确的问题，提供了跨端同步的实操测试步骤，并通过写入 /Users/zhaoxiuwei/.mavis/memory/user.md "
+    },
+    {
+      "rank": 2,
+      "task_id": "ses_0ca8a24d9ffeHoz0wYkhYDDO4w_T1",
+      "source": "vector",
+      "rerank_score": 0.893216,
+      "hybrid_score": 0.009211,
+      "vector_rank": 46,
+      "graph_rank": null,
+      "graph_raw_score": null,
+      "label": "工具能力确认与 Pages 方案咨询",
+      "summary_preview": "确认了 opencode 的核心能力边界及当前只读模式状态，并明确了在 GitHub 个人账户添加网页的两种实现路径（通过 GitHub Pages 托管独立站点或在个人资料 README 中添加链接）。"
+    },
+    {
+      "rank": 3,
+      "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T5",
+      "source": "graph",
+      "rerank_score": 0.887205,
+      "hybrid_score": 0.008571,
+      "vector_rank": null,
+      "graph_rank": 5,
+      "graph_raw_score": 3.270836,
+      "label": "P2增量运行功能开发",
+      "summary_preview": "背景与目标：解决P2阶段LLM调用失败后必须全量重跑的问题，实现基于Checkpoint的增量处理功能。\n核心产出与关键决策：在`src/code_p2_main.py`中引入`output/.p2_checkpoint.json`机制，记"
+    },
+    {
+      "rank": 4,
+      "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T7",
+      "source": "vector",
+      "rerank_score": 0.626124,
+      "hybrid_score": 0.019444,
+      "vector_rank": 6,
+      "graph_rank": null,
+      "graph_raw_score": null,
+      "label": "规划 P5 稀疏向量改造方案",
+      "summary_preview": "背景与目标：分析 Phase 5 实体对齐阶段未能利用 BGE-M3 等模型 Sparse 向量能力的原因，并规划混合检索改造方案。\n核心产出与关键决策：定位到根本原因是 `KGBuilder` 仅初始化了 Dense encoder，且 "
+    },
+    {
+      "rank": 5,
+      "task_id": "ses_0c99b81bcffeAwdzQ0s8zld82L_T2",
+      "source": "vector",
+      "rerank_score": 0.566019,
+      "hybrid_score": 0.012727,
+      "vector_rank": 25,
+      "graph_rank": null,
+      "graph_raw_score": null,
+      "label": "编写优化器进阶指南v2",
+      "summary_preview": "在 v1 基础上，针对 Adam/AdamW/Lion/Muon 四大核心优化器进行深度扩写，以强化数学原理、手算推导与面试问答。核心产出为 v2 版本的 Markdown 与 HTML 文件，大幅增加了硬核推导内容（如 Adam 偏差修正"
+    }
+  ],
+  "total_time_ms": 30531,
+  "total_wall_ms": 43975,
+  "db": "triple",
+  "db_stats": {
+    "db_path": "output/triple/knowledge_graph.db",
+    "nodes": 1211,
+    "edges": 3353,
+    "modes": 1,
+    "avg_task_count_per_entity": 1.09
+  },
+  "wall_ms": 43975
+}
