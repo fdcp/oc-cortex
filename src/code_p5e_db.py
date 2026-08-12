@@ -13,7 +13,8 @@ from pathlib import Path
 
 import networkx as nx
 from loguru import logger
-
+import contextlib
+from typing import List
 
 class KGDatabase:
     """SQLite 知识图谱数据库"""
@@ -178,26 +179,89 @@ class KGDatabase:
             return []
         return node["source_tasks"]
 
-    def search_entities(self, query: str, limit: int = 20) -> list[dict]:
-        """模糊搜索实体名称（LIKE 匹配）"""
-        conn = sqlite3.connect(self.db_path)
-        c = conn.cursor()
-        c.execute(
-            "SELECT name, entity_type, aliases, source_tasks, task_count "
-            "FROM nodes WHERE name LIKE ? ORDER BY task_count DESC LIMIT ?",
-            (f"%{query}%", limit),
-        )
-        results = []
-        for row in c.fetchall():
-            results.append({
-                "name": row[0],
-                "entity_type": row[1],
-                "aliases": json.loads(row[2]),
-                "source_tasks": json.loads(row[3]),
-                "task_count": row[4],
-            })
-        conn.close()
-        return results
+    def search_entities(self, query: str, limit: int = 20) -> List[dict]:
+        """
+        Fuzzy-search entity: match name OR any alias in aliases array.
+        Support searching only by alias even if name does not contain query.
+        Use GROUP BY + MIN(score) instead of DISTINCT to preserve best match rank.
+        Sort priority:
+            0: exact match on name
+            1: prefix match on name
+            2: exact match on any alias
+            3: prefix match on any alias
+            4: partial contains match on name
+            5: partial contains match on any alias
+        Within same rank: shorter name first, higher task_count first.
+        """
+        query = query.strip()
+        if not isinstance(query, str) or not query:
+            return []
+        limit = max(1, min(int(limit), 200))
+
+        # Escape LIKE special characters: \ % _
+        esc = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        pat_contains = f"%{esc}%"
+        pat_prefix = f"{esc}%"
+
+        with contextlib.closing(sqlite3.connect(self.db_path)) as conn:
+            conn.execute("PRAGMA case_sensitive_like = false;")
+            c = conn.cursor()
+
+            c.execute(
+                """
+                SELECT
+                    n.name,
+                    n.entity_type,
+                    n.aliases,
+                    n.source_tasks,
+                    n.task_count
+                FROM nodes n
+                LEFT JOIN json_each(NULLIF(n.aliases, '')) al
+                WHERE
+                    n.name LIKE ? ESCAPE '\\'
+                    OR al.value LIKE ? ESCAPE '\\'
+                GROUP BY n.rowid, n.name
+                ORDER BY
+                    MIN(
+                        CASE
+                            WHEN n.name = ?                    THEN 0
+                            WHEN n.name LIKE ? ESCAPE '\\'     THEN 1
+                            WHEN al.value = ?                  THEN 2
+                            WHEN al.value LIKE ? ESCAPE '\\'   THEN 3
+                            WHEN n.name LIKE ? ESCAPE '\\'     THEN 4
+                            ELSE                                    5
+                        END
+                    ),
+                    LENGTH(n.name) ASC,
+                    n.task_count DESC
+                LIMIT ?
+                """,
+                (
+                    pat_contains, pat_contains,
+                    query, pat_prefix,
+                    query, pat_prefix,
+                    pat_contains,
+                    limit,
+                ),
+            )
+            rows = c.fetchall()
+
+        def _safe_load_json(s, default):
+            try:
+                return json.loads(s) if s else default
+            except (json.JSONDecodeError, TypeError):
+                return default
+
+        return [
+            {
+                "name": r[0],
+                "entity_type": r[1],
+                "aliases": _safe_load_json(r[2], []),
+                "source_tasks": _safe_load_json(r[3], []),
+                "task_count": r[4],
+            }
+            for r in rows
+        ]
 
     def bfs_expand(self, seed_entities: list[str], depth: int = 1, max_nodes: int = 50) -> set[str]:
         """从种子实体出发做 BFS 扩散，返回扩散到的所有实体名。
