@@ -45,7 +45,7 @@ qdrant:
 reranker:
   model: "Qwen/Qwen3-Reranker-0.6B"
   device: "mps"            # auto / cpu / mps / cuda
-  instruction: "Given a web search query, retrieve relevant passages."
+  instruction: "检索与该查询语义相关的文档"
   max_length: 8192
   batch_size: 4
 

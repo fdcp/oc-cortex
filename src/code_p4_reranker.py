@@ -31,11 +31,12 @@ class Qwen3Reranker:
     基于 CausalLM 架构，通过 yes/no token logit 差异计算相关性。
     """
 
-    DEFAULT_INSTRUCTION = "Given a web search query, retrieve relevant passages."
+    # DEFAULT_INSTRUCTION = "Given a web search query, retrieve relevant passages that answer the query."
+    DEFAULT_INSTRUCTION = "检索与该查询语义相关的文档"
+    # DEFAULT_INSTRUCTION = "Given a query, retrieve relevant passages that answer the query."
 
     SYSTEM_PROMPT = (
-        "Judge whether the Document matches the Intent. "
-        "Your answer must be either `yes` or `no`."
+        "Judge whether the Document meets the requirements based on the Query and the Instruct provided. Note that the answer can only be `yes` or `no`."
     )
 
     def __init__(
@@ -52,6 +53,7 @@ class Qwen3Reranker:
         self.max_length = max_length
         self.batch_size = batch_size
         self.instruction = instruction or self.DEFAULT_INSTRUCTION
+        logger.info(f"Reranker instruction: {self.instruction}")
 
         # 缓存目录
         if cache_folder is None:
