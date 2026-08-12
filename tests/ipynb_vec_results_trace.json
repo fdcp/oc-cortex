@@ -1,0 +1,2554 @@
+{
+  "meta": {
+    "query_raw": "GPU的对比和选型",
+    "query_instruction": "为这个句子生成表示以用于检索相关文章：",
+    "retrieval_query": "为这个句子生成表示以用于检索相关文章：GPU的对比和选型",
+    "top_k": 5,
+    "use_graph_rag": false,
+    "use_reranker": true,
+    "graph_channel_weight": 0.1,
+    "bfs_depth": 1,
+    "rerank_multiplier": 1,
+    "config_path": "../config/code_p3_config.yaml",
+    "kg_db_path": "../output/triple/knowledge_graph.db",
+    "cwd": "/Users/zhaoxiuwei/Desktop/oc_sess_graph/tests",
+    "total_time_ms": 10760,
+    "vec_debug": {
+      "vector_results": 5,
+      "top_k": 5,
+      "retrieval_query": "为这个句子生成表示以用于检索相关文章：GPU的对比和选型",
+      "total_time_ms": 10760
+    }
+  },
+  "stages": [
+    {
+      "stage": "search_dense",
+      "input": {
+        "query": "为这个句子生成表示以用于检索相关文章：GPU的对比和选型",
+        "collection": "tasks",
+        "top_k": 25
+      },
+      "output": [
+        {
+          "rank": 1,
+          "point_id": "3546bfe5-bfb0-0897-52db-01f3922f1043",
+          "score": 0.605715,
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+          "task_label": "NVIDIA SP与Ulysses并行策略对比"
+        },
+        {
+          "rank": 2,
+          "point_id": "343c80ec-5800-f393-7f6e-e09e726e6f3b",
+          "score": 0.576892,
+          "task_id": "ses_0c4845647ffea08jfnkY5ArLEG_T1",
+          "task_label": "GPU算力对比与选型分析"
+        },
+        {
+          "rank": 3,
+          "point_id": "701a9636-bdca-2acc-742a-ebd766fa612b",
+          "score": 0.543742,
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T2",
+          "task_label": "Roofline模型算术强度推导"
+        },
+        {
+          "rank": 4,
+          "point_id": "584eee6c-25b8-cb38-df37-951e3204b147",
+          "score": 0.529717,
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T2",
+          "task_label": "ZeRO显存优化原理与通信推导"
+        },
+        {
+          "rank": 5,
+          "point_id": "1dee347a-f35c-1eb7-56c0-b846b7658227",
+          "score": 0.523972,
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T3",
+          "task_label": "AllReduce算法原理与历史溯源"
+        },
+        {
+          "rank": 6,
+          "point_id": "a5f7aaf1-5b3d-53a6-3407-836b21e74fd9",
+          "score": 0.519153,
+          "task_id": "ses_0ca8b3533ffeRk0KWh2cSqkKOa_T1",
+          "task_label": "开发浮点数格式转换与教学网页"
+        },
+        {
+          "rank": 7,
+          "point_id": "167b1643-fddd-2741-6d7c-2009af36f323",
+          "score": 0.508368,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T1",
+          "task_label": "P5测试脚本对比与能力确认"
+        },
+        {
+          "rank": 8,
+          "point_id": "f0e29423-f20e-2316-24ff-2d2d846647e6",
+          "score": 0.503654,
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T3",
+          "task_label": "NeMo Megatron Bridge定位与价值辨析"
+        },
+        {
+          "rank": 9,
+          "point_id": "26288944-0f4e-b9ea-cacb-34c068a96e70",
+          "score": 0.500318,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T4",
+          "task_label": "P5实体对齐机制与配置解析"
+        },
+        {
+          "rank": 10,
+          "point_id": "37da5209-bf1d-92ad-97d7-392ffe2cd545",
+          "score": 0.499352,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T6",
+          "task_label": "评估 Dense Embedding 替换方案"
+        },
+        {
+          "rank": 11,
+          "point_id": "1c430258-9e60-e16f-8ac2-bd9f257c905e",
+          "score": 0.486474,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T7",
+          "task_label": "规划 P5 稀疏向量改造方案"
+        },
+        {
+          "rank": 12,
+          "point_id": "884af785-8e4e-5cb1-93e4-d686a20ba7ac",
+          "score": 0.485079,
+          "task_id": "ses_04d77c8caffexlaTbA0HPB87oY_T1",
+          "task_label": "OMO 多 Agent 模型配置诊断与优化"
+        },
+        {
+          "rank": 13,
+          "point_id": "f315f784-61f5-60b9-1423-5514ef43dc9c",
+          "score": 0.48199,
+          "task_id": "ses_04b86396effeR5frMxXdiRtezt_T1",
+          "task_label": "排查 opencode 中 Copilot 模型不可见问题"
+        },
+        {
+          "rank": 14,
+          "point_id": "b3198a05-0884-4b93-8a4c-201787ef1c37",
+          "score": 0.478573,
+          "task_id": "ses_04d77c8caffexlaTbA0HPB87oY_T2",
+          "task_label": "OMO 配置文件优化"
+        },
+        {
+          "rank": 15,
+          "point_id": "a0129041-f888-b090-e578-44eccec77520",
+          "score": 0.476005,
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+          "task_label": "SP原理剖析与Mermaid图解迭代"
+        },
+        {
+          "rank": 16,
+          "point_id": "80787f30-2f12-d097-17a2-4c6959aa4e05",
+          "score": 0.475106,
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T6",
+          "task_label": "实现内容指纹与增量处理机制"
+        },
+        {
+          "rank": 17,
+          "point_id": "94ba4c5a-da26-d6be-76f9-a6bcfc9d5118",
+          "score": 0.474845,
+          "task_id": "ses_0c4845647ffea08jfnkY5ArLEG_T2",
+          "task_label": "A800拓扑诊断与NCCL调优"
+        },
+        {
+          "rank": 18,
+          "point_id": "41e3e2cb-a65b-6aff-2630-a3a4e11ad885",
+          "score": 0.470265,
+          "task_id": "ses_0c99b81bcffeAwdzQ0s8zld82L_T1",
+          "task_label": "编写优化器基础指南v1"
+        },
+        {
+          "rank": 19,
+          "point_id": "58232869-73d2-bbac-d675-68054a33cda1",
+          "score": 0.470045,
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T3",
+          "task_label": "FA状态变量Shape澄清"
+        },
+        {
+          "rank": 20,
+          "point_id": "9dab2d40-7f9d-c616-f4f0-aa0a8fcd7ad0",
+          "score": 0.468503,
+          "task_id": "ses_10772d114fferNiLEcTQ8YNd5k_T2",
+          "task_label": "分析 omo 模型配置及影响"
+        },
+        {
+          "rank": 21,
+          "point_id": "750999ed-27a4-bc76-69e0-75ef7fd6231d",
+          "score": 0.468169,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T5",
+          "task_label": "澄清图谱构建流程及模型职责"
+        },
+        {
+          "rank": 22,
+          "point_id": "96e31a00-2aa3-41c5-aec3-2ff2d850822f",
+          "score": 0.45527,
+          "task_id": "ses_04e4b0b9cffe8OApx3qp7sRHb3_T1",
+          "task_label": "排查 Copilot 无法显示 Claude 模型"
+        },
+        {
+          "rank": 23,
+          "point_id": "cdfeb5b4-88a2-d0ec-5bde-e13342582252",
+          "score": 0.452417,
+          "task_id": "ses_0c99b81bcffeAwdzQ0s8zld82L_T2",
+          "task_label": "编写优化器进阶指南v2"
+        },
+        {
+          "rank": 24,
+          "point_id": "2b576845-0547-5167-6f50-61980a81637d",
+          "score": 0.445742,
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T1",
+          "task_label": "DDP训练流程与参数同步机制"
+        },
+        {
+          "rank": 25,
+          "point_id": "19c2dc85-4868-7232-3db8-42a310e8f714",
+          "score": 0.444582,
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T2",
+          "task_label": "编写并校验端到端测试指南"
+        }
+      ],
+      "output_count": 25,
+      "elapsed_ms": 67
+    },
+    {
+      "stage": "search_sparse_bm25",
+      "input": {
+        "query": "为这个句子生成表示以用于检索相关文章：GPU的对比和选型",
+        "collection": "chunks_summary",
+        "top_k": 75
+      },
+      "output": [
+        {
+          "rank": 1,
+          "point_id": "744c96de-7095-e4f9-8b04-3c2ae33d09eb",
+          "score": 10.375756,
+          "chunk_id": "ses_04b987deaffeKfDUR5b1Y99vcx_c23",
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T7"
+        },
+        {
+          "rank": 2,
+          "point_id": "b9b75e4f-e140-bbe5-90cc-b9350ee230dd",
+          "score": 10.07739,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c10",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T5"
+        },
+        {
+          "rank": 3,
+          "point_id": "71971228-9c85-7e03-0349-e8bee199fbdc",
+          "score": 8.659804,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c13",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T8"
+        },
+        {
+          "rank": 4,
+          "point_id": "faee3fcc-3457-b32f-c1d0-bb4806745bc9",
+          "score": 8.55969,
+          "chunk_id": "ses_14a9ad327ffejgP9Qba8jnwIVI_c2",
+          "task_id": "ses_14a9ad327ffejgP9Qba8jnwIVI_T1"
+        },
+        {
+          "rank": 5,
+          "point_id": "86850163-deb8-2426-2e98-54095a171eef",
+          "score": 8.507474,
+          "chunk_id": "ses_053c0ac72ffe883RpIvqU1LUEw_c5",
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T2"
+        },
+        {
+          "rank": 6,
+          "point_id": "22884354-c33a-7f66-e88a-690cd0848b90",
+          "score": 8.401122,
+          "chunk_id": "ses_0ca8b3533ffeRk0KWh2cSqkKOa_c1",
+          "task_id": "ses_0ca8b3533ffeRk0KWh2cSqkKOa_T1"
+        },
+        {
+          "rank": 7,
+          "point_id": "75f6f85b-3e89-91db-4802-417d3c2d2341",
+          "score": 8.161934,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c50",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T19"
+        },
+        {
+          "rank": 8,
+          "point_id": "a3a8e211-56bf-55f7-6154-9ba2fb5dd037",
+          "score": 7.891282,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c18",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T11"
+        },
+        {
+          "rank": 9,
+          "point_id": "51d0426b-820b-8a5a-70d1-b213b6d1563c",
+          "score": 7.704623,
+          "chunk_id": "ses_14a9ad327ffejgP9Qba8jnwIVI_c3",
+          "task_id": "ses_14a9ad327ffejgP9Qba8jnwIVI_T2"
+        },
+        {
+          "rank": 10,
+          "point_id": "46c65dbb-1879-d364-8d84-e9fb42261897",
+          "score": 7.525334,
+          "chunk_id": "ses_053c0ac72ffe883RpIvqU1LUEw_c8",
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T3"
+        },
+        {
+          "rank": 11,
+          "point_id": "fa479c48-af71-ac35-3afd-9c0a26b568de",
+          "score": 6.791923,
+          "chunk_id": "ses_04b987deaffeKfDUR5b1Y99vcx_c30",
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T7"
+        },
+        {
+          "rank": 12,
+          "point_id": "c46c1496-6485-887c-6a17-7b7182b91eb4",
+          "score": 6.751219,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c32",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T15"
+        },
+        {
+          "rank": 13,
+          "point_id": "bd5d083c-6634-0d3c-f8c3-4dcb11843a3d",
+          "score": 6.751219,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c33",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T15"
+        },
+        {
+          "rank": 14,
+          "point_id": "c57bd296-594f-5d1a-3f01-233c3d49f9f1",
+          "score": 6.518027,
+          "chunk_id": "ses_053c0ac72ffe883RpIvqU1LUEw_c7",
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T2"
+        },
+        {
+          "rank": 15,
+          "point_id": "a87616d9-dbd8-5599-1df4-37963e473b47",
+          "score": 6.50965,
+          "chunk_id": "ses_04b987deaffeKfDUR5b1Y99vcx_c3",
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T1"
+        },
+        {
+          "rank": 16,
+          "point_id": "98bbd91b-a27e-c407-21e5-e6ea636776d1",
+          "score": 5.655567,
+          "chunk_id": "ses_0ca8b3533ffeRk0KWh2cSqkKOa_c2",
+          "task_id": "ses_0ca8b3533ffeRk0KWh2cSqkKOa_T1"
+        },
+        {
+          "rank": 17,
+          "point_id": "4185a819-5ba3-7fe8-8138-5a254d20ae49",
+          "score": 5.53873,
+          "chunk_id": "ses_0ca8b3533ffeRk0KWh2cSqkKOa_c3",
+          "task_id": "ses_0ca8b3533ffeRk0KWh2cSqkKOa_T1"
+        },
+        {
+          "rank": 18,
+          "point_id": "c33bfb1f-fd99-4be4-73e8-61b2e0cdf5ce",
+          "score": 5.316844,
+          "chunk_id": "ses_0c99b81bcffeAwdzQ0s8zld82L_c2",
+          "task_id": "ses_0c99b81bcffeAwdzQ0s8zld82L_T1"
+        },
+        {
+          "rank": 19,
+          "point_id": "aafa2ebf-1298-030c-c1fe-5c2c88e220f4",
+          "score": 5.291942,
+          "chunk_id": "ses_04d77c8caffexlaTbA0HPB87oY_c2",
+          "task_id": "ses_04d77c8caffexlaTbA0HPB87oY_T1"
+        },
+        {
+          "rank": 20,
+          "point_id": "dc2734d5-1e72-a617-a3ad-470fd8494d3b",
+          "score": 5.177826,
+          "chunk_id": "ses_0c5b6171bfferME7He2F8G6UuJ_c8",
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T3"
+        },
+        {
+          "rank": 21,
+          "point_id": "ec023fe3-9657-a5ac-9ae2-c874ccb2a9be",
+          "score": 5.134371,
+          "chunk_id": "ses_072ebc268ffe227bGpbCtWbM97_c1",
+          "task_id": "ses_072ebc268ffe227bGpbCtWbM97_T1"
+        },
+        {
+          "rank": 22,
+          "point_id": "71ee0e98-9914-37d1-c879-32ea2859f51e",
+          "score": 5.114383,
+          "chunk_id": "ses_072ebc268ffe227bGpbCtWbM97_c11",
+          "task_id": "ses_072ebc268ffe227bGpbCtWbM97_T4"
+        },
+        {
+          "rank": 23,
+          "point_id": "79bbe401-7c27-7be3-a3ee-97623984824b",
+          "score": 4.937987,
+          "chunk_id": "ses_072ebc268ffe227bGpbCtWbM97_c12",
+          "task_id": "ses_072ebc268ffe227bGpbCtWbM97_T4"
+        },
+        {
+          "rank": 24,
+          "point_id": "8f04dd9a-328d-41bf-373a-86c108bb5e93",
+          "score": 4.916043,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c52",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T20"
+        },
+        {
+          "rank": 25,
+          "point_id": "c66f7e7c-a794-2284-cf98-a399e204dbe1",
+          "score": 4.862666,
+          "chunk_id": "ses_04b987deaffeKfDUR5b1Y99vcx_c2",
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T1"
+        },
+        {
+          "rank": 26,
+          "point_id": "f7f7eb03-e551-eb1f-5a09-a708010e8ef0",
+          "score": 4.798187,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c23",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T13"
+        },
+        {
+          "rank": 27,
+          "point_id": "12c95126-6f8a-6c18-065c-92612a806fad",
+          "score": 4.785231,
+          "chunk_id": "ses_04d77c8caffexlaTbA0HPB87oY_c1",
+          "task_id": "ses_04d77c8caffexlaTbA0HPB87oY_T1"
+        },
+        {
+          "rank": 28,
+          "point_id": "590d2bb7-2c7f-55a4-25cb-d8d0ea36a723",
+          "score": 4.766257,
+          "chunk_id": "ses_04b987deaffeKfDUR5b1Y99vcx_c8",
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T3"
+        },
+        {
+          "rank": 29,
+          "point_id": "24b64a83-e72a-3d8b-034c-201453f0ba53",
+          "score": 4.748641,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c40",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T16"
+        },
+        {
+          "rank": 30,
+          "point_id": "e4a010c9-6ca9-6e3a-9541-513ec2028b52",
+          "score": 4.706711,
+          "chunk_id": "ses_053c0ac72ffe883RpIvqU1LUEw_c6",
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T2"
+        },
+        {
+          "rank": 31,
+          "point_id": "fd2c1983-9a21-883b-944e-1592b1b5d87e",
+          "score": 4.672129,
+          "chunk_id": "ses_0c5b6171bfferME7He2F8G6UuJ_c7",
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T3"
+        },
+        {
+          "rank": 32,
+          "point_id": "79bc241b-aed7-a899-52ab-9348b561b22e",
+          "score": 4.671118,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c12",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T7"
+        },
+        {
+          "rank": 33,
+          "point_id": "441eacb0-6b8f-b345-068d-98d5c1a7e935",
+          "score": 4.636477,
+          "chunk_id": "ses_04b987deaffeKfDUR5b1Y99vcx_c4",
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T2"
+        },
+        {
+          "rank": 34,
+          "point_id": "66e28b5f-6460-49e7-53c9-030031de3a76",
+          "score": 4.550341,
+          "chunk_id": "ses_0c5b6171bfferME7He2F8G6UuJ_c6",
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T3"
+        },
+        {
+          "rank": 35,
+          "point_id": "ee42859c-d0c8-6319-416e-c709c04b7027",
+          "score": 4.539972,
+          "chunk_id": "ses_0c9e4a359ffeGDSrVSG2jNVB6n_c3",
+          "task_id": "ses_0c9e4a359ffeGDSrVSG2jNVB6n_T1"
+        },
+        {
+          "rank": 36,
+          "point_id": "f6385a61-e29b-932f-2752-82b626aa00b9",
+          "score": 4.455338,
+          "chunk_id": "ses_0c5b6171bfferME7He2F8G6UuJ_c5",
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T2"
+        },
+        {
+          "rank": 37,
+          "point_id": "45578404-cce7-bb45-6d31-ce3cbad91440",
+          "score": 4.454596,
+          "chunk_id": "ses_04b987deaffeKfDUR5b1Y99vcx_c18",
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T6"
+        },
+        {
+          "rank": 38,
+          "point_id": "6a7354c2-0264-885d-5af3-494f1dd6252c",
+          "score": 4.415689,
+          "chunk_id": "ses_04edfa1f2ffey5A7mn4t5lm1YW_c4",
+          "task_id": "ses_04edfa1f2ffey5A7mn4t5lm1YW_T3"
+        },
+        {
+          "rank": 39,
+          "point_id": "de6fe5f5-1ea6-9261-204c-3e1d0a207dcd",
+          "score": 4.344854,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c26",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T14"
+        },
+        {
+          "rank": 40,
+          "point_id": "c680790e-5059-752e-dab2-4a570fb1f156",
+          "score": 4.329282,
+          "chunk_id": "ses_0ec02cc6dffeH1O7QFPSrptpla_c2",
+          "task_id": "ses_0ec02cc6dffeH1O7QFPSrptpla_T1"
+        },
+        {
+          "rank": 41,
+          "point_id": "a1134e05-b0fc-0624-5c86-1d2f4e792186",
+          "score": 4.267661,
+          "chunk_id": "ses_072ebc268ffe227bGpbCtWbM97_c5",
+          "task_id": "ses_072ebc268ffe227bGpbCtWbM97_T2"
+        },
+        {
+          "rank": 42,
+          "point_id": "426feeaa-fc27-de1a-c7c8-da43ed8e98b8",
+          "score": 4.258151,
+          "chunk_id": "ses_04b86396effeR5frMxXdiRtezt_c3",
+          "task_id": "ses_04b86396effeR5frMxXdiRtezt_T1"
+        },
+        {
+          "rank": 43,
+          "point_id": "669bb6c9-4d74-dd33-fc69-470692ca2091",
+          "score": 4.214798,
+          "chunk_id": "ses_04e86c806ffepxGVpAy3W5zsD9_c1",
+          "task_id": "ses_04e86c806ffepxGVpAy3W5zsD9_T1"
+        },
+        {
+          "rank": 44,
+          "point_id": "18eb7b3d-4344-4281-9f6c-aa3dfe4abb08",
+          "score": 4.187253,
+          "chunk_id": "ses_0c4845647ffea08jfnkY5ArLEG_c2",
+          "task_id": "ses_0c4845647ffea08jfnkY5ArLEG_T1"
+        },
+        {
+          "rank": 45,
+          "point_id": "c9ce35c5-662d-5b8d-75be-f9bb56d2999f",
+          "score": 4.148862,
+          "chunk_id": "ses_072ebc268ffe227bGpbCtWbM97_c4",
+          "task_id": "ses_072ebc268ffe227bGpbCtWbM97_T1"
+        },
+        {
+          "rank": 46,
+          "point_id": "b7230edb-5caa-08a8-6d92-fcf566301876",
+          "score": 4.141066,
+          "chunk_id": "ses_04e86c806ffepxGVpAy3W5zsD9_c2",
+          "task_id": "ses_04e86c806ffepxGVpAy3W5zsD9_T1"
+        },
+        {
+          "rank": 47,
+          "point_id": "92f576fb-e12e-7cbc-d2ea-e9491540dc86",
+          "score": 4.117181,
+          "chunk_id": "ses_04b987deaffeKfDUR5b1Y99vcx_c14",
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T4"
+        },
+        {
+          "rank": 48,
+          "point_id": "f146d405-254e-5cc0-a203-458d5619996b",
+          "score": 4.075189,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c56",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T20"
+        },
+        {
+          "rank": 49,
+          "point_id": "60b4ab54-3a79-907c-ba94-f40d4423dc63",
+          "score": 4.070785,
+          "chunk_id": "ses_04b987deaffeKfDUR5b1Y99vcx_c24",
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T7"
+        },
+        {
+          "rank": 50,
+          "point_id": "a6f6ac05-e0d2-3305-349f-fca9541e5fa5",
+          "score": 3.988616,
+          "chunk_id": "ses_0c4e0312affeUm1WYU03ISPgU2_c2",
+          "task_id": "ses_0c4e0312affeUm1WYU03ISPgU2_T1"
+        },
+        {
+          "rank": 51,
+          "point_id": "6e4b5547-4ac1-edcd-d6ac-4cc67ca4bed9",
+          "score": 3.985926,
+          "chunk_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_c7",
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T2"
+        },
+        {
+          "rank": 52,
+          "point_id": "30ab42f3-ab86-d94a-bcbe-3fd7e026038b",
+          "score": 3.937643,
+          "chunk_id": "ses_0e8898453ffeS7ByDo9zjP8Z8h_c2",
+          "task_id": "ses_0e8898453ffeS7ByDo9zjP8Z8h_T2"
+        },
+        {
+          "rank": 53,
+          "point_id": "e8ab71b2-9c5a-99b5-3e87-fe3dc56631b8",
+          "score": 3.875944,
+          "chunk_id": "ses_0c5b6171bfferME7He2F8G6UuJ_c9",
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T3"
+        },
+        {
+          "rank": 54,
+          "point_id": "cbadca99-f8c5-91bf-c6f6-735c267f0e0a",
+          "score": 3.819414,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c24",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T13"
+        },
+        {
+          "rank": 55,
+          "point_id": "94dbd4e4-a138-16e8-7fc0-10a03dddcb4f",
+          "score": 3.69367,
+          "chunk_id": "ses_0c5b6171bfferME7He2F8G6UuJ_c13",
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T4"
+        },
+        {
+          "rank": 56,
+          "point_id": "b741c864-3cc6-cef5-f6bb-b1d404f53cc7",
+          "score": 3.683602,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c11",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T6"
+        },
+        {
+          "rank": 57,
+          "point_id": "e72cad89-87cd-1388-94ff-946cb925bd73",
+          "score": 3.569242,
+          "chunk_id": "ses_0c5b6171bfferME7He2F8G6UuJ_c12",
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T4"
+        },
+        {
+          "rank": 58,
+          "point_id": "7616f714-bd9e-dfd5-c71c-ded42a3175e6",
+          "score": 3.519149,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c1",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T1"
+        },
+        {
+          "rank": 59,
+          "point_id": "52d3a548-48d0-f8a2-95af-015a0b23398c",
+          "score": 3.477439,
+          "chunk_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_c3",
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1"
+        },
+        {
+          "rank": 60,
+          "point_id": "3c8c1668-80cb-7d9f-722f-70a7bd5f2610",
+          "score": 3.428535,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c45",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T18"
+        },
+        {
+          "rank": 61,
+          "point_id": "b4e32a49-67fc-1c79-5055-90864b401644",
+          "score": 3.344515,
+          "chunk_id": "ses_0a53b6807ffex4xr4a0wNdi5EQ_c2",
+          "task_id": "ses_0a53b6807ffex4xr4a0wNdi5EQ_T1"
+        },
+        {
+          "rank": 62,
+          "point_id": "4f4af056-d94d-533d-b22e-108744c2a068",
+          "score": 3.344263,
+          "chunk_id": "ses_04edfa1f2ffey5A7mn4t5lm1YW_c5",
+          "task_id": "ses_04edfa1f2ffey5A7mn4t5lm1YW_T3"
+        },
+        {
+          "rank": 63,
+          "point_id": "df8e0b88-0d14-95be-55c2-2b6cfcc0bb4d",
+          "score": 3.338675,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c41",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T16"
+        },
+        {
+          "rank": 64,
+          "point_id": "f736fa69-3b8d-c9bd-0efd-ecd474660024",
+          "score": 3.333555,
+          "chunk_id": "ses_04ba8451cffeeg4eVFN8BencC8_c2",
+          "task_id": "ses_04ba8451cffeeg4eVFN8BencC8_T1"
+        },
+        {
+          "rank": 65,
+          "point_id": "84980787-7ef9-7570-7619-3551e1f6a9da",
+          "score": 3.306196,
+          "chunk_id": "ses_0ca8a24d9ffeHoz0wYkhYDDO4w_c4",
+          "task_id": "ses_0ca8a24d9ffeHoz0wYkhYDDO4w_T2"
+        },
+        {
+          "rank": 66,
+          "point_id": "dcfcfaf0-67d3-c3f6-83b4-b4e7cc27de08",
+          "score": 3.296639,
+          "chunk_id": "ses_0c4845647ffea08jfnkY5ArLEG_c10",
+          "task_id": "ses_0c4845647ffea08jfnkY5ArLEG_T2"
+        },
+        {
+          "rank": 67,
+          "point_id": "6e564c50-f1ae-9bd9-42c7-5b79b1cbaf3f",
+          "score": 3.295292,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c48",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T18"
+        },
+        {
+          "rank": 68,
+          "point_id": "aca8db30-f1cc-14d6-c01b-6d6e9d217968",
+          "score": 3.199632,
+          "chunk_id": "ses_16a4e11cfffe79OQe98lCUaEhp_c1",
+          "task_id": "ses_16a4e11cfffe79OQe98lCUaEhp_T1"
+        },
+        {
+          "rank": 69,
+          "point_id": "3a76ed08-d634-6a66-ffdc-69886e3d2354",
+          "score": 3.155099,
+          "chunk_id": "ses_0c99b81bcffeAwdzQ0s8zld82L_c1",
+          "task_id": "ses_0c99b81bcffeAwdzQ0s8zld82L_T1"
+        },
+        {
+          "rank": 70,
+          "point_id": "aff51977-226b-85a4-87cd-0372c872290d",
+          "score": 3.107854,
+          "chunk_id": "ses_0ca8a24d9ffeHoz0wYkhYDDO4w_c3",
+          "task_id": "ses_0ca8a24d9ffeHoz0wYkhYDDO4w_T2"
+        },
+        {
+          "rank": 71,
+          "point_id": "1c803104-26e5-edaa-e1c6-b13b34ddaa52",
+          "score": 3.105041,
+          "chunk_id": "ses_0a16b26dcffewGBp0akSLB5IZG_c6",
+          "task_id": "ses_0a16b26dcffewGBp0akSLB5IZG_T2"
+        },
+        {
+          "rank": 72,
+          "point_id": "a6fbda76-5148-cda7-2ddd-d704510dc58e",
+          "score": 3.073962,
+          "chunk_id": "ses_053c0ac72ffe883RpIvqU1LUEw_c4",
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T1"
+        },
+        {
+          "rank": 73,
+          "point_id": "096964cc-6a2d-6cd0-509c-2237427f2a2c",
+          "score": 3.072112,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c20",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T9"
+        },
+        {
+          "rank": 74,
+          "point_id": "603d2611-a1e5-ca17-49d5-2f40265432fe",
+          "score": 3.056595,
+          "chunk_id": "ses_0ee881bddffeTfWiIhcZwg7Xmb_c3",
+          "task_id": "ses_0ee881bddffeTfWiIhcZwg7Xmb_T2"
+        },
+        {
+          "rank": 75,
+          "point_id": "5472b7ce-c6a1-e485-58b8-82adb8030b3b",
+          "score": 3.032951,
+          "chunk_id": "ses_0ec02cc6dffeH1O7QFPSrptpla_c1",
+          "task_id": "ses_0ec02cc6dffeH1O7QFPSrptpla_T1"
+        }
+      ],
+      "output_count": 75,
+      "elapsed_ms": 2
+    },
+    {
+      "stage": "search_sparse_bm25",
+      "input": {
+        "query": "为这个句子生成表示以用于检索相关文章：GPU的对比和选型",
+        "collection": "chunks_cleaned_text",
+        "top_k": 75
+      },
+      "output": [
+        {
+          "rank": 1,
+          "point_id": "8a6bd738-06c0-56ec-1f1c-b4b1b739fe27",
+          "score": 19.342631,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c27",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T14"
+        },
+        {
+          "rank": 2,
+          "point_id": "7b2b7c48-87aa-7f9e-b452-53d43cb23eab",
+          "score": 18.47579,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c19",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T12"
+        },
+        {
+          "rank": 3,
+          "point_id": "24b64a83-e72a-3d8b-034c-201453f0ba53",
+          "score": 16.115126,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c40",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T16"
+        },
+        {
+          "rank": 4,
+          "point_id": "ffd4eac8-1420-7f89-d05d-30ef5c0edd2c",
+          "score": 14.717839,
+          "chunk_id": "ses_04b987deaffeKfDUR5b1Y99vcx_c1",
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T1"
+        },
+        {
+          "rank": 5,
+          "point_id": "ef278b50-c7f8-6dd9-1c61-7607c7fca249",
+          "score": 13.769138,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c14",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T9"
+        },
+        {
+          "rank": 6,
+          "point_id": "5e6323f3-886a-5a9d-c376-da4fca852bf7",
+          "score": 12.34168,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c8",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T4"
+        },
+        {
+          "rank": 7,
+          "point_id": "71971228-9c85-7e03-0349-e8bee199fbdc",
+          "score": 12.230019,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c13",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T8"
+        },
+        {
+          "rank": 8,
+          "point_id": "42e07e42-3171-ae2a-5748-265e85b223de",
+          "score": 12.186681,
+          "chunk_id": "ses_0c4845647ffea08jfnkY5ArLEG_c1",
+          "task_id": "ses_0c4845647ffea08jfnkY5ArLEG_T1"
+        },
+        {
+          "rank": 9,
+          "point_id": "18eb7b3d-4344-4281-9f6c-aa3dfe4abb08",
+          "score": 11.678453,
+          "chunk_id": "ses_0c4845647ffea08jfnkY5ArLEG_c2",
+          "task_id": "ses_0c4845647ffea08jfnkY5ArLEG_T1"
+        },
+        {
+          "rank": 10,
+          "point_id": "a3a8e211-56bf-55f7-6154-9ba2fb5dd037",
+          "score": 11.520397,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c18",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T11"
+        },
+        {
+          "rank": 11,
+          "point_id": "46c65dbb-1879-d364-8d84-e9fb42261897",
+          "score": 11.182541,
+          "chunk_id": "ses_053c0ac72ffe883RpIvqU1LUEw_c8",
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T3"
+        },
+        {
+          "rank": 12,
+          "point_id": "dcfcfaf0-67d3-c3f6-83b4-b4e7cc27de08",
+          "score": 11.105916,
+          "chunk_id": "ses_0c4845647ffea08jfnkY5ArLEG_c10",
+          "task_id": "ses_0c4845647ffea08jfnkY5ArLEG_T2"
+        },
+        {
+          "rank": 13,
+          "point_id": "7569dde3-9b16-02c1-205a-11455d3e4ce7",
+          "score": 11.046325,
+          "chunk_id": "ses_0c4845647ffea08jfnkY5ArLEG_c12",
+          "task_id": "ses_0c4845647ffea08jfnkY5ArLEG_T2"
+        },
+        {
+          "rank": 14,
+          "point_id": "c46c1496-6485-887c-6a17-7b7182b91eb4",
+          "score": 10.916486,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c32",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T15"
+        },
+        {
+          "rank": 15,
+          "point_id": "faee3fcc-3457-b32f-c1d0-bb4806745bc9",
+          "score": 10.56378,
+          "chunk_id": "ses_14a9ad327ffejgP9Qba8jnwIVI_c2",
+          "task_id": "ses_14a9ad327ffejgP9Qba8jnwIVI_T1"
+        },
+        {
+          "rank": 16,
+          "point_id": "8965d510-fdf1-baf9-6f22-4b038b068450",
+          "score": 10.421414,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c3",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T2"
+        },
+        {
+          "rank": 17,
+          "point_id": "5a47c112-c6be-5b3f-8d77-218f86dd0961",
+          "score": 10.363067,
+          "chunk_id": "ses_14a9ad327ffejgP9Qba8jnwIVI_c1",
+          "task_id": "ses_14a9ad327ffejgP9Qba8jnwIVI_T1"
+        },
+        {
+          "rank": 18,
+          "point_id": "711ba3b9-e9cf-04fc-73ef-4e0ade3e6041",
+          "score": 10.310585,
+          "chunk_id": "ses_0c9e4a359ffeGDSrVSG2jNVB6n_c2",
+          "task_id": "ses_0c9e4a359ffeGDSrVSG2jNVB6n_T1"
+        },
+        {
+          "rank": 19,
+          "point_id": "d97db069-b244-f4dd-6470-45fb1920d8f8",
+          "score": 10.296446,
+          "chunk_id": "ses_0c5b6171bfferME7He2F8G6UuJ_c3",
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T2"
+        },
+        {
+          "rank": 20,
+          "point_id": "bd5d083c-6634-0d3c-f8c3-4dcb11843a3d",
+          "score": 10.155871,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c33",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T15"
+        },
+        {
+          "rank": 21,
+          "point_id": "94dbd4e4-a138-16e8-7fc0-10a03dddcb4f",
+          "score": 10.123278,
+          "chunk_id": "ses_0c5b6171bfferME7He2F8G6UuJ_c13",
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T4"
+        },
+        {
+          "rank": 22,
+          "point_id": "86850163-deb8-2426-2e98-54095a171eef",
+          "score": 9.993902,
+          "chunk_id": "ses_053c0ac72ffe883RpIvqU1LUEw_c5",
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T2"
+        },
+        {
+          "rank": 23,
+          "point_id": "2503e0a9-a288-d0d1-a9cc-74ab053d3175",
+          "score": 9.907005,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c53",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T20"
+        },
+        {
+          "rank": 24,
+          "point_id": "4804c6fc-a347-5934-5fb1-a842b1cb011c",
+          "score": 9.832382,
+          "chunk_id": "ses_0c4845647ffea08jfnkY5ArLEG_c3",
+          "task_id": "ses_0c4845647ffea08jfnkY5ArLEG_T1"
+        },
+        {
+          "rank": 25,
+          "point_id": "6350ce38-7e07-0d25-6c20-d4937231ab57",
+          "score": 9.831077,
+          "chunk_id": "ses_0c5b6171bfferME7He2F8G6UuJ_c2",
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T1"
+        },
+        {
+          "rank": 26,
+          "point_id": "50c749ee-1ca2-7550-54a9-5aab97b939b9",
+          "score": 9.828731,
+          "chunk_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_c8",
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T2"
+        },
+        {
+          "rank": 27,
+          "point_id": "f52ab520-2964-1938-1406-1231667b0d59",
+          "score": 9.82421,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c38",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T15"
+        },
+        {
+          "rank": 28,
+          "point_id": "50a06af4-82d3-ad4d-8795-0646ee47c21d",
+          "score": 9.82092,
+          "chunk_id": "ses_053c0ac72ffe883RpIvqU1LUEw_c1",
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T1"
+        },
+        {
+          "rank": 29,
+          "point_id": "3d5e7099-f98c-8a9f-0cb2-f729a9b0d50b",
+          "score": 9.79175,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c39",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T15"
+        },
+        {
+          "rank": 30,
+          "point_id": "79bbe401-7c27-7be3-a3ee-97623984824b",
+          "score": 9.756052,
+          "chunk_id": "ses_072ebc268ffe227bGpbCtWbM97_c12",
+          "task_id": "ses_072ebc268ffe227bGpbCtWbM97_T4"
+        },
+        {
+          "rank": 31,
+          "point_id": "60e504d6-423a-80df-a87a-fecb5be6fc8f",
+          "score": 9.72188,
+          "chunk_id": "ses_0a16b26dcffewGBp0akSLB5IZG_c5",
+          "task_id": "ses_0a16b26dcffewGBp0akSLB5IZG_T2"
+        },
+        {
+          "rank": 32,
+          "point_id": "8c397369-7089-ddcc-1a9d-dc4a0706a754",
+          "score": 9.592181,
+          "chunk_id": "ses_0c4845647ffea08jfnkY5ArLEG_c11",
+          "task_id": "ses_0c4845647ffea08jfnkY5ArLEG_T2"
+        },
+        {
+          "rank": 33,
+          "point_id": "12c95126-6f8a-6c18-065c-92612a806fad",
+          "score": 9.573212,
+          "chunk_id": "ses_04d77c8caffexlaTbA0HPB87oY_c1",
+          "task_id": "ses_04d77c8caffexlaTbA0HPB87oY_T1"
+        },
+        {
+          "rank": 34,
+          "point_id": "22884354-c33a-7f66-e88a-690cd0848b90",
+          "score": 9.550745,
+          "chunk_id": "ses_0ca8b3533ffeRk0KWh2cSqkKOa_c1",
+          "task_id": "ses_0ca8b3533ffeRk0KWh2cSqkKOa_T1"
+        },
+        {
+          "rank": 35,
+          "point_id": "99b7ebf7-a638-a992-e1c1-1d36fdd6723c",
+          "score": 9.527065,
+          "chunk_id": "ses_0c4845647ffea08jfnkY5ArLEG_c6",
+          "task_id": "ses_0c4845647ffea08jfnkY5ArLEG_T2"
+        },
+        {
+          "rank": 36,
+          "point_id": "71ee0e98-9914-37d1-c879-32ea2859f51e",
+          "score": 9.502388,
+          "chunk_id": "ses_072ebc268ffe227bGpbCtWbM97_c11",
+          "task_id": "ses_072ebc268ffe227bGpbCtWbM97_T4"
+        },
+        {
+          "rank": 37,
+          "point_id": "da7f423d-489a-07d7-df97-41af2586497e",
+          "score": 9.462254,
+          "chunk_id": "ses_0c4845647ffea08jfnkY5ArLEG_c8",
+          "task_id": "ses_0c4845647ffea08jfnkY5ArLEG_T2"
+        },
+        {
+          "rank": 38,
+          "point_id": "3237f76e-0d29-6756-5654-436a2814c2c9",
+          "score": 9.325562,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c36",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T15"
+        },
+        {
+          "rank": 39,
+          "point_id": "1550eb7e-01d7-d87f-2b2f-1bfdbb27a546",
+          "score": 9.322897,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c7",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T4"
+        },
+        {
+          "rank": 40,
+          "point_id": "ba49afcf-a984-460a-c843-ac4c87791cc8",
+          "score": 9.305754,
+          "chunk_id": "ses_0c4845647ffea08jfnkY5ArLEG_c7",
+          "task_id": "ses_0c4845647ffea08jfnkY5ArLEG_T2"
+        },
+        {
+          "rank": 41,
+          "point_id": "b80801cb-d7fe-c1f4-20eb-83e0bdfb2534",
+          "score": 9.264438,
+          "chunk_id": "ses_0ca8a24d9ffeHoz0wYkhYDDO4w_c5",
+          "task_id": "ses_0ca8a24d9ffeHoz0wYkhYDDO4w_T2"
+        },
+        {
+          "rank": 42,
+          "point_id": "2d8ca6f8-97d4-6df2-f868-926353691b9e",
+          "score": 9.249919,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c21",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T13"
+        },
+        {
+          "rank": 43,
+          "point_id": "b741c864-3cc6-cef5-f6bb-b1d404f53cc7",
+          "score": 9.206316,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c11",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T6"
+        },
+        {
+          "rank": 44,
+          "point_id": "096964cc-6a2d-6cd0-509c-2237427f2a2c",
+          "score": 9.026072,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c20",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T9"
+        },
+        {
+          "rank": 45,
+          "point_id": "1cbc77bd-558b-6d02-a1e9-57a545055811",
+          "score": 9.025062,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c34",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T15"
+        },
+        {
+          "rank": 46,
+          "point_id": "de6fe5f5-1ea6-9261-204c-3e1d0a207dcd",
+          "score": 8.936561,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c26",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T14"
+        },
+        {
+          "rank": 47,
+          "point_id": "6e564c50-f1ae-9bd9-42c7-5b79b1cbaf3f",
+          "score": 8.920192,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c48",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T18"
+        },
+        {
+          "rank": 48,
+          "point_id": "1e76d657-673b-477e-1893-ba990ec1af08",
+          "score": 8.841904,
+          "chunk_id": "ses_04d77c8caffexlaTbA0HPB87oY_c5",
+          "task_id": "ses_04d77c8caffexlaTbA0HPB87oY_T1"
+        },
+        {
+          "rank": 49,
+          "point_id": "559bde4a-7682-c647-6f76-30edeed6bc5f",
+          "score": 8.76857,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c28",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T14"
+        },
+        {
+          "rank": 50,
+          "point_id": "44f40970-bd66-0085-1c1b-a1817660dd16",
+          "score": 8.578002,
+          "chunk_id": "ses_0c4845647ffea08jfnkY5ArLEG_c5",
+          "task_id": "ses_0c4845647ffea08jfnkY5ArLEG_T1"
+        },
+        {
+          "rank": 51,
+          "point_id": "2c74807d-f5fb-b7c9-80ac-b5981c88f9b6",
+          "score": 8.528261,
+          "chunk_id": "ses_0c9e4a359ffeGDSrVSG2jNVB6n_c1",
+          "task_id": "ses_0c9e4a359ffeGDSrVSG2jNVB6n_T1"
+        },
+        {
+          "rank": 52,
+          "point_id": "52d3a548-48d0-f8a2-95af-015a0b23398c",
+          "score": 8.340036,
+          "chunk_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_c3",
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1"
+        },
+        {
+          "rank": 53,
+          "point_id": "f146d405-254e-5cc0-a203-458d5619996b",
+          "score": 8.339282,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c56",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T20"
+        },
+        {
+          "rank": 54,
+          "point_id": "fb5c1c05-a598-addc-2d53-93daa056c266",
+          "score": 8.315168,
+          "chunk_id": "ses_10772d114fferNiLEcTQ8YNd5k_c3",
+          "task_id": "ses_10772d114fferNiLEcTQ8YNd5k_T2"
+        },
+        {
+          "rank": 55,
+          "point_id": "ee9b561e-5465-55f6-ce1e-f80607a00014",
+          "score": 8.217074,
+          "chunk_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_c11",
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T3"
+        },
+        {
+          "rank": 56,
+          "point_id": "cad01bf0-ad9c-9a8d-474b-2e270923477c",
+          "score": 8.199269,
+          "chunk_id": "ses_0c5b6171bfferME7He2F8G6UuJ_c1",
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T1"
+        },
+        {
+          "rank": 57,
+          "point_id": "8f04dd9a-328d-41bf-373a-86c108bb5e93",
+          "score": 8.176142,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c52",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T20"
+        },
+        {
+          "rank": 58,
+          "point_id": "a786747a-0084-5377-5b26-3e25de8f97ed",
+          "score": 8.124457,
+          "chunk_id": "ses_04b987deaffeKfDUR5b1Y99vcx_c6",
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T3"
+        },
+        {
+          "rank": 59,
+          "point_id": "fe8e0b64-d547-67f4-3ab9-4884cbb23e40",
+          "score": 8.109144,
+          "chunk_id": "ses_04b987deaffeKfDUR5b1Y99vcx_c19",
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T6"
+        },
+        {
+          "rank": 60,
+          "point_id": "ab99b37a-7ab5-3823-43a9-6dae15f702ca",
+          "score": 8.085005,
+          "chunk_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_c10",
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T3"
+        },
+        {
+          "rank": 61,
+          "point_id": "8a8fef63-a9ef-6089-dc1f-511638bf1e21",
+          "score": 7.966968,
+          "chunk_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_c9",
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T3"
+        },
+        {
+          "rank": 62,
+          "point_id": "b4e32a49-67fc-1c79-5055-90864b401644",
+          "score": 7.957572,
+          "chunk_id": "ses_0a53b6807ffex4xr4a0wNdi5EQ_c2",
+          "task_id": "ses_0a53b6807ffex4xr4a0wNdi5EQ_T1"
+        },
+        {
+          "rank": 63,
+          "point_id": "75f6f85b-3e89-91db-4802-417d3c2d2341",
+          "score": 7.867347,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c50",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T19"
+        },
+        {
+          "rank": 64,
+          "point_id": "19367d8a-f3db-6cd3-dba7-4a10aa6d96df",
+          "score": 7.840589,
+          "chunk_id": "ses_0c4845647ffea08jfnkY5ArLEG_c4",
+          "task_id": "ses_0c4845647ffea08jfnkY5ArLEG_T1"
+        },
+        {
+          "rank": 65,
+          "point_id": "4185a819-5ba3-7fe8-8138-5a254d20ae49",
+          "score": 7.831372,
+          "chunk_id": "ses_0ca8b3533ffeRk0KWh2cSqkKOa_c3",
+          "task_id": "ses_0ca8b3533ffeRk0KWh2cSqkKOa_T1"
+        },
+        {
+          "rank": 66,
+          "point_id": "ec282471-7de3-c900-30c1-a7971ef7aabc",
+          "score": 7.799845,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c49",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T19"
+        },
+        {
+          "rank": 67,
+          "point_id": "0c500e5b-d8be-6bbc-4026-4567d2db4fec",
+          "score": 7.781487,
+          "chunk_id": "ses_04d77c8caffexlaTbA0HPB87oY_c4",
+          "task_id": "ses_04d77c8caffexlaTbA0HPB87oY_T1"
+        },
+        {
+          "rank": 68,
+          "point_id": "bfa5079b-a6f4-b3b6-8a09-c44bca7421b4",
+          "score": 7.722316,
+          "chunk_id": "ses_0a16b26dcffewGBp0akSLB5IZG_c2",
+          "task_id": "ses_0a16b26dcffewGBp0akSLB5IZG_T1"
+        },
+        {
+          "rank": 69,
+          "point_id": "45578404-cce7-bb45-6d31-ce3cbad91440",
+          "score": 7.712196,
+          "chunk_id": "ses_04b987deaffeKfDUR5b1Y99vcx_c18",
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T6"
+        },
+        {
+          "rank": 70,
+          "point_id": "6e4b5547-4ac1-edcd-d6ac-4cc67ca4bed9",
+          "score": 7.591941,
+          "chunk_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_c7",
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T2"
+        },
+        {
+          "rank": 71,
+          "point_id": "aff51977-226b-85a4-87cd-0372c872290d",
+          "score": 7.587363,
+          "chunk_id": "ses_0ca8a24d9ffeHoz0wYkhYDDO4w_c3",
+          "task_id": "ses_0ca8a24d9ffeHoz0wYkhYDDO4w_T2"
+        },
+        {
+          "rank": 72,
+          "point_id": "df8e0b88-0d14-95be-55c2-2b6cfcc0bb4d",
+          "score": 7.495717,
+          "chunk_id": "ses_0870d73a7ffehev1FO7HA2HSze_c41",
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T16"
+        },
+        {
+          "rank": 73,
+          "point_id": "7eae8f82-735a-5074-2035-18a40413dd02",
+          "score": 7.438813,
+          "chunk_id": "ses_04d77c8caffexlaTbA0HPB87oY_c13",
+          "task_id": "ses_04d77c8caffexlaTbA0HPB87oY_T2"
+        },
+        {
+          "rank": 74,
+          "point_id": "0d7a64b2-e9ba-d460-c0f3-5af4a57fb614",
+          "score": 7.365807,
+          "chunk_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_c1",
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1"
+        },
+        {
+          "rank": 75,
+          "point_id": "7e245a9e-d98a-911c-f499-2c9820cbdc54",
+          "score": 7.334685,
+          "chunk_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_c2",
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1"
+        }
+      ],
+      "output_count": 75,
+      "elapsed_ms": 3
+    },
+    {
+      "stage": "_rrf_fuse",
+      "input": {
+        "fuse_k": 60,
+        "n_dense_results": 51,
+        "n_sparse_results": 39,
+        "input_summaries": [
+          {
+            "name": "dense_results",
+            "count": 51,
+            "top5_task_ids": [
+              "ses_04b987deaffeKfDUR5b1Y99vcx_T7",
+              "ses_0870d73a7ffehev1FO7HA2HSze_T5",
+              "ses_0870d73a7ffehev1FO7HA2HSze_T8",
+              "ses_14a9ad327ffejgP9Qba8jnwIVI_T1",
+              "ses_053c0ac72ffe883RpIvqU1LUEw_T2"
+            ]
+          },
+          {
+            "name": "sparse_results",
+            "count": 39,
+            "top5_task_ids": [
+              "ses_0870d73a7ffehev1FO7HA2HSze_T14",
+              "ses_0870d73a7ffehev1FO7HA2HSze_T12",
+              "ses_0870d73a7ffehev1FO7HA2HSze_T16",
+              "ses_04b987deaffeKfDUR5b1Y99vcx_T1",
+              "ses_0870d73a7ffehev1FO7HA2HSze_T9"
+            ]
+          }
+        ]
+      },
+      "output": [
+        {
+          "rank": 1,
+          "point_id": "f1cc08c2-f01c-9be1-5d2e-17f2e9b324d7",
+          "rrf_score": 0.030798,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T8",
+          "task_label": "P4与P5图谱关系分析",
+          "dense_rank": 3,
+          "sparse_rank": 7
+        },
+        {
+          "rank": 2,
+          "point_id": "91a263a1-e92a-dc36-19d7-db2037fd3ee1",
+          "rrf_score": 0.029514,
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T1",
+          "task_label": "P1文档配置对齐与提交",
+          "dense_rank": 12,
+          "sparse_rank": 4
+        },
+        {
+          "rank": 3,
+          "point_id": "4b578795-2f38-1bfb-e468-c8e12faf9c97",
+          "rrf_score": 0.029324,
+          "task_id": "ses_14a9ad327ffejgP9Qba8jnwIVI_T1",
+          "task_label": "解析 Data Collator 机制",
+          "dense_rank": 4,
+          "sparse_rank": 13
+        },
+        {
+          "rank": 4,
+          "point_id": "b7cd13f5-71ec-d971-1194-da4326cb1054",
+          "rrf_score": 0.029199,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T11",
+          "task_label": "Repo架构定位确认",
+          "dense_rank": 8,
+          "sparse_rank": 9
+        },
+        {
+          "rank": 5,
+          "point_id": "1dee347a-f35c-1eb7-56c0-b846b7658227",
+          "rrf_score": 0.028571,
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T3",
+          "task_label": "AllReduce算法原理与历史溯源",
+          "dense_rank": 10,
+          "sparse_rank": 10
+        },
+        {
+          "rank": 6,
+          "point_id": "1027f618-729e-49c2-e163-685611bcc8fc",
+          "rrf_score": 0.028219,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T16",
+          "task_label": "整合优化专利交底书生成Ver2",
+          "dense_rank": 21,
+          "sparse_rank": 3
+        },
+        {
+          "rank": 7,
+          "point_id": "584eee6c-25b8-cb38-df37-951e3204b147",
+          "rrf_score": 0.028205,
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T2",
+          "task_label": "ZeRO显存优化原理与通信推导",
+          "dense_rank": 5,
+          "sparse_rank": 18
+        },
+        {
+          "rank": 8,
+          "point_id": "c217df95-d906-cb89-436f-3261d8f2f1e5",
+          "rrf_score": 0.027973,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T15",
+          "task_label": "恢复误删文件与清理Git历史",
+          "dense_rank": 11,
+          "sparse_rank": 12
+        },
+        {
+          "rank": 9,
+          "point_id": "e3339bb1-e6f8-8168-607a-c5d9eb3459f0",
+          "rrf_score": 0.027757,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T14",
+          "task_label": "专利交底书整合与冗余清理",
+          "dense_rank": 28,
+          "sparse_rank": 1
+        },
+        {
+          "rank": 10,
+          "point_id": "a5f7aaf1-5b3d-53a6-3407-836b21e74fd9",
+          "rrf_score": 0.026779,
+          "task_id": "ses_0ca8b3533ffeRk0KWh2cSqkKOa_T1",
+          "task_label": "开发浮点数格式转换与教学网页",
+          "dense_rank": 6,
+          "sparse_rank": 26
+        },
+        {
+          "rank": 11,
+          "point_id": "a7e30559-1d98-15d6-ee10-42c517f92ea1",
+          "rrf_score": 0.025479,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T20",
+          "task_label": "Session 历史追溯与总结",
+          "dense_rank": 18,
+          "sparse_rank": 19
+        },
+        {
+          "rank": 12,
+          "point_id": "343c80ec-5800-f393-7f6e-e09e726e6f3b",
+          "rrf_score": 0.025459,
+          "task_id": "ses_0c4845647ffea08jfnkY5ArLEG_T1",
+          "task_label": "GPU算力对比与选型分析",
+          "dense_rank": 33,
+          "sparse_rank": 8
+        },
+        {
+          "rank": 13,
+          "point_id": "884af785-8e4e-5cb1-93e4-d686a20ba7ac",
+          "rrf_score": 0.025278,
+          "task_id": "ses_04d77c8caffexlaTbA0HPB87oY_T1",
+          "task_label": "OMO 多 Agent 模型配置诊断与优化",
+          "dense_rank": 14,
+          "sparse_rank": 25
+        },
+        {
+          "rank": 14,
+          "point_id": "d057e831-e23c-959b-e1b1-4b031b29ff7e",
+          "rrf_score": 0.025238,
+          "task_id": "ses_0c9e4a359ffeGDSrVSG2jNVB6n_T1",
+          "task_label": "BF16训练指南v4扩充",
+          "dense_rank": 24,
+          "sparse_rank": 15
+        },
+        {
+          "rank": 15,
+          "point_id": "33ebc385-ba71-fcb6-0e06-6af4e8582fb0",
+          "rrf_score": 0.025235,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T19",
+          "task_label": "专利名称优化建议",
+          "dense_rank": 7,
+          "sparse_rank": 37
+        },
+        {
+          "rank": 16,
+          "point_id": "2668a11a-466d-688e-7a7e-43f9d19b50e5",
+          "rrf_score": 0.025035,
+          "task_id": "ses_072ebc268ffe227bGpbCtWbM97_T4",
+          "task_label": "重构消息编号系统增加轮次与局部编号",
+          "dense_rank": 17,
+          "sparse_rank": 23
+        },
+        {
+          "rank": 17,
+          "point_id": "701a9636-bdca-2acc-742a-ebd766fa612b",
+          "rrf_score": 0.024923,
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T2",
+          "task_label": "Roofline模型算术强度推导",
+          "dense_rank": 25,
+          "sparse_rank": 16
+        },
+        {
+          "rank": 18,
+          "point_id": "77c19ad7-948d-0072-1f20-37b02c4ec5de",
+          "rrf_score": 0.024476,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T9",
+          "task_label": "MCP模块功能与架构分析",
+          "dense_rank": 50,
+          "sparse_rank": 5
+        },
+        {
+          "rank": 19,
+          "point_id": "a0d30844-660a-2707-bc15-0d2c3dcf45e9",
+          "rrf_score": 0.024022,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T13",
+          "task_label": "MCP HTTP Server 配置与缺陷分析",
+          "dense_rank": 19,
+          "sparse_rank": 28
+        },
+        {
+          "rank": 20,
+          "point_id": "94ba4c5a-da26-d6be-76f9-a6bcfc9d5118",
+          "rrf_score": 0.023518,
+          "task_id": "ses_0c4845647ffea08jfnkY5ArLEG_T2",
+          "task_label": "A800拓扑诊断与NCCL调优",
+          "dense_rank": 46,
+          "sparse_rank": 11
+        },
+        {
+          "rank": 21,
+          "point_id": "b65f0e14-afbe-5aa1-cd1b-e1df5b2e1d43",
+          "rrf_score": 0.023191,
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T4",
+          "task_label": "FA1与FA2底层实现及并行类比",
+          "dense_rank": 38,
+          "sparse_rank": 17
+        },
+        {
+          "rank": 22,
+          "point_id": "25783eaf-ec4e-d791-0ba2-de566821463b",
+          "rrf_score": 0.023138,
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T3",
+          "task_label": "环境配置梳理与脚本修复",
+          "dense_rank": 20,
+          "sparse_rank": 34
+        },
+        {
+          "rank": 23,
+          "point_id": "3546bfe5-bfb0-0897-52db-01f3922f1043",
+          "rrf_score": 0.022762,
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+          "task_label": "NVIDIA SP与Ulysses并行策略对比",
+          "dense_rank": 36,
+          "sparse_rank": 21
+        },
+        {
+          "rank": 24,
+          "point_id": "80787f30-2f12-d097-17a2-4c6959aa4e05",
+          "rrf_score": 0.022154,
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T6",
+          "task_label": "实现内容指纹与增量处理机制",
+          "dense_rank": 26,
+          "sparse_rank": 35
+        },
+        {
+          "rank": 25,
+          "point_id": "2b576845-0547-5167-6f50-61980a81637d",
+          "rrf_score": 0.021369,
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T1",
+          "task_label": "DDP训练流程与参数同步机制",
+          "dense_rank": 49,
+          "sparse_rank": 22
+        },
+        {
+          "rank": 26,
+          "point_id": "37da5209-bf1d-92ad-97d7-392ffe2cd545",
+          "rrf_score": 0.021337,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T6",
+          "task_label": "评估 Dense Embedding 替换方案",
+          "dense_rank": 39,
+          "sparse_rank": 29
+        },
+        {
+          "rank": 27,
+          "point_id": "cbf4a1e7-8d2d-80b9-d8c8-0595f39d583a",
+          "rrf_score": 0.021164,
+          "task_id": "ses_0a16b26dcffewGBp0akSLB5IZG_T2",
+          "task_label": "调研免费模型及当前状态",
+          "dense_rank": 48,
+          "sparse_rank": 24
+        },
+        {
+          "rank": 28,
+          "point_id": "efb2a1c9-d0f3-ec96-b3da-5a291cf04109",
+          "rrf_score": 0.021018,
+          "task_id": "ses_0ca8a24d9ffeHoz0wYkhYDDO4w_T2",
+          "task_label": "技术笔记静态站点整合与本地实施",
+          "dense_rank": 45,
+          "sparse_rank": 27
+        },
+        {
+          "rank": 29,
+          "point_id": "c118b3d7-6126-2905-3686-96a0bcefb937",
+          "rrf_score": 0.020915,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T18",
+          "task_label": "专利交底书格式迭代优化",
+          "dense_rank": 42,
+          "sparse_rank": 30
+        },
+        {
+          "rank": 30,
+          "point_id": "a0129041-f888-b090-e578-44eccec77520",
+          "rrf_score": 0.02089,
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+          "task_label": "SP原理剖析与Mermaid图解迭代",
+          "dense_rank": 41,
+          "sparse_rank": 31
+        },
+        {
+          "rank": 31,
+          "point_id": "61a41336-9c54-c7e8-8e4f-9be0ee874fb5",
+          "rrf_score": 0.020125,
+          "task_id": "ses_0a53b6807ffex4xr4a0wNdi5EQ_T1",
+          "task_label": "梳理 opencode 会话分布及属性",
+          "dense_rank": 43,
+          "sparse_rank": 36
+        },
+        {
+          "rank": 32,
+          "point_id": "3e5f693d-8782-e3f4-c884-9d6fe5b11ffa",
+          "rrf_score": 0.016393,
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T7",
+          "task_label": "解释系统运行原理与完善文档",
+          "dense_rank": 1,
+          "sparse_rank": null
+        },
+        {
+          "rank": 33,
+          "point_id": "750999ed-27a4-bc76-69e0-75ef7fd6231d",
+          "rrf_score": 0.016129,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T5",
+          "task_label": "澄清图谱构建流程及模型职责",
+          "dense_rank": 2,
+          "sparse_rank": null
+        },
+        {
+          "rank": 34,
+          "point_id": "fe396ce3-aafc-206c-395d-d693b4c6b8ac",
+          "rrf_score": 0.016129,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T12",
+          "task_label": "GraphRAG业界应用调研",
+          "dense_rank": null,
+          "sparse_rank": 2
+        },
+        {
+          "rank": 35,
+          "point_id": "26288944-0f4e-b9ea-cacb-34c068a96e70",
+          "rrf_score": 0.015152,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T4",
+          "task_label": "P5实体对齐机制与配置解析",
+          "dense_rank": null,
+          "sparse_rank": 6
+        },
+        {
+          "rank": 36,
+          "point_id": "7094bb32-e1b1-0c7f-0a31-8869e7a77da5",
+          "rrf_score": 0.014493,
+          "task_id": "ses_14a9ad327ffejgP9Qba8jnwIVI_T2",
+          "task_label": "澄清 CAPTCHA 技术需求",
+          "dense_rank": 9,
+          "sparse_rank": null
+        },
+        {
+          "rank": 37,
+          "point_id": "41e3e2cb-a65b-6aff-2630-a3a4e11ad885",
+          "rrf_score": 0.013699,
+          "task_id": "ses_0c99b81bcffeAwdzQ0s8zld82L_T1",
+          "task_label": "编写优化器基础指南v1",
+          "dense_rank": 13,
+          "sparse_rank": null
+        },
+        {
+          "rank": 38,
+          "point_id": "92d06f4d-ab92-3bdb-1f9e-d64ddcc09b4d",
+          "rrf_score": 0.013514,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T2",
+          "task_label": "Repo改动分析与Commit规划",
+          "dense_rank": null,
+          "sparse_rank": 14
+        },
+        {
+          "rank": 39,
+          "point_id": "58232869-73d2-bbac-d675-68054a33cda1",
+          "rrf_score": 0.013333,
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T3",
+          "task_label": "FA状态变量Shape澄清",
+          "dense_rank": 15,
+          "sparse_rank": null
+        },
+        {
+          "rank": 40,
+          "point_id": "580bdb52-e4ce-24e0-0224-1ffd1e1496d7",
+          "rrf_score": 0.013158,
+          "task_id": "ses_072ebc268ffe227bGpbCtWbM97_T1",
+          "task_label": "对话数据高可读性转换与渲染",
+          "dense_rank": 16,
+          "sparse_rank": null
+        },
+        {
+          "rank": 41,
+          "point_id": "4bf95d1b-6020-b338-dd96-610f38786b20",
+          "rrf_score": 0.0125,
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T1",
+          "task_label": "FSDP与SDPA概念澄清",
+          "dense_rank": null,
+          "sparse_rank": 20
+        },
+        {
+          "rank": 42,
+          "point_id": "1c430258-9e60-e16f-8ac2-bd9f257c905e",
+          "rrf_score": 0.012195,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T7",
+          "task_label": "规划 P5 稀疏向量改造方案",
+          "dense_rank": 22,
+          "sparse_rank": null
+        },
+        {
+          "rank": 43,
+          "point_id": "19c2dc85-4868-7232-3db8-42a310e8f714",
+          "rrf_score": 0.012048,
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T2",
+          "task_label": "编写并校验端到端测试指南",
+          "dense_rank": 23,
+          "sparse_rank": null
+        },
+        {
+          "rank": 44,
+          "point_id": "47a535be-c04a-aa40-e30b-282b73084541",
+          "rrf_score": 0.011494,
+          "task_id": "ses_04edfa1f2ffey5A7mn4t5lm1YW_T3",
+          "task_label": "探讨 restore 脚本自动恢复机制",
+          "dense_rank": 27,
+          "sparse_rank": null
+        },
+        {
+          "rank": 45,
+          "point_id": "fb20aafa-e8fb-86a9-3737-0d363987cbe0",
+          "rrf_score": 0.011236,
+          "task_id": "ses_0ec02cc6dffeH1O7QFPSrptpla_T1",
+          "task_label": "澄清 OpenCode /fork 命令",
+          "dense_rank": 29,
+          "sparse_rank": null
+        },
+        {
+          "rank": 46,
+          "point_id": "c3a6f63d-0edf-0105-178b-5d55bd683b98",
+          "rrf_score": 0.011111,
+          "task_id": "ses_072ebc268ffe227bGpbCtWbM97_T2",
+          "task_label": "扩展脚本参数与完善文档",
+          "dense_rank": 30,
+          "sparse_rank": null
+        },
+        {
+          "rank": 47,
+          "point_id": "f315f784-61f5-60b9-1423-5514ef43dc9c",
+          "rrf_score": 0.010989,
+          "task_id": "ses_04b86396effeR5frMxXdiRtezt_T1",
+          "task_label": "排查 opencode 中 Copilot 模型不可见问题",
+          "dense_rank": 31,
+          "sparse_rank": null
+        },
+        {
+          "rank": 48,
+          "point_id": "bfc0e777-e4d4-8039-1dd9-24607f247a63",
+          "rrf_score": 0.01087,
+          "task_id": "ses_04e86c806ffepxGVpAy3W5zsD9_T1",
+          "task_label": "梳理 opencode 工具分类",
+          "dense_rank": 32,
+          "sparse_rank": null
+        },
+        {
+          "rank": 49,
+          "point_id": "9dab2d40-7f9d-c616-f4f0-aa0a8fcd7ad0",
+          "rrf_score": 0.01087,
+          "task_id": "ses_10772d114fferNiLEcTQ8YNd5k_T2",
+          "task_label": "分析 omo 模型配置及影响",
+          "dense_rank": null,
+          "sparse_rank": 32
+        },
+        {
+          "rank": 50,
+          "point_id": "f0e29423-f20e-2316-24ff-2d2d846647e6",
+          "rrf_score": 0.010753,
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T3",
+          "task_label": "NeMo Megatron Bridge定位与价值辨析",
+          "dense_rank": null,
+          "sparse_rank": 33
+        },
+        {
+          "rank": 51,
+          "point_id": "f6679d5a-7857-7037-b990-e49afe9319e8",
+          "rrf_score": 0.010638,
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T4",
+          "task_label": "P2模型配置与超时排查",
+          "dense_rank": 34,
+          "sparse_rank": null
+        },
+        {
+          "rank": 52,
+          "point_id": "2f80fe7d-fb56-7c6e-5c9c-c5c907b7a62d",
+          "rrf_score": 0.010526,
+          "task_id": "ses_0c4e0312affeUm1WYU03ISPgU2_T1",
+          "task_label": "RoPE预计算函数实现解析",
+          "dense_rank": 35,
+          "sparse_rank": null
+        },
+        {
+          "rank": 53,
+          "point_id": "7033986d-815b-4a2b-41db-aeba0a0d6f5b",
+          "rrf_score": 0.010309,
+          "task_id": "ses_0e8898453ffeS7ByDo9zjP8Z8h_T2",
+          "task_label": "并行训练尾部填充代码解析",
+          "dense_rank": 37,
+          "sparse_rank": null
+        },
+        {
+          "rank": 54,
+          "point_id": "4ee1dfda-6a1c-a64e-2908-025001303a41",
+          "rrf_score": 0.010204,
+          "task_id": "ses_0a16b26dcffewGBp0akSLB5IZG_T1",
+          "task_label": "跨工作区查询历史 Session",
+          "dense_rank": null,
+          "sparse_rank": 38
+        },
+        {
+          "rank": 55,
+          "point_id": "b3198a05-0884-4b93-8a4c-201787ef1c37",
+          "rrf_score": 0.010101,
+          "task_id": "ses_04d77c8caffexlaTbA0HPB87oY_T2",
+          "task_label": "OMO 配置文件优化",
+          "dense_rank": null,
+          "sparse_rank": 39
+        },
+        {
+          "rank": 56,
+          "point_id": "167b1643-fddd-2741-6d7c-2009af36f323",
+          "rrf_score": 0.01,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T1",
+          "task_label": "P5测试脚本对比与能力确认",
+          "dense_rank": 40,
+          "sparse_rank": null
+        },
+        {
+          "rank": 57,
+          "point_id": "b61effb4-f8d5-4f82-9c63-c8c30ae316e4",
+          "rrf_score": 0.009615,
+          "task_id": "ses_04ba8451cffeeg4eVFN8BencC8_T1",
+          "task_label": "执行init-deep生成层级化文档",
+          "dense_rank": 44,
+          "sparse_rank": null
+        },
+        {
+          "rank": 58,
+          "point_id": "4962af2b-6239-f68b-5900-eef34efe638a",
+          "rrf_score": 0.009346,
+          "task_id": "ses_16a4e11cfffe79OQe98lCUaEhp_T1",
+          "task_label": "MiniMax跨端互通解答与偏好记录",
+          "dense_rank": 47,
+          "sparse_rank": null
+        },
+        {
+          "rank": 59,
+          "point_id": "afa9acb4-f1bd-4b14-6130-81942c5dac4d",
+          "rrf_score": 0.009009,
+          "task_id": "ses_0ee881bddffeTfWiIhcZwg7Xmb_T2",
+          "task_label": "解析 Python HTTP 服务命令",
+          "dense_rank": 51,
+          "sparse_rank": null
+        }
+      ],
+      "output_count": 59,
+      "elapsed_ms": 0
+    },
+    {
+      "stage": "_rrf_fuse",
+      "input": {
+        "fuse_k": 60,
+        "n_dense_results": 25,
+        "n_sparse_results": 59,
+        "input_summaries": [
+          {
+            "name": "dense_results",
+            "count": 25,
+            "top5_task_ids": [
+              "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+              "ses_0c4845647ffea08jfnkY5ArLEG_T1",
+              "ses_0c5b6171bfferME7He2F8G6UuJ_T2",
+              "ses_053c0ac72ffe883RpIvqU1LUEw_T2",
+              "ses_053c0ac72ffe883RpIvqU1LUEw_T3"
+            ]
+          },
+          {
+            "name": "sparse_results",
+            "count": 59,
+            "top5_task_ids": [
+              "ses_0870d73a7ffehev1FO7HA2HSze_T8",
+              "ses_04b987deaffeKfDUR5b1Y99vcx_T1",
+              "ses_14a9ad327ffejgP9Qba8jnwIVI_T1",
+              "ses_0870d73a7ffehev1FO7HA2HSze_T11",
+              "ses_053c0ac72ffe883RpIvqU1LUEw_T3"
+            ]
+          }
+        ]
+      },
+      "output": [
+        {
+          "rank": 1,
+          "point_id": "1dee347a-f35c-1eb7-56c0-b846b7658227",
+          "rrf_score": 0.030769,
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T3",
+          "task_label": "AllReduce算法原理与历史溯源",
+          "dense_rank": 5,
+          "sparse_rank": 5
+        },
+        {
+          "rank": 2,
+          "point_id": "584eee6c-25b8-cb38-df37-951e3204b147",
+          "rrf_score": 0.03055,
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T2",
+          "task_label": "ZeRO显存优化原理与通信推导",
+          "dense_rank": 4,
+          "sparse_rank": 7
+        },
+        {
+          "rank": 3,
+          "point_id": "343c80ec-5800-f393-7f6e-e09e726e6f3b",
+          "rrf_score": 0.030018,
+          "task_id": "ses_0c4845647ffea08jfnkY5ArLEG_T1",
+          "task_label": "GPU算力对比与选型分析",
+          "dense_rank": 2,
+          "sparse_rank": 12
+        },
+        {
+          "rank": 4,
+          "point_id": "a5f7aaf1-5b3d-53a6-3407-836b21e74fd9",
+          "rrf_score": 0.029437,
+          "task_id": "ses_0ca8b3533ffeRk0KWh2cSqkKOa_T1",
+          "task_label": "开发浮点数格式转换与教学网页",
+          "dense_rank": 6,
+          "sparse_rank": 10
+        },
+        {
+          "rank": 5,
+          "point_id": "701a9636-bdca-2acc-742a-ebd766fa612b",
+          "rrf_score": 0.02886,
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T2",
+          "task_label": "Roofline模型算术强度推导",
+          "dense_rank": 3,
+          "sparse_rank": 17
+        },
+        {
+          "rank": 6,
+          "point_id": "3546bfe5-bfb0-0897-52db-01f3922f1043",
+          "rrf_score": 0.028442,
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+          "task_label": "NVIDIA SP与Ulysses并行策略对比",
+          "dense_rank": 1,
+          "sparse_rank": 23
+        },
+        {
+          "rank": 7,
+          "point_id": "884af785-8e4e-5cb1-93e4-d686a20ba7ac",
+          "rrf_score": 0.027588,
+          "task_id": "ses_04d77c8caffexlaTbA0HPB87oY_T1",
+          "task_label": "OMO 多 Agent 模型配置诊断与优化",
+          "dense_rank": 12,
+          "sparse_rank": 13
+        },
+        {
+          "rank": 8,
+          "point_id": "37da5209-bf1d-92ad-97d7-392ffe2cd545",
+          "rrf_score": 0.025914,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T6",
+          "task_label": "评估 Dense Embedding 替换方案",
+          "dense_rank": 10,
+          "sparse_rank": 26
+        },
+        {
+          "rank": 9,
+          "point_id": "94ba4c5a-da26-d6be-76f9-a6bcfc9d5118",
+          "rrf_score": 0.025487,
+          "task_id": "ses_0c4845647ffea08jfnkY5ArLEG_T2",
+          "task_label": "A800拓扑诊断与NCCL调优",
+          "dense_rank": 17,
+          "sparse_rank": 20
+        },
+        {
+          "rank": 10,
+          "point_id": "80787f30-2f12-d097-17a2-4c6959aa4e05",
+          "rrf_score": 0.025063,
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T6",
+          "task_label": "实现内容指纹与增量处理机制",
+          "dense_rank": 16,
+          "sparse_rank": 24
+        },
+        {
+          "rank": 11,
+          "point_id": "26288944-0f4e-b9ea-cacb-34c068a96e70",
+          "rrf_score": 0.025019,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T4",
+          "task_label": "P5实体对齐机制与配置解析",
+          "dense_rank": 9,
+          "sparse_rank": 35
+        },
+        {
+          "rank": 12,
+          "point_id": "a0129041-f888-b090-e578-44eccec77520",
+          "rrf_score": 0.024444,
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+          "task_label": "SP原理剖析与Mermaid图解迭代",
+          "dense_rank": 15,
+          "sparse_rank": 30
+        },
+        {
+          "rank": 13,
+          "point_id": "1c430258-9e60-e16f-8ac2-bd9f257c905e",
+          "rrf_score": 0.023888,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T7",
+          "task_label": "规划 P5 稀疏向量改造方案",
+          "dense_rank": 11,
+          "sparse_rank": 42
+        },
+        {
+          "rank": 14,
+          "point_id": "f0e29423-f20e-2316-24ff-2d2d846647e6",
+          "rrf_score": 0.023797,
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T3",
+          "task_label": "NeMo Megatron Bridge定位与价值辨析",
+          "dense_rank": 8,
+          "sparse_rank": 50
+        },
+        {
+          "rank": 15,
+          "point_id": "2b576845-0547-5167-6f50-61980a81637d",
+          "rrf_score": 0.023669,
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T1",
+          "task_label": "DDP训练流程与参数同步机制",
+          "dense_rank": 24,
+          "sparse_rank": 25
+        },
+        {
+          "rank": 16,
+          "point_id": "167b1643-fddd-2741-6d7c-2009af36f323",
+          "rrf_score": 0.023546,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T1",
+          "task_label": "P5测试脚本对比与能力确认",
+          "dense_rank": 7,
+          "sparse_rank": 56
+        },
+        {
+          "rank": 17,
+          "point_id": "41e3e2cb-a65b-6aff-2630-a3a4e11ad885",
+          "rrf_score": 0.02313,
+          "task_id": "ses_0c99b81bcffeAwdzQ0s8zld82L_T1",
+          "task_label": "编写优化器基础指南v1",
+          "dense_rank": 18,
+          "sparse_rank": 37
+        },
+        {
+          "rank": 18,
+          "point_id": "750999ed-27a4-bc76-69e0-75ef7fd6231d",
+          "rrf_score": 0.023098,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T5",
+          "task_label": "澄清图谱构建流程及模型职责",
+          "dense_rank": 21,
+          "sparse_rank": 33
+        },
+        {
+          "rank": 19,
+          "point_id": "f315f784-61f5-60b9-1423-5514ef43dc9c",
+          "rrf_score": 0.023044,
+          "task_id": "ses_04b86396effeR5frMxXdiRtezt_T1",
+          "task_label": "排查 opencode 中 Copilot 模型不可见问题",
+          "dense_rank": 13,
+          "sparse_rank": 47
+        },
+        {
+          "rank": 20,
+          "point_id": "58232869-73d2-bbac-d675-68054a33cda1",
+          "rrf_score": 0.022759,
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T3",
+          "task_label": "FA状态变量Shape澄清",
+          "dense_rank": 19,
+          "sparse_rank": 39
+        },
+        {
+          "rank": 21,
+          "point_id": "b3198a05-0884-4b93-8a4c-201787ef1c37",
+          "rrf_score": 0.022209,
+          "task_id": "ses_04d77c8caffexlaTbA0HPB87oY_T2",
+          "task_label": "OMO 配置文件优化",
+          "dense_rank": 14,
+          "sparse_rank": 55
+        },
+        {
+          "rank": 22,
+          "point_id": "9dab2d40-7f9d-c616-f4f0-aa0a8fcd7ad0",
+          "rrf_score": 0.021674,
+          "task_id": "ses_10772d114fferNiLEcTQ8YNd5k_T2",
+          "task_label": "分析 omo 模型配置及影响",
+          "dense_rank": 20,
+          "sparse_rank": 49
+        },
+        {
+          "rank": 23,
+          "point_id": "19c2dc85-4868-7232-3db8-42a310e8f714",
+          "rrf_score": 0.021473,
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T2",
+          "task_label": "编写并校验端到端测试指南",
+          "dense_rank": 25,
+          "sparse_rank": 43
+        },
+        {
+          "rank": 24,
+          "point_id": "f1cc08c2-f01c-9be1-5d2e-17f2e9b324d7",
+          "rrf_score": 0.016393,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T8",
+          "task_label": "P4与P5图谱关系分析",
+          "dense_rank": null,
+          "sparse_rank": 1
+        },
+        {
+          "rank": 25,
+          "point_id": "91a263a1-e92a-dc36-19d7-db2037fd3ee1",
+          "rrf_score": 0.016129,
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T1",
+          "task_label": "P1文档配置对齐与提交",
+          "dense_rank": null,
+          "sparse_rank": 2
+        },
+        {
+          "rank": 26,
+          "point_id": "4b578795-2f38-1bfb-e468-c8e12faf9c97",
+          "rrf_score": 0.015873,
+          "task_id": "ses_14a9ad327ffejgP9Qba8jnwIVI_T1",
+          "task_label": "解析 Data Collator 机制",
+          "dense_rank": null,
+          "sparse_rank": 3
+        },
+        {
+          "rank": 27,
+          "point_id": "b7cd13f5-71ec-d971-1194-da4326cb1054",
+          "rrf_score": 0.015625,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T11",
+          "task_label": "Repo架构定位确认",
+          "dense_rank": null,
+          "sparse_rank": 4
+        },
+        {
+          "rank": 28,
+          "point_id": "1027f618-729e-49c2-e163-685611bcc8fc",
+          "rrf_score": 0.015152,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T16",
+          "task_label": "整合优化专利交底书生成Ver2",
+          "dense_rank": null,
+          "sparse_rank": 6
+        },
+        {
+          "rank": 29,
+          "point_id": "c217df95-d906-cb89-436f-3261d8f2f1e5",
+          "rrf_score": 0.014706,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T15",
+          "task_label": "恢复误删文件与清理Git历史",
+          "dense_rank": null,
+          "sparse_rank": 8
+        },
+        {
+          "rank": 30,
+          "point_id": "e3339bb1-e6f8-8168-607a-c5d9eb3459f0",
+          "rrf_score": 0.014493,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T14",
+          "task_label": "专利交底书整合与冗余清理",
+          "dense_rank": null,
+          "sparse_rank": 9
+        },
+        {
+          "rank": 31,
+          "point_id": "a7e30559-1d98-15d6-ee10-42c517f92ea1",
+          "rrf_score": 0.014085,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T20",
+          "task_label": "Session 历史追溯与总结",
+          "dense_rank": null,
+          "sparse_rank": 11
+        },
+        {
+          "rank": 32,
+          "point_id": "d057e831-e23c-959b-e1b1-4b031b29ff7e",
+          "rrf_score": 0.013514,
+          "task_id": "ses_0c9e4a359ffeGDSrVSG2jNVB6n_T1",
+          "task_label": "BF16训练指南v4扩充",
+          "dense_rank": null,
+          "sparse_rank": 14
+        },
+        {
+          "rank": 33,
+          "point_id": "33ebc385-ba71-fcb6-0e06-6af4e8582fb0",
+          "rrf_score": 0.013333,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T19",
+          "task_label": "专利名称优化建议",
+          "dense_rank": null,
+          "sparse_rank": 15
+        },
+        {
+          "rank": 34,
+          "point_id": "2668a11a-466d-688e-7a7e-43f9d19b50e5",
+          "rrf_score": 0.013158,
+          "task_id": "ses_072ebc268ffe227bGpbCtWbM97_T4",
+          "task_label": "重构消息编号系统增加轮次与局部编号",
+          "dense_rank": null,
+          "sparse_rank": 16
+        },
+        {
+          "rank": 35,
+          "point_id": "77c19ad7-948d-0072-1f20-37b02c4ec5de",
+          "rrf_score": 0.012821,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T9",
+          "task_label": "MCP模块功能与架构分析",
+          "dense_rank": null,
+          "sparse_rank": 18
+        },
+        {
+          "rank": 36,
+          "point_id": "a0d30844-660a-2707-bc15-0d2c3dcf45e9",
+          "rrf_score": 0.012658,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T13",
+          "task_label": "MCP HTTP Server 配置与缺陷分析",
+          "dense_rank": null,
+          "sparse_rank": 19
+        },
+        {
+          "rank": 37,
+          "point_id": "b65f0e14-afbe-5aa1-cd1b-e1df5b2e1d43",
+          "rrf_score": 0.012346,
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T4",
+          "task_label": "FA1与FA2底层实现及并行类比",
+          "dense_rank": null,
+          "sparse_rank": 21
+        },
+        {
+          "rank": 38,
+          "point_id": "96e31a00-2aa3-41c5-aec3-2ff2d850822f",
+          "rrf_score": 0.012195,
+          "task_id": "ses_04e4b0b9cffe8OApx3qp7sRHb3_T1",
+          "task_label": "排查 Copilot 无法显示 Claude 模型",
+          "dense_rank": 22,
+          "sparse_rank": null
+        },
+        {
+          "rank": 39,
+          "point_id": "25783eaf-ec4e-d791-0ba2-de566821463b",
+          "rrf_score": 0.012195,
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T3",
+          "task_label": "环境配置梳理与脚本修复",
+          "dense_rank": null,
+          "sparse_rank": 22
+        },
+        {
+          "rank": 40,
+          "point_id": "cdfeb5b4-88a2-d0ec-5bde-e13342582252",
+          "rrf_score": 0.012048,
+          "task_id": "ses_0c99b81bcffeAwdzQ0s8zld82L_T2",
+          "task_label": "编写优化器进阶指南v2",
+          "dense_rank": 23,
+          "sparse_rank": null
+        },
+        {
+          "rank": 41,
+          "point_id": "cbf4a1e7-8d2d-80b9-d8c8-0595f39d583a",
+          "rrf_score": 0.011494,
+          "task_id": "ses_0a16b26dcffewGBp0akSLB5IZG_T2",
+          "task_label": "调研免费模型及当前状态",
+          "dense_rank": null,
+          "sparse_rank": 27
+        },
+        {
+          "rank": 42,
+          "point_id": "efb2a1c9-d0f3-ec96-b3da-5a291cf04109",
+          "rrf_score": 0.011364,
+          "task_id": "ses_0ca8a24d9ffeHoz0wYkhYDDO4w_T2",
+          "task_label": "技术笔记静态站点整合与本地实施",
+          "dense_rank": null,
+          "sparse_rank": 28
+        },
+        {
+          "rank": 43,
+          "point_id": "c118b3d7-6126-2905-3686-96a0bcefb937",
+          "rrf_score": 0.011236,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T18",
+          "task_label": "专利交底书格式迭代优化",
+          "dense_rank": null,
+          "sparse_rank": 29
+        },
+        {
+          "rank": 44,
+          "point_id": "61a41336-9c54-c7e8-8e4f-9be0ee874fb5",
+          "rrf_score": 0.010989,
+          "task_id": "ses_0a53b6807ffex4xr4a0wNdi5EQ_T1",
+          "task_label": "梳理 opencode 会话分布及属性",
+          "dense_rank": null,
+          "sparse_rank": 31
+        },
+        {
+          "rank": 45,
+          "point_id": "3e5f693d-8782-e3f4-c884-9d6fe5b11ffa",
+          "rrf_score": 0.01087,
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T7",
+          "task_label": "解释系统运行原理与完善文档",
+          "dense_rank": null,
+          "sparse_rank": 32
+        },
+        {
+          "rank": 46,
+          "point_id": "fe396ce3-aafc-206c-395d-d693b4c6b8ac",
+          "rrf_score": 0.010638,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T12",
+          "task_label": "GraphRAG业界应用调研",
+          "dense_rank": null,
+          "sparse_rank": 34
+        },
+        {
+          "rank": 47,
+          "point_id": "7094bb32-e1b1-0c7f-0a31-8869e7a77da5",
+          "rrf_score": 0.010417,
+          "task_id": "ses_14a9ad327ffejgP9Qba8jnwIVI_T2",
+          "task_label": "澄清 CAPTCHA 技术需求",
+          "dense_rank": null,
+          "sparse_rank": 36
+        },
+        {
+          "rank": 48,
+          "point_id": "92d06f4d-ab92-3bdb-1f9e-d64ddcc09b4d",
+          "rrf_score": 0.010204,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T2",
+          "task_label": "Repo改动分析与Commit规划",
+          "dense_rank": null,
+          "sparse_rank": 38
+        },
+        {
+          "rank": 49,
+          "point_id": "580bdb52-e4ce-24e0-0224-1ffd1e1496d7",
+          "rrf_score": 0.01,
+          "task_id": "ses_072ebc268ffe227bGpbCtWbM97_T1",
+          "task_label": "对话数据高可读性转换与渲染",
+          "dense_rank": null,
+          "sparse_rank": 40
+        },
+        {
+          "rank": 50,
+          "point_id": "4bf95d1b-6020-b338-dd96-610f38786b20",
+          "rrf_score": 0.009901,
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T1",
+          "task_label": "FSDP与SDPA概念澄清",
+          "dense_rank": null,
+          "sparse_rank": 41
+        },
+        {
+          "rank": 51,
+          "point_id": "47a535be-c04a-aa40-e30b-282b73084541",
+          "rrf_score": 0.009615,
+          "task_id": "ses_04edfa1f2ffey5A7mn4t5lm1YW_T3",
+          "task_label": "探讨 restore 脚本自动恢复机制",
+          "dense_rank": null,
+          "sparse_rank": 44
+        },
+        {
+          "rank": 52,
+          "point_id": "fb20aafa-e8fb-86a9-3737-0d363987cbe0",
+          "rrf_score": 0.009524,
+          "task_id": "ses_0ec02cc6dffeH1O7QFPSrptpla_T1",
+          "task_label": "澄清 OpenCode /fork 命令",
+          "dense_rank": null,
+          "sparse_rank": 45
+        },
+        {
+          "rank": 53,
+          "point_id": "c3a6f63d-0edf-0105-178b-5d55bd683b98",
+          "rrf_score": 0.009434,
+          "task_id": "ses_072ebc268ffe227bGpbCtWbM97_T2",
+          "task_label": "扩展脚本参数与完善文档",
+          "dense_rank": null,
+          "sparse_rank": 46
+        },
+        {
+          "rank": 54,
+          "point_id": "bfc0e777-e4d4-8039-1dd9-24607f247a63",
+          "rrf_score": 0.009259,
+          "task_id": "ses_04e86c806ffepxGVpAy3W5zsD9_T1",
+          "task_label": "梳理 opencode 工具分类",
+          "dense_rank": null,
+          "sparse_rank": 48
+        },
+        {
+          "rank": 55,
+          "point_id": "f6679d5a-7857-7037-b990-e49afe9319e8",
+          "rrf_score": 0.009009,
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T4",
+          "task_label": "P2模型配置与超时排查",
+          "dense_rank": null,
+          "sparse_rank": 51
+        },
+        {
+          "rank": 56,
+          "point_id": "2f80fe7d-fb56-7c6e-5c9c-c5c907b7a62d",
+          "rrf_score": 0.008929,
+          "task_id": "ses_0c4e0312affeUm1WYU03ISPgU2_T1",
+          "task_label": "RoPE预计算函数实现解析",
+          "dense_rank": null,
+          "sparse_rank": 52
+        },
+        {
+          "rank": 57,
+          "point_id": "7033986d-815b-4a2b-41db-aeba0a0d6f5b",
+          "rrf_score": 0.00885,
+          "task_id": "ses_0e8898453ffeS7ByDo9zjP8Z8h_T2",
+          "task_label": "并行训练尾部填充代码解析",
+          "dense_rank": null,
+          "sparse_rank": 53
+        },
+        {
+          "rank": 58,
+          "point_id": "4ee1dfda-6a1c-a64e-2908-025001303a41",
+          "rrf_score": 0.008772,
+          "task_id": "ses_0a16b26dcffewGBp0akSLB5IZG_T1",
+          "task_label": "跨工作区查询历史 Session",
+          "dense_rank": null,
+          "sparse_rank": 54
+        },
+        {
+          "rank": 59,
+          "point_id": "b61effb4-f8d5-4f82-9c63-c8c30ae316e4",
+          "rrf_score": 0.008547,
+          "task_id": "ses_04ba8451cffeeg4eVFN8BencC8_T1",
+          "task_label": "执行init-deep生成层级化文档",
+          "dense_rank": null,
+          "sparse_rank": 57
+        },
+        {
+          "rank": 60,
+          "point_id": "4962af2b-6239-f68b-5900-eef34efe638a",
+          "rrf_score": 0.008475,
+          "task_id": "ses_16a4e11cfffe79OQe98lCUaEhp_T1",
+          "task_label": "MiniMax跨端互通解答与偏好记录",
+          "dense_rank": null,
+          "sparse_rank": 58
+        },
+        {
+          "rank": 61,
+          "point_id": "afa9acb4-f1bd-4b14-6130-81942c5dac4d",
+          "rrf_score": 0.008403,
+          "task_id": "ses_0ee881bddffeTfWiIhcZwg7Xmb_T2",
+          "task_label": "解析 Python HTTP 服务命令",
+          "dense_rank": null,
+          "sparse_rank": 59
+        }
+      ],
+      "output_count": 61,
+      "elapsed_ms": 0
+    },
+    {
+      "stage": "reranker",
+      "input": {
+        "query": "为这个句子生成表示以用于检索相关文章：GPU的对比和选型",
+        "n_documents": 25,
+        "top_k": 5,
+        "documents_preview": [
+          "背景与目标：为准确评估分布式训练通信开销，厘清 Ring-AllReduce 算法的通信量计算、术语命名及历史渊源。核心…",
+          "背景与目标：为解决 DDP 在大模型训练中面临的显存冗余瓶颈，深入剖析 ZeRO 各阶段的优化原理与通信开销。核心产出与…",
+          "为明确大模型硬件选型，对比了 V100 至 H200 的算力、显存及互联差异。明确 A800/H800 为 NVLink…",
+          "为深入理解 IEEE 754 浮点数格式，开发了支持十进制与 FP32/FP16/BF16 互转的 HTML 教学网页。…",
+          "背景：基于 Roofline 模型分析标准 Attention 与 FlashAttention 的性能瓶颈。核心产出：…",
+          "背景与目标：针对 8 GPU (TP=2, SP=4) 场景，澄清 Tensor Parallelism 与 Seque…",
+          "**背景与目标**：用户当前 OMO (oh-my-openagent) 配置存在严重问题，所有 agent 和 cat…",
+          "背景与目标：评估在系统中替换 Dense Embedding 模型的可行性、硬约束及实施步骤。\n核心产出与关键决策：确认…",
+          "针对 A800 集群分布式训练 NCCL AllReduce 耗时异常（单步 1.4s）问题，进行拓扑诊断与通信调优。确…",
+          "背景：原实现仅比对chunk_id列表，内容变化但id不变时会漏跑，需引入hash摘要算法检测内容变更并支持增量处理。核…",
+          "背景与目标：为深入理解 Phase 5 知识图谱构建流水线的底层机制，剖析 `test_p5.py` 的实体对齐逻辑及 …",
+          "背景与目标：为深入理解 Megatron-LM 序列并行 (SP) 机制，系统梳理了 TP=2 场景下 SP 的张量切分…",
+          "背景与目标：分析 Phase 5 实体对齐阶段未能利用 BGE-M3 等模型 Sparse 向量能力的原因，并规划混合检…",
+          "背景与目标：解答 NeMo Megatron Bridge 的核心定位，辨析其与 Megatron 原生 convert…",
+          "背景与目标：为理解大模型分布式训练的基础，系统解析 PyTorch DDP 的训练流程及参数同步机制。核心产出与关键决策…",
+          "背景与目标：为明确 Phase 5 阶段两个测试脚本的定位与能力边界，对比分析 `code_p5_benchmark.p…",
+          "为系统学习大模型训练中的参数更新机制，编写了一份涵盖理论、实战、手算与面试的优化器基础指南。核心产出为 Markdown…",
+          "背景与目标：为厘清 OpenCode 会话数据处理流水线中各阶段的模型调用逻辑，澄清 Phase 5 知识图谱构建中 L…",
+          "背景与目标：解决在 opencode 客户端中无法看到 GitHub Copilot 提供的 Claude 模型，但在 …",
+          "澄清了 FlashAttention 算法中用于 online softmax 的累加量 m（行最大值）和 l（指数和）…",
+          "背景与目标：根据 OMO 官方 agent-model-matching.md 文档，在用户约束下（无 Kimi K3、…",
+          "背景与目标：评估 omo 插件默认免费模型配置对 OpenCode 核心功能的影响，并确认原生 agent 的保留状态。…",
+          "背景与目标：为验证项目所有Phase（P1至P6b及MCP）的功能，需编写一份详尽的端到端测试指南，涵盖所有CLI入口、…",
+          "背景与目标：澄清 P4 跨 session 搜索是否利用 P5 知识图谱的架构疑问。核心产出与关键决策：通过源码分析确认…",
+          "背景与目标：P1阶段代码实际行为与项目文档、配置文件存在不一致，需进行对齐并提交相关初始化产物。\n核心产出与关键决策：审…"
+        ]
+      },
+      "output": [
+        {
+          "index": 2,
+          "score": 0.99593,
+          "task_id": "ses_0c4845647ffea08jfnkY5ArLEG_T1",
+          "task_label": "GPU算力对比与选型分析",
+          "hybrid_score": 0.030018
+        },
+        {
+          "index": 19,
+          "score": 0.893216,
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T3",
+          "task_label": "FA状态变量Shape澄清",
+          "hybrid_score": 0.022759
+        },
+        {
+          "index": 21,
+          "score": 0.571767,
+          "task_id": "ses_10772d114fferNiLEcTQ8YNd5k_T2",
+          "task_label": "分析 omo 模型配置及影响",
+          "hybrid_score": 0.021674
+        },
+        {
+          "index": 0,
+          "score": 0.245447,
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T3",
+          "task_label": "AllReduce算法原理与历史溯源",
+          "hybrid_score": 0.030769
+        },
+        {
+          "index": 22,
+          "score": 0.235108,
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T2",
+          "task_label": "编写并校验端到端测试指南",
+          "hybrid_score": 0.021473
+        }
+      ],
+      "output_count": 5,
+      "elapsed_ms": 10684
+    }
+  ],
+  "final_top5": [
+    {
+      "rank": 1,
+      "task_id": "ses_0c4845647ffea08jfnkY5ArLEG_T1",
+      "task_label": "GPU算力对比与选型分析",
+      "rerank_score": 0.99593,
+      "hybrid_score": 0.030018,
+      "task_summary_preview": "为明确大模型硬件选型，对比了 V100 至 H200 的算力、显存及互联差异。明确 A800/H800 为 NVLink 阉割版，H200 算力同 H100 但显存与带宽大幅升级，并推导了其对长序列训练和推理的影响。结论：H200 在长上下"
+    },
+    {
+      "rank": 2,
+      "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T3",
+      "task_label": "FA状态变量Shape澄清",
+      "rerank_score": 0.893216,
+      "hybrid_score": 0.022759,
+      "task_summary_preview": "澄清了 FlashAttention 算法中用于 online softmax 的累加量 m（行最大值）和 l（指数和）的 shape 为 (B, H, N)（即每个 query 位置一个标量，无 head_dim 维度），并明确了其必须使"
+    },
+    {
+      "rank": 3,
+      "task_id": "ses_10772d114fferNiLEcTQ8YNd5k_T2",
+      "task_label": "分析 omo 模型配置及影响",
+      "rerank_score": 0.571767,
+      "hybrid_score": 0.021674,
+      "task_summary_preview": "背景与目标：评估 omo 插件默认免费模型配置对 OpenCode 核心功能的影响，并确认原生 agent 的保留状态。核心产出与关键决策：解析 ~/.config/opencode/oh-my-openagent.json，确认 omo "
+    },
+    {
+      "rank": 4,
+      "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T3",
+      "task_label": "AllReduce算法原理与历史溯源",
+      "rerank_score": 0.245447,
+      "hybrid_score": 0.030769,
+      "task_summary_preview": "背景与目标：为准确评估分布式训练通信开销，厘清 Ring-AllReduce 算法的通信量计算、术语命名及历史渊源。核心产出与关键决策：确认 DDP 中 2P 的 per-GPU 通信量基于 Ring-AllReduce 算法，其核心优势是"
+    },
+    {
+      "rank": 5,
+      "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T2",
+      "task_label": "编写并校验端到端测试指南",
+      "rerank_score": 0.235108,
+      "hybrid_score": 0.021473,
+      "task_summary_preview": "背景与目标：为验证项目所有Phase（P1至P6b及MCP）的功能，需编写一份详尽的端到端测试指南，涵盖所有CLI入口、配置变体及预期产物。\n核心产出与关键决策：生成781行的`test_all.md`，包含Step 0-11的完整流程。随"
+    }
+  ]
+}
