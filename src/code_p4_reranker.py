@@ -173,18 +173,22 @@ class Qwen3Reranker:
             input_ids = encoded["input_ids"].to(self.device)
             attention_mask = encoded["attention_mask"].to(self.device)
 
+            # left padding 下显式构造 position_ids，确保 RoPE 位置编码不受 padding 量影响
+            position_ids = attention_mask.long().cumsum(-1) - 1
+            position_ids.masked_fill_(attention_mask == 0, 0)
             with torch.no_grad():
                 outputs = self.model(
                     input_ids=input_ids,
                     attention_mask=attention_mask,
+                    position_ids=position_ids,
                 )
                 # logits: [batch, seq_len, vocab_size]
                 # 取最后一个有效 token 位置的 logits
                 for b_idx in range(len(batch_docs)):
                     # 找到最后一个非 pad token 的位置
-                    mask = attention_mask[b_idx]
-                    last_pos = mask.sum().item() - 1
-                    last_logits = outputs.logits[b_idx, last_pos, :]
+                    # mask = attention_mask[b_idx]
+                    # last_pos = mask.sum().item() - 1
+                    last_logits = outputs.logits[b_idx, -1, :]
 
                     # 取 yes 和 no 的 logit
                     yes_logit = last_logits[self._yes_id].item()
