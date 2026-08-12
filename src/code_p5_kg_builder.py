@@ -14,6 +14,7 @@ import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
+from typing import List, Tuple
 
 import yaml
 from openai import OpenAI
@@ -207,40 +208,53 @@ def _repair_truncated_json(json_str: str) -> str:
     return result
 
 
+# Compile patterns at the module level for performance
+_ENTITY_PATTERNS: List[Tuple[str, re.Pattern]] = [
+    ("file", re.compile(r'\.(py|js|ts|ya?ml|json|md|html|css)', re.IGNORECASE)),
+    ("bug", re.compile(r'\b(bug|issue|error|fix)\b|修复|问题|错误|异常', re.IGNORECASE)),
+    ("tool", re.compile(r'\b(tool|cli|command|api|sdk|framework)\b|工具|命令|框架', re.IGNORECASE)),
+    ("project", re.compile(r'\b(project|repo|app|application)\b|项目|仓库|应用', re.IGNORECASE)),
+    ("module", re.compile(r'\b(module|component|service|layer)\b|模块|组件|服务|层', re.IGNORECASE)),
+]
+
+# 中文人名
+_PERSON_CN_PATTERN = re.compile(r'^[\u4e00-\u9fa5]{2,4}$')
+_PERSON_CN_BLACKLIST = {"的", "了", "是", "在", "和", "与", 
+                        "模型", "算法", "函数", "系统", "测试", "模块", "组件",
+                        "数据源", "缓存", "线程", "进程", "数据库"}
+
+# 英文人名：首字母大写两段式 (如 Alice Li, John Doe)
+_PERSON_EN_PATTERN = re.compile(r'^[A-Z][a-z]+ [A-Z][a-z]+$')
+_PERSON_EN_BLACKLIST = {
+    "Web Server", "App Server", "Big Data", "Red Hat", "Domain Model", 
+    "Source Code", "Test Case", "User Interface", "Virtual Machine",
+    "System Design", "Machine Learning", "Deep Learning", "Data Science",
+    "Code Review", "Pull Request", "Merge Request"
+}
+
 def _infer_entity_type(name: str) -> str:
-    """基于关键词规则推断实体类型"""
-    name_lower = name.lower()
+    if not name.strip():
+        return "concept"
 
-    # Bug / 问题
-    bug_keywords = ["bug", "issue", "error", "fix", "修复", "问题", "错误", "异常"]
-    if any(kw in name_lower for kw in bug_keywords):
-        return "bug"
+    name_stripped = name.strip()
+    name_lower = name_stripped.lower()
 
-    # 文件
-    if any(ext in name_lower for ext in [".py", ".js", ".ts", ".yaml", ".json", ".md", ".html", ".css"]):
-        return "file"
+    # 1. 规则正则匹配（顺序优先级：靠前优先）
+    for entity_type, pattern in _ENTITY_PATTERNS:
+        if pattern.search(name_lower):
+            return entity_type
 
-    # 工具
-    tool_keywords = ["tool", "工具", "cli", "命令", "command", "api", "sdk", "框架", "framework"]
-    if any(kw in name_lower for kw in tool_keywords):
-        return "tool"
+    # 2. 判断人名
+    # 2.1 中文人名
+    if _PERSON_CN_PATTERN.match(name_stripped):
+        if not any(word in name_stripped for word in _PERSON_CN_BLACKLIST):
+            return "person"
+    # 2.2 英文人名
+    elif _PERSON_EN_PATTERN.match(name_stripped):
+        if name_stripped not in _PERSON_EN_BLACKLIST:
+            return "person"
 
-    # 项目
-    project_keywords = ["项目", "project", "repo", "仓库", "app", "应用"]
-    if any(kw in name_lower for kw in project_keywords):
-        return "project"
-
-    # 模块
-    module_keywords = ["模块", "module", "组件", "component", "service", "服务", "层", "layer"]
-    if any(kw in name_lower for kw in module_keywords):
-        return "module"
-
-    # 人名 (中文 2-3 字且不含技术关键词)
-    if len(name) <= 4 and not any(c in name for c in "的了是在") and not any(kw in name_lower for kw in ["模型", "算法", "函数"]):
-        # 不做过度推断，只标记明显的
-        pass
-
-    # 默认: 技术概念
+    # 3. 默认：通用技术概念
     return "concept"
 
 
