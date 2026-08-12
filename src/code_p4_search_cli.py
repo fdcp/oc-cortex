@@ -8,8 +8,9 @@ Phase 4 跨 session 搜索 CLI
   # 交互模式
   python code_p4_search_cli.py --interactive
 
-  # 跳过 Reranker (对比粗排效果)
+  # 跳过 Reranker (对比粗排效果); 默认按 --top-k 截断, --full-pool 返回 5x 候选池
   python code_p4_search_cli.py --query "优化器学习率" --no-rerank
+  python code_p4_search_cli.py --query "优化器学习率" --no-rerank --full-pool
 
   # 调整返回数量
   python code_p4_search_cli.py --query "session管理" --top-k 10
@@ -93,6 +94,7 @@ def run_single_search(
     query: str,
     top_k: int = 5,
     skip_rerank: bool = False,
+    full_pool: bool = False,
     query_instruction: str = "",
 ):
     """执行单次搜索并打印结果"""
@@ -102,10 +104,15 @@ def run_single_search(
         top_k=top_k,
         skip_rerank=skip_rerank,
     )
+    if skip_rerank and not full_pool:
+        results = results[:top_k]
     elapsed = time.time() - t0
 
     print(f"\n{'=' * 60}")
-    mode = "粗排 (Hybrid, 无 Reranker)" if skip_rerank else "精排 (Hybrid + Reranker)"
+    if skip_rerank:
+        mode = "粗排 (Hybrid, 无 Reranker, 完整候选池)" if full_pool else "粗排 (Hybrid, 无 Reranker, top_k 截断)"
+    else:
+        mode = "精排 (Hybrid + Reranker)"
     print(f"  查询: {query}")
     print(f"  模式: {mode}")
     print(f"  结果: {len(results)} 条, 耗时 {elapsed:.2f}s")
@@ -122,6 +129,7 @@ def run_interactive(
     searcher: SessionSearcher,
     top_k: int,
     skip_rerank: bool,
+    full_pool: bool,
     query_instruction: str,
 ):
     """交互模式: 循环输入查询"""
@@ -145,10 +153,10 @@ def run_interactive(
             break
         if query.lower() == "demo":
             for q in DEMO_QUERIES:
-                run_single_search(searcher, q, top_k, skip_rerank, query_instruction)
+                run_single_search(searcher, q, top_k, skip_rerank, full_pool, query_instruction)
             continue
 
-        run_single_search(searcher, query, top_k, skip_rerank, query_instruction)
+        run_single_search(searcher, query, top_k, skip_rerank, full_pool, query_instruction)
 
 
 def main():
@@ -158,7 +166,11 @@ def main():
     parser.add_argument("--top-k", type=int, default=5, help="返回结果数")
     parser.add_argument(
         "--no-rerank", action="store_true",
-        help="跳过 Reranker, 仅使用粗排 (hybrid RRF)"
+        help="跳过 Reranker, 仅使用粗排 (hybrid RRF); 默认按 --top-k 截断, --full-pool 返回完整候选池"
+    )
+    parser.add_argument(
+        "--full-pool", action="store_true",
+        help="配合 --no-rerank, 返回完整候选池 (= top_k * candidate_multiplier)"
     )
     parser.add_argument(
         "--interactive", action="store_true",
@@ -187,6 +199,7 @@ def main():
             searcher,
             args.top_k,
             args.no_rerank,
+            args.full_pool,
             config.get("query_instruction_for_retrieval", ""),
         )
     elif args.query:
@@ -195,6 +208,7 @@ def main():
             args.query,
             args.top_k,
             args.no_rerank,
+            args.full_pool,
             config.get("query_instruction_for_retrieval", ""),
         )
     else:
@@ -206,6 +220,7 @@ def main():
                 q,
                 args.top_k,
                 args.no_rerank,
+                args.full_pool,
                 config.get("query_instruction_for_retrieval", ""),
             )
 

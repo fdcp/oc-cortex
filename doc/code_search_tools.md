@@ -103,7 +103,7 @@ Stage 7: Chunk 展开 → 为每个结果 Task 附加关联 Chunk 的摘要和�
 
 - 返回 `SessionSearchResult`，包含 task_label、task_summary、rerank_score、hybrid_score，以及关联 Chunk 的 summary 和 cleaned_text_preview，信息最丰富。
 - 支持 `--interactive` 交互模式，循环输入查询。
-- 支持 `--no-rerank` 跳过精排，方便对比粗排和精排效果。
+- 支持 `--no-rerank` 跳过精排，默认按 `--top-k` 截断以匹配精排路径行为；配合 `--full-pool` 可返回完整候选池 (`top_k × candidate_multiplier`)，方便对比粗排召回全貌。
 - Dense 检索目标是 tasks 集合（Task 级别）；两个 chunk 路径分别查询 `chunks_summary` 和 `chunks_cleaned_text`（Chunk 级别，聚合回 Task），先做 chunk 路径 RRF，再与 tasks Dense 结果做第二次 RRF。
 - 启动快（不重建索引），适合日常使用。
 
@@ -116,8 +116,11 @@ python src/code_p4_search_cli.py --query "GPU对比分析"
 # 交互模式
 python src/code_p4_search_cli.py --interactive
 
-# 跳过 Reranker 对比粗排效果
+# 跳过 Reranker 对比粗排效果 (默认按 --top-k 截断)
 python src/code_p4_search_cli.py --query "优化器学习率" --no-rerank
+
+# 跳过 Reranker 并返回完整候选池
+python src/code_p4_search_cli.py --query "优化器学习率" --no-rerank --full-pool
 ```
 
 ## 检索方式深度对比

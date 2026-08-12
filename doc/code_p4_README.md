@@ -75,7 +75,11 @@ python src/code_p4_search_cli.py --interactive --config config/code_p3_config.ya
 ### 跳过 Reranker (对比粗排效果)
 
 ```bash
+# 默认: 按 --top-k 截断 (跟 rerank 路径保持一致)
 python src/code_p4_search_cli.py --query "优化器学习率" --no-rerank
+
+# --full-pool: 返回完整候选池 (= top_k × candidate_multiplier), 用于查看粗排召回全貌
+python src/code_p4_search_cli.py --query "优化器学习率" --no-rerank --full-pool
 ```
 
 ### 调整返回数量
