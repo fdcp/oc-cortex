@@ -412,10 +412,10 @@ class SessionSearcher:
                 logger.warning(f"alias_expansion token '{token}' 查 KG 失败: {e}")
                 continue
             kg_total_hits += len(hits)
-            if not hits:
-                logger.debug(
-                    f"  alias_expansion[kg]: token '{token}' → 0 hits"
-                )
+            logger.debug(
+                f"  alias_expansion[kg]: token '{token}' → {len(hits)} hits: "
+                f"{[(hit['name'], hit.get('aliases') or []) for hit in hits]}"
+            )
             for hit in hits:
                 if len(extra_terms) >= max_total:
                     cap_hit = True
@@ -435,6 +435,12 @@ class SessionSearcher:
                     candidates = [c for c in candidates if not _eq(c, matched)]
                 candidates = [c for c in candidates if c not in seen]
                 candidates = candidates[:max_aliases]
+                if not candidates:
+                    logger.debug(
+                        f"  alias_expansion[filter]: hit '{canonical}' "
+                        f"(aliases={aliases}) → 0 candidates "
+                        f"(matched={matched}, filtered by seen/cap)"
+                    )
                 for c in candidates:
                     seen.add(c)
                     extra_terms.append(c)
