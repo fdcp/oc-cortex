@@ -1475,7 +1475,7 @@ class KGBuilder:
         # max_tokens 按 batch 大小动态调整
         batch_tokens = max(self.merge_batch_size * 40, 500)
         content_retries = 3
-        best_results = {pair: False for pair in pairs}
+        best_results: dict[tuple[str, str], bool] = {}
         best_decisions = 0
 
         for attempt in range(content_retries):
@@ -1507,30 +1507,19 @@ class KGBuilder:
             except Exception as e:
                 logger.warning(f"批量合并 LLM 调用失败 (尝试 {attempt + 1}): {e}")
 
-        # 补充: 对批量未决的 pair 逐条确认
-        undecided = [p for p in pairs if best_decisions == 0 or
-                     (p not in {k for k, v in best_results.items() if v is not None})]
+        undecided = [p for p in pairs if best_results.get(p) is None]
 
-        if best_decisions == 0:
-            # 批量完全失败, 全部逐条确认
-            logger.warning(f"批量合并确认失败 ({len(pairs)} 对), 降级为单条确认")
-            results = {}
-            for e1, e2 in pairs:
-                results[(e1, e2)] = self._llm_confirm_merge(e1, e2, entity_map)
-            return results
-
-        # 批量部分成功: 保留已决结果, 未决的逐条补充
-        if best_decisions < len(pairs):
-            # 找出未被批量覆盖的 pair (total_decisions 只反映匹配数)
-            # 由于 fallback 可能只覆盖部分 pair, 对其余全部用单条确认
-            logger.info(f"批量部分成功 ({best_decisions}/{len(pairs)}), 补充单条确认")
-            for e1, e2 in pairs:
-                if not best_results.get((e1, e2), False):
-                    # 只有批量结果为 False (KEEP) 的才需要补充确认
-                    # 因为批量匹配到的 MERGE 是可信的
-                    single_result = self._llm_confirm_merge(e1, e2, entity_map)
-                    if single_result:
-                        best_results[(e1, e2)] = True
+        if undecided:
+            if best_decisions == 0:
+                logger.warning(
+                    f"批量合并确认失败 ({len(undecided)} 对), 降级为单条确认"
+                )
+            else:
+                logger.info(
+                    f"批量未决 {len(undecided)}/{len(pairs)} 对, 补充单条确认"
+                )
+            for e1, e2 in undecided:
+                best_results[(e1, e2)] = self._llm_confirm_merge(e1, e2, entity_map)
 
         return best_results
 
