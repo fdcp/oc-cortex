@@ -21,6 +21,7 @@ tools
 Phase_1_code_skeleton_complete_2026-07-19_03-37.md
 # Test artifacts
 tests/*.log
+tests/test_p4/test_p4_full_results.json
 问题答复*
 专利代理批注_回复*
 cmt0*.png
