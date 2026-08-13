@@ -791,6 +791,47 @@ class Phase3Store:
             ))
         return results
 
+    def search_sparse_bm25_tokens(
+        self,
+        tokens: list[str],
+        collection: Optional[str] = None,
+        top_k: int = 10,
+    ) -> list[SearchResult]:
+        """BM25 检索, 接受预分词 tokens (跳过 jieba 重切).
+
+        用于 P4 alias expansion: caller 已经把 query + extra terms 拼成 token 列表,
+        这里直接调 bm25.get_scores(tokens), 避免 jieba 二次切词引入冗余/重复.
+        """
+        collection = collection or self.chunks_cleaned_text_collection
+
+        if collection not in self._bm25_index:
+            logger.warning(f"BM25 索引不存在: {collection}")
+            return []
+
+        if not tokens:
+            return []
+
+        bm25 = self._bm25_index[collection]
+        docs = self._bm25_docs[collection]
+
+        scores = bm25.get_scores(tokens)
+
+        scored_idx = sorted(
+            range(len(scores)), key=lambda i: scores[i], reverse=True
+        )[:top_k]
+
+        results = []
+        for i in scored_idx:
+            if scores[i] <= 0:
+                break
+            doc = docs[i]
+            results.append(SearchResult(
+                point_id=doc["point_id"],
+                score=float(scores[i]),
+                payload=doc["payload"],
+            ))
+        return results
+
     # --------------------------------------------------------
     # 检索: Sparse (BGE-M3)
     # --------------------------------------------------------

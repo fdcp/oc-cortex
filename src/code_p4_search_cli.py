@@ -96,9 +96,12 @@ def run_single_search(
     skip_rerank: bool = False,
     full_pool: bool = False,
     query_instruction: str = "",
+    no_alias_expansion: bool = False,
 ):
     """执行单次搜索并打印结果"""
     t0 = time.time()
+    if no_alias_expansion:
+        searcher.set_alias_expansion(False)
     results = searcher.search(
         build_retrieval_query(query, query_instruction),
         top_k=top_k,
@@ -131,6 +134,7 @@ def run_interactive(
     skip_rerank: bool,
     full_pool: bool,
     query_instruction: str,
+    no_alias_expansion: bool = False,
 ):
     """交互模式: 循环输入查询"""
     print("\n" + "=" * 60)
@@ -153,10 +157,10 @@ def run_interactive(
             break
         if query.lower() == "demo":
             for q in DEMO_QUERIES:
-                run_single_search(searcher, q, top_k, skip_rerank, full_pool, query_instruction)
+                run_single_search(searcher, q, top_k, skip_rerank, full_pool, query_instruction, no_alias_expansion)
             continue
 
-        run_single_search(searcher, query, top_k, skip_rerank, full_pool, query_instruction)
+        run_single_search(searcher, query, top_k, skip_rerank, full_pool, query_instruction, no_alias_expansion)
 
 
 def main():
@@ -171,6 +175,10 @@ def main():
     parser.add_argument(
         "--full-pool", action="store_true",
         help="配合 --no-rerank, 返回完整候选池 (= top_k * candidate_multiplier)"
+    )
+    parser.add_argument(
+        "--no-alias-expansion", action="store_true",
+        help="关闭 query-side alias expansion (sparse 路径用原 query 分词, 不查 KG)"
     )
     parser.add_argument(
         "--interactive", action="store_true",
@@ -201,6 +209,7 @@ def main():
             args.no_rerank,
             args.full_pool,
             config.get("query_instruction_for_retrieval", ""),
+            args.no_alias_expansion,
         )
     elif args.query:
         run_single_search(
@@ -210,6 +219,7 @@ def main():
             args.no_rerank,
             args.full_pool,
             config.get("query_instruction_for_retrieval", ""),
+            args.no_alias_expansion,
         )
     else:
         # 无参数时运行 demo
@@ -222,6 +232,7 @@ def main():
                 args.no_rerank,
                 args.full_pool,
                 config.get("query_instruction_for_retrieval", ""),
+                args.no_alias_expansion,
             )
 
 

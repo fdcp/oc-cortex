@@ -7,9 +7,11 @@ Sparse 支持 BM25 (开发) 或 BGE-M3 (上线)，由 config sparse.method 决�
 复用 Phase 3 的 Phase3Store + Qdrant 数据
 """
 import json
+import os
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Optional
 
 from loguru import logger
 
@@ -18,6 +20,34 @@ from code_p1_models import Chunk, CleanedToolCall
 from code_p2_models import Task
 from code_p3_qdrant_store import Phase3Store, SearchResult
 from code_p4_reranker import Qwen3Reranker
+
+
+def _patch_pkg_resources() -> None:
+    """
+    新版 setuptools 移除了 pkg_resources.resource_stream,
+    导致 jieba.posseg 加载词性词典失败 (AttributeError)。
+    这里补一个基于 importlib 的 fallback, 保证 jieba.posseg 可用。
+    """
+    try:
+        import pkg_resources
+        if hasattr(pkg_resources, "resource_stream"):
+            return
+        import importlib
+
+        def _rs(pkg, path):
+            if isinstance(pkg, str):
+                mod = importlib.import_module(pkg)
+                pkg_dir = os.path.dirname(mod.__file__)
+            else:
+                pkg_dir = os.path.dirname(pkg.__file__)
+            return open(os.path.join(pkg_dir, path), "rb")
+
+        pkg_resources.resource_stream = _rs
+    except Exception:
+        pass
+
+
+_patch_pkg_resources()
 
 
 # ============================================================
@@ -105,6 +135,39 @@ def _load_summaries(path: str) -> dict[str, str]:
     return summaries
 
 
+def _try_init_kg_db(config: "Config", resolve_path) -> Optional["KGDatabase"]:
+    """
+    解析 KG 路径并懒加载 KGDatabase; 失败返回 None.
+
+    路径解析顺序:
+      1. alias_expansion.kg_db_path 显式配置
+      2. alias_expansion.kg_auto_mode 自动 (output/{mode}/knowledge_graph.db)
+    """
+    from code_p5e_db import KGDatabase
+
+    cfg = config.get("alias_expansion", {}) or {}
+    explicit = (cfg.get("kg_db_path") or "").strip()
+    candidates: list[Path] = []
+    if explicit:
+        candidates.append(Path(resolve_path(explicit)))
+    else:
+        mode = cfg.get("kg_auto_mode", "entity")
+        candidates.append(Path(resolve_path(f"output/{mode}/knowledge_graph.db")))
+
+    for p in candidates:
+        if p.exists():
+            try:
+                logger.info(f"alias_expansion 加载 KG: {p}")
+                return KGDatabase(str(p))
+            except Exception as e:
+                logger.warning(f"KGDatabase({p}) 初始化失败: {e}")
+                return None
+    logger.info(
+        f"alias_expansion 未找到 KG DB (candidates={[str(p) for p in candidates]})"
+    )
+    return None
+
+
 # ============================================================
 # SessionSearcher
 # ============================================================
@@ -112,7 +175,6 @@ def _load_summaries(path: str) -> dict[str, str]:
 class SessionSearcher:
     """
     跨 session 搜索引擎
-
     封装 Phase3Store (向量检索) + Qwen3Reranker (精排) + chunk 详情展开
     """
 
@@ -134,6 +196,8 @@ class SessionSearcher:
         def _resolve_path(p: str) -> str:
             pp = Path(p)
             return str(pp if pp.is_absolute() else (_repo_root / pp))
+        self._repo_root = _repo_root
+        self._resolve_path = _resolve_path
 
         tasks_file = _resolve_path(self.config.get("phase2.tasks_file", "./output/tasks.jsonl"))
         chunks_file = _resolve_path(self.config.get("phase1.chunks_file", "./output/chunks.jsonl"))
@@ -216,7 +280,166 @@ class SessionSearcher:
             batch_size=reranker_batch_size,
         )
 
+        # 5. Alias expansion (opt-in, 依赖 P5 输出的 KG)
+        # 仅扩展 sparse 路径 (BM25/BGE-M3), 不影响 dense embedding 和 reranker.
+        self.alias_expansion_cfg = self.config.get("alias_expansion", {}) or {}
+        self.alias_expansion_enabled = bool(
+            self.alias_expansion_cfg.get("enabled", False)
+        )
+        self.kg_db: Optional[KGDatabase] = None
+        if self.alias_expansion_enabled:
+            self.kg_db = _try_init_kg_db(self.config, self._resolve_path)
+            if self.kg_db is None:
+                logger.warning(
+                    "alias_expansion.enabled=true 但 KG DB 不可用, 降级为不扩展"
+                )
+                self.alias_expansion_enabled = False
+        else:
+            logger.info("alias_expansion disabled (config)")
+
         logger.info("SessionSearcher 初始化完成")
+
+    def set_alias_expansion(self, enabled: bool) -> None:
+        """运行时开关 alias expansion; CLI --no-alias-expansion 用。"""
+        if enabled and self.kg_db is None and self.alias_expansion_cfg:
+            self.kg_db = _try_init_kg_db(self.config, self._resolve_path)
+        self.alias_expansion_enabled = enabled and (self.kg_db is not None)
+        logger.info(f"alias_expansion 运行时切换: {self.alias_expansion_enabled}")
+
+    def _tokenize_query(self, query: str) -> list[str]:
+        """jieba search-mode 分词, 与 BM25 索引保持一致。"""
+        import jieba
+        return list(jieba.cut_for_search(query))
+
+    def _compute_token_idf(
+        self, tokens: list[str], collection: str
+    ) -> dict[str, float]:
+        """从指定 collection 的 BM25 索引估算每个 token 的 IDF (近似).
+
+        rank_bm25 不暴露 token -> idx 映射, 用 max(scores) 反推:
+          score(d, t) = IDF(t) · tf_norm(d, t) ≤ IDF(t)
+          (k1=1.5, b=0.75 时, 当 tf=1 且 dl=avgdl, tf_norm 恰好 = 1)
+        所以 max(scores) 是真实 IDF 的上界, 单调性保持一致 (用于排序 OK).
+        """
+        bm25 = self.store._bm25_index.get(collection)
+        if bm25 is None:
+            return {}
+        out: dict[str, float] = {}
+        for t in tokens:
+            scores = bm25.get_scores([t])
+            out[t] = float(scores.max()) if len(scores) > 0 else 0.0
+        return out
+
+    def _expand_query_for_sparse(
+        self, query: str, collection: str
+    ) -> list[str]:
+        """
+        IDF + POS + exact-match alias expansion, 仅用于 sparse 检索.
+
+        流程:
+          1. jieba.posseg 切词, POS 白名单 + 长度过滤得到候选 token
+          2. 从 collection 的 BM25 索引取 IDF, 按 IDF 降序取 top-K
+          3. 每个 top-K token 用 KGDatabase.search_entities_exact 严格匹配
+          4. 每个 hit 收集 [canonical] + aliases, 排除 matched, 取前 N 个
+          5. 全局 dedup (跨 hit + 跨 token), 追加到原 query tokens 后面
+
+        Returns:
+            原 query 分词 tokens (无扩展) 或扩展后 token 列表。
+            顺序: 原 tokens 在前, extra tokens 追加在末尾。
+        """
+        if not self.alias_expansion_enabled or self.kg_db is None:
+            return self._tokenize_query(query)
+
+        cfg = self.alias_expansion_cfg
+        max_k = int(cfg.get("max_idf_tokens", 3))
+        idf_floor = float(cfg.get("idf_floor", 0.5))
+        min_chars = int(cfg.get("min_token_chars", 2))
+        pos_keep = set(cfg.get("pos_keep", ["n", "eng", "x"]))
+        max_aliases = int(cfg.get("max_aliases_per_match", 2))
+        max_total = int(cfg.get("max_total_extra_terms", 6))
+        case_sensitive = bool(cfg.get("case_sensitive", False))
+        match_mode = str(cfg.get("match_mode", "exact"))
+
+        import jieba.posseg as pseg
+
+        tagged = [(w.word, w.flag) for w in pseg.cut(query)]
+        pos_tokens = [
+            w for w, pos in tagged
+            if pos in pos_keep and len(w) >= min_chars
+        ]
+        all_tokens = self._tokenize_query(query)
+        if not pos_tokens:
+            return all_tokens
+
+        idf_map = self._compute_token_idf(pos_tokens, collection)
+        ranked = [
+            (t, idf_map[t]) for t in pos_tokens
+            if idf_map.get(t, 0.0) >= idf_floor
+        ]
+        ranked.sort(key=lambda x: -x[1])
+        ranked = ranked[:max_k]
+        if not ranked:
+            return all_tokens
+
+        def _eq(a: str, b: str) -> bool:
+            return a == b if case_sensitive else a.lower() == b.lower()
+
+        seen: set[str] = set(all_tokens)
+        extra_terms: list[str] = []
+
+        for token, _idf in ranked:
+            if len(extra_terms) >= max_total:
+                break
+            try:
+                hits = self.kg_db.search_entities_exact(
+                    token, limit=10, match_mode=match_mode
+                )
+            except Exception as e:
+                logger.warning(f"alias_expansion token '{token}' 查 KG 失败: {e}")
+                continue
+            for hit in hits:
+                if len(extra_terms) >= max_total:
+                    break
+                canonical = hit["name"]
+                aliases = list(hit.get("aliases") or [])
+                matched = None
+                if _eq(canonical, token):
+                    matched = canonical
+                else:
+                    for a in aliases:
+                        if _eq(a, token):
+                            matched = a
+                            break
+                candidates = [canonical] + aliases
+                if matched:
+                    candidates = [c for c in candidates if not _eq(c, matched)]
+                candidates = [c for c in candidates if c not in seen]
+                candidates = candidates[:max_aliases]
+                for c in candidates:
+                    seen.add(c)
+                    extra_terms.append(c)
+
+        if not extra_terms:
+            return all_tokens
+
+        import jieba
+
+        seen_lower = {x.lower() for x in seen}
+        expanded: list[str] = []
+        expanded_seen: set[str] = set()
+        for term in extra_terms:
+            for sub in jieba.cut_for_search(term):
+                if not sub or not sub.strip():
+                    continue
+                key = sub.lower()
+                if key in seen_lower or key in expanded_seen:
+                    continue
+                expanded_seen.add(key)
+                expanded.append(sub)
+
+        if not expanded:
+            return all_tokens
+        return all_tokens + expanded
 
     def _rebuild_bm25_index(self) -> None:
         """从已加载的 chunks 数据重建两个 chunk 集合的 BM25 索引。"""
@@ -300,15 +523,32 @@ class SessionSearcher:
             f"搜索: '{query}' (top_k={top_k}, skip_rerank={skip_rerank})"
         )
 
-        # 阶段 1: Dense → tasks 集合
+        sparse_top_k = n_candidates * 3
+        if self.alias_expansion_enabled and self.kg_db is not None:
+            summary_tokens = self._expand_query_for_sparse(
+                query, self.store.chunks_summary_collection
+            )
+            cleaned_tokens = self._expand_query_for_sparse(
+                query, self.store.chunks_cleaned_text_collection
+            )
+            self._log_alias_expansion_diff(
+                query, summary_tokens, "chunks_summary"
+            )
+            self._log_alias_expansion_diff(
+                query, cleaned_tokens, "chunks_cleaned_text"
+            )
+        else:
+            summary_tokens = self._tokenize_query(query)
+            cleaned_tokens = self._tokenize_query(query)
+
         dense_results = self.store.search_dense(
             query, collection=self.store.tasks_collection, top_k=n_candidates
         )
         logger.info(f"  Dense[tasks]: {len(dense_results)} 结果")
 
-        # 阶段 2: 两路 chunk 检索 → 分别映射回 task
-        sparse_top_k = n_candidates * 3  # 取更多 chunk, 映射后去重
-        summary_chunk_results = self._search_chunks_summary(query, sparse_top_k)
+        summary_chunk_results = self._search_chunks_summary_with_tokens(
+            summary_tokens, sparse_top_k
+        )
         summary_task_results = self._aggregate_chunks_to_tasks(summary_chunk_results)
         logger.info(
             f"  {self.chunks_summary_method}[chunks_summary] → task 聚合: "
@@ -316,14 +556,15 @@ class SessionSearcher:
         )
 
         if self.store.sparse_method == "bge_m3":
+            sparse_query = " ".join(cleaned_tokens)
             sparse_chunk_results = self.store.search_sparse_bge_m3(
-                query,
+                sparse_query,
                 collection=self.store.chunks_cleaned_text_collection,
                 top_k=sparse_top_k,
             )
         else:
-            sparse_chunk_results = self.store.search_sparse_bm25(
-                query,
+            sparse_chunk_results = self.store.search_sparse_bm25_tokens(
+                cleaned_tokens,
                 collection=self.store.chunks_cleaned_text_collection,
                 top_k=sparse_top_k,
             )
@@ -441,6 +682,45 @@ class SessionSearcher:
             collection=self.store.chunks_summary_collection,
             top_k=top_k,
         )
+
+    def _search_chunks_summary_with_tokens(
+        self, tokens: list[str], top_k: int
+    ) -> list[SearchResult]:
+        """chunks_summary 检索, 接受预扩展 token 列表 (alias expansion 输出).
+
+        - dense 路径: 把 tokens 拼回字符串做 embedding (alias terms 影响 embedding)
+        - BM25 路径: 直接用 token list 跳 jieba 重切
+        - BGE-M3 sparse: 暂时回退到字符串 (token-level 接口后续)
+        """
+        if self.chunks_summary_method == "dense":
+            return self.store.search_dense(
+                " ".join(tokens),
+                collection=self.store.chunks_summary_collection,
+                top_k=top_k,
+            )
+        if self.store.sparse_method == "bm25":
+            return self.store.search_sparse_bm25_tokens(
+                tokens,
+                collection=self.store.chunks_summary_collection,
+                top_k=top_k,
+            )
+        return self.store.search_sparse_bge_m3(
+            " ".join(tokens),
+            collection=self.store.chunks_summary_collection,
+            top_k=top_k,
+        )
+
+    def _log_alias_expansion_diff(
+        self, query: str, expanded_tokens: list[str], label: str
+    ) -> None:
+        """log 一次 alias expansion 前后的 token diff (仅在有扩展时)."""
+        base_tokens = self._tokenize_query(query)
+        base_set = set(base_tokens)
+        added = [t for t in expanded_tokens if t not in base_set]
+        if added:
+            logger.info(
+                f"  alias_expansion[{label}]: '{query}' +{added}"
+            )
 
     def _aggregate_chunks_to_tasks(
         self, chunk_results: list[SearchResult]
