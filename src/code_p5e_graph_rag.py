@@ -278,10 +278,8 @@ class GraphRAGSearcher:
             # 稀有 entity (task_count 小) 贡献大, 热门 hub 被打压
             total_tasks = max(self._total_tasks, 1)  # 防御: 空语料除 0
             task_scores: dict[str, dict] = {}  # task_id -> {score, entities}
-            for entity_name in expanded:
-                node = self.db.get_node(entity_name)
-                if not node:
-                    continue
+            nodes = self.db.get_nodes_batch(list(expanded))
+            for entity_name, node in nodes.items():
                 tc = max(node["task_count"], 1)  # 防御
                 contrib = math.log(1 + total_tasks / tc)
                 for tid in node["source_tasks"]:

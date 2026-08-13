@@ -149,6 +149,32 @@ class KGDatabase:
             "task_count": row[4],
         }
 
+    def get_nodes_batch(self, names: list[str]) -> dict[str, dict]:
+        """批量查询节点, 返回 {name: node_dict} (仅含存在的节点)"""
+        if not names:
+            return {}
+        conn = self._open_conn()
+        try:
+            c = conn.cursor()
+            placeholders = ",".join("?" for _ in names)
+            c.execute(
+                f"SELECT name, entity_type, aliases, source_tasks, task_count "
+                f"FROM nodes WHERE name IN ({placeholders})",
+                names,
+            )
+            results = {}
+            for row in c.fetchall():
+                results[row[0]] = {
+                    "name": row[0],
+                    "entity_type": row[1],
+                    "aliases": json.loads(row[2]),
+                    "source_tasks": json.loads(row[3]),
+                    "task_count": row[4],
+                }
+            return results
+        finally:
+            conn.close()
+
     def get_edges(self, name: str, direction: str = "both") -> list[dict]:
         """查询与指定节点关联的边。
 
