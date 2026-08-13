@@ -112,6 +112,88 @@ Phase 4 同时读取以下 Phase 3 配置项：
 | `embedding.*` | Dense embedding 模型和设备 (用于 Phase3Store 初始化) |
 | `sparse.*` | Sparse 方法选择 (BM25/BGE-M3)、参数和 RRF 融合参数 |
 | `qdrant.*` | Qdrant 数据路径和集合名 |
+| `alias_expansion.*` | Query-side alias expansion (sparse-only, opt-in) |
+
+### Alias Expansion (sparse-only)
+
+KG-driven alias 扩展注入 sparse 检索 token 列表。默认 **关闭**,opt-in 启用。
+
+设计动机: BM25 是 token-level 精确匹配,如果用户写 `FlashAttention` 但 chunk 文本里写的是 `Flash Attention`(空格差),BM25 召回率会下降。Alias expansion 把 query token 在 KG 里查一次,拿到该实体的其他写法,补到 BM25 token 列表里。
+
+**关键约束**:
+
+- **仅扩展 sparse 路径**, Dense embedding 和 Reranker 仍用原 query
+- **严格匹配**: KG entry name / alias 必须 `==` query token (case-insensitive),不做 fuzzy LIKE
+- **按 collection 独立计算**: `chunks_summary` 和 `chunks_cleaned_text` 用各自的 BM25 IDF
+- **不影响 reranker 语义评分**: 扩展 term 只增加 BM25 召回面,cross-encoder 用原 query
+
+数据流:
+
+```
+query="FlashAttention 原理"
+  │
+  ▼  jieba.posseg.cut → [(FlashAttention, eng), ( , x), (原理, n)]
+  │     POS 白名单 {n, eng, x} + min_chars=2
+  ▼
+候选 [(FlashAttention, eng, ?), (原理, n, ?)]
+  │
+  ▼  从 chunks_cleaned_text BM25 取 IDF, 按 IDF 降序取 top-K=3
+  │
+  ▼  search_entities_exact (case-insensitive ==)
+  │   "FlashAttention" → 命中 canonical, matched=FlashAttention
+  │   "原理" → 0 命中
+  ▼
+每个 hit: candidates = [canonical] + aliases, 排除 matched, 取前 max_aliases_per_match=2
+  hit FlashAttention: aliases=["Flash Attention"] → candidates=["Flash Attention"]
+  │
+  ▼  全局 dedup, 追加到原 tokens 后面
+sparse_tokens = ['FlashAttention', ' ', '原理', 'Flash Attention']
+  │
+  ▼  search_sparse_bm25_tokens(sparse_tokens, ...)
+```
+
+| 配置项 | 默认 | 说明 |
+|--------|------|------|
+| `alias_expansion.enabled` | `false` | 总开关; 翻 true 才生效 |
+| `alias_expansion.kg_db_path` | `""` | 显式 KG 路径; 空则自动解析 `output/{kg_auto_mode}/knowledge_graph.db` |
+| `alias_expansion.kg_auto_mode` | `"entity"` | 自动模式选哪个 KG (entity / triple) |
+| `alias_expansion.max_idf_tokens` | `3` | POS 过滤后, 按 IDF 降序取 top-K 个 token 参与扩展 |
+| `alias_expansion.idf_floor` | `0.5` | IDF 绝对阈值, 低于此值的 token 直接跳过 (停用词兜底) |
+| `alias_expansion.min_token_chars` | `2` | 短于此长度的 token 不参与扩展 (过滤单字符) |
+| `alias_expansion.pos_keep` | `[n, eng, x]` | jieba 词性白名单; 名词/英文/字符串 |
+| `alias_expansion.max_aliases_per_match` | `2` | 每个 entity hit 最多取 2 个 term (canonical 优先, 排除 matched) |
+| `alias_expansion.max_total_extra_terms` | `6` | 所有 hit 累计 extra term 上限 |
+| `alias_expansion.case_sensitive` | `false` | KG 匹配是否大小写敏感 |
+| `alias_expansion.match_mode` | `"exact"` | `"exact"` (默认) 或 `"word_boundary"` — 见下表 |
+
+**match_mode 详解**:
+
+| mode | SQL 模式 | 行为 | 适用场景 |
+|------|----------|------|---------|
+| `"exact"` (默认) | `LOWER(name) = LOWER(?)` | 严格等值, query 必须完整等于 entity/alias | KG 条目命名一致, 防止子串误匹配 |
+| `"word_boundary"` | `LOWER(name) REGEXP '\b<escaped>\b'` | query 是 entity/alias 的整词子串 (e.g. `Attention` 命中 `FlashAttention`, `FlashAttentionV2`) | 想扩大召回面, 接受少量 token-level 相似命中 |
+
+**模式选择建议**:
+
+- 默认 `exact`: 保守, 不破坏现有召回, 防止短 query (e.g. `FA`, `SP`) 命中大量同名实体的子串
+- `word_boundary`: 只在 query 包含 ≥2 个连续字母数字的子串 (受 `min_token_chars` 保护) 时打开; 短词仍走 `min_chars` 过滤兜底
+
+**word_boundary 实现注意**: 用 Python `re` 充当 SQLite `REGEXP` UDF (per-connection 注册), `re.escape` 包裹 query 防 regex 注入。CJK 字符 `\b` 在 Python re 里按 `\w` (含中文 Unicode) 处理, 所以中文 query (e.g. `注意力`) 也能命中包含该中文词的 entity 名。
+
+CLI 验证:
+
+```bash
+python3 tests/test_p4/test_p4.py --query "FlashAttention"
+# 对比 alias OFF vs alias ON, 列出新召回 / 丢失召回
+```
+
+性能: 单次扩展耗时 <10ms (含 BM25 IDF 查询 + 1-2 次 KG lookup); 不影响 Reranker。
+
+降级策略:
+
+- `enabled=false` → 完全跳过,token list = jieba 原切词
+- `enabled=true` 但 KG DB 不存在 → 降级为 enabled=false,log warning
+- IDF 查询失败 / KG 异常 → 静默跳过,返回原 tokens
 
 ## 核心设计
 
