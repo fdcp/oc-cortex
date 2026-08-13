@@ -1655,6 +1655,11 @@ class KGBuilder:
         for tid, entities in task_entities.items():
             # 限制每个 task 内最多 15 个实体, 避免 C(n,2) 爆炸
             limited = entities[:15]
+            if len(entities) > 15:
+                logger.debug(
+                    f"task {tid}: {len(entities)} entities > 15, truncated "
+                    f"(dropped {len(entities) - 15})"
+                )
             for e1, e2 in combinations(limited, 2):
                 pair = tuple(sorted([e1, e2]))
                 cooccurrence_count[pair] = cooccurrence_count.get(pair, 0) + 1
@@ -1716,8 +1721,6 @@ class KGBuilder:
 
         count = 0
         with open(p, "w", encoding="utf-8") as f:
-            # 按 canonical name 分组输出
-            seen_canonical: set[str] = set()
             for name, entity in sorted(entity_map.items()):
                 canonical = canonical_map.get(name, name)
                 entity.canonical_name = canonical
