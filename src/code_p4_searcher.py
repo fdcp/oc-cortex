@@ -373,6 +373,10 @@ class SessionSearcher:
         if not pos_tokens:
             return all_tokens
 
+        logger.debug(
+            f"  alias_expansion[pos]: tagged={tagged} → pos_tokens={pos_tokens}"
+        )
+
         idf_map = self._compute_token_idf(pos_tokens, collection)
         ranked = [
             (t, idf_map[t]) for t in pos_tokens
@@ -383,14 +387,22 @@ class SessionSearcher:
         if not ranked:
             return all_tokens
 
+        logger.debug(
+            f"  alias_expansion[idf]: top-{max_k}="
+            f"{[(t, round(idf, 3)) for t, idf in ranked]}"
+        )
+
         def _eq(a: str, b: str) -> bool:
             return a == b if case_sensitive else a.lower() == b.lower()
 
         seen: set[str] = set(all_tokens)
         extra_terms: list[str] = []
+        cap_hit = False
+        kg_total_hits = 0
 
         for token, _idf in ranked:
             if len(extra_terms) >= max_total:
+                cap_hit = True
                 break
             try:
                 hits = self.kg_db.search_entities_exact(
@@ -399,8 +411,14 @@ class SessionSearcher:
             except Exception as e:
                 logger.warning(f"alias_expansion token '{token}' 查 KG 失败: {e}")
                 continue
+            kg_total_hits += len(hits)
+            if not hits:
+                logger.debug(
+                    f"  alias_expansion[kg]: token '{token}' → 0 hits"
+                )
             for hit in hits:
                 if len(extra_terms) >= max_total:
+                    cap_hit = True
                     break
                 canonical = hit["name"]
                 aliases = list(hit.get("aliases") or [])
@@ -420,8 +438,21 @@ class SessionSearcher:
                 for c in candidates:
                     seen.add(c)
                     extra_terms.append(c)
+            if cap_hit:
+                break
+
+        if cap_hit:
+            logger.warning(
+                f"alias_expansion extras cap {max_total} reached, more hits dropped"
+            )
 
         if not extra_terms:
+            logger.info(
+                f"  alias_expansion[trace][{collection}]: '{query}' "
+                f"pos={len(pos_tokens)}/{len(tagged)} "
+                f"idf_topK={len(ranked)} kg_hits={kg_total_hits} "
+                f"extras=0/{max_total} final=0"
+            )
             return all_tokens
 
         import jieba
@@ -429,7 +460,9 @@ class SessionSearcher:
         seen_lower = {x.lower() for x in seen}
         expanded: list[str] = []
         expanded_seen: set[str] = set()
+        pre_to_sub: dict[str, list[str]] = {}
         for term in extra_terms:
+            subs: list[str] = []
             for sub in jieba.cut_for_search(term):
                 if not sub or not sub.strip():
                     continue
@@ -438,9 +471,28 @@ class SessionSearcher:
                     continue
                 expanded_seen.add(key)
                 expanded.append(sub)
+                subs.append(sub)
+            pre_to_sub[term] = subs
+
+        logger.debug(
+            f"  alias_expansion[retokenize]: {pre_to_sub}"
+        )
 
         if not expanded:
+            logger.info(
+                f"  alias_expansion[trace][{collection}]: '{query}' "
+                f"pos={len(pos_tokens)}/{len(tagged)} "
+                f"idf_topK={len(ranked)} kg_hits={kg_total_hits} "
+                f"extras={len(extra_terms)}/{max_total} final=0"
+            )
             return all_tokens
+
+        logger.info(
+            f"  alias_expansion[trace][{collection}]: '{query}' "
+            f"pos={len(pos_tokens)}/{len(tagged)} "
+            f"idf_topK={len(ranked)} kg_hits={kg_total_hits} "
+            f"extras={len(extra_terms)}/{max_total} final={len(expanded)}"
+        )
         return all_tokens + expanded
 
     def _rebuild_bm25_index(self) -> None:
@@ -715,14 +767,13 @@ class SessionSearcher:
     def _log_alias_expansion_diff(
         self, query: str, expanded_tokens: list[str], label: str
     ) -> None:
-        """log 一次 alias expansion 前后的 token diff (仅在有扩展时)."""
+        """log alias expansion 前后的 token diff (always log, 包括 0-add)."""
         base_tokens = self._tokenize_query(query)
         base_set = set(base_tokens)
         added = [t for t in expanded_tokens if t not in base_set]
-        if added:
-            logger.info(
-                f"  alias_expansion[{label}]: '{query}' +{added}"
-            )
+        logger.info(
+            f"  alias_expansion[{label}]: '{query}' +{added}"
+        )
 
     def _aggregate_chunks_to_tasks(
         self, chunk_results: list[SearchResult]
