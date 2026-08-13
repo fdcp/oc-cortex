@@ -7,6 +7,7 @@ Phase 5 Extension: SQLite 持久化模块
   edges: 关系边 (head, tail, relation, weight, source_task, extraction_mode)
 """
 import json
+import re
 import sqlite3
 from collections import deque
 from pathlib import Path
@@ -26,7 +27,7 @@ class KGDatabase:
 
     def _create_tables(self):
         """创建 nodes 和 edges 表"""
-        conn = sqlite3.connect(self.db_path)
+        conn = self._open_conn()
         c = conn.cursor()
         c.execute("""
             CREATE TABLE IF NOT EXISTS nodes (
@@ -59,6 +60,18 @@ class KGDatabase:
         conn.close()
         logger.debug(f"KGDatabase 表结构就绪: {self.db_path}")
 
+    def _open_conn(self) -> sqlite3.Connection:
+        """打开连接并注册 per-connection UDF (REGEXP)。
+        SQLite 的 create_function 是 per-connection 的, 每个新连接都需要重新注册。
+        """
+        conn = sqlite3.connect(self.db_path)
+        conn.create_function(
+            "regexp", 2,
+            lambda pattern, value: bool(re.search(pattern, value or "")),
+            deterministic=True,
+        )
+        return conn
+
     # ------------------------------------------------------------------
     # 写入
     # ------------------------------------------------------------------
@@ -73,7 +86,7 @@ class KGDatabase:
         Returns:
             (nodes_count, edges_count)
         """
-        conn = sqlite3.connect(self.db_path)
+        conn = self._open_conn()
         c = conn.cursor()
 
         # 批量写入节点
@@ -121,7 +134,7 @@ class KGDatabase:
 
     def get_node(self, name: str) -> dict | None:
         """按名称查询节点"""
-        conn = sqlite3.connect(self.db_path)
+        conn = self._open_conn()
         c = conn.cursor()
         c.execute("SELECT name, entity_type, aliases, source_tasks, task_count FROM nodes WHERE name = ?", (name,))
         row = c.fetchone()
@@ -143,7 +156,7 @@ class KGDatabase:
             name: 节点名称
             direction: "out" (head=name), "in" (tail=name), "both"
         """
-        conn = sqlite3.connect(self.db_path)
+        conn = self._open_conn()
         c = conn.cursor()
         results = []
 
@@ -203,7 +216,7 @@ class KGDatabase:
         pat_contains = f"%{esc}%"
         pat_prefix = f"{esc}%"
 
-        with contextlib.closing(sqlite3.connect(self.db_path)) as conn:
+        with contextlib.closing(self._open_conn()) as conn:
             conn.execute("PRAGMA case_sensitive_like = false;")
             c = conn.cursor()
 
@@ -263,6 +276,81 @@ class KGDatabase:
             for r in rows
         ]
 
+    def search_entities_exact(
+        self,
+        query: str,
+        limit: int = 20,
+        match_mode: str = "exact",
+    ) -> List[dict]:
+        """
+        严格匹配: name 或 aliases 任一项匹配 query (case-insensitive, 保留原大小写返回).
+
+        Args:
+            query: 查询 token.
+            limit: 最大返回实体数.
+            match_mode:
+                - "exact": `LOWER(name) = LOWER(query)` 或 `LOWER(alias) = LOWER(query)`.
+                - "word_boundary": `LOWER(name) REGEXP \\bLOWER(query)\\b` (含 re.escape).
+                  适合 query 是 name/alias 的子串场景 (e.g. "Attention" 命中 "FlashAttention",
+                  "FlashAttentionV2"),但要小心短 query (e.g. "FA") 误命中大量行.
+
+        与 search_entities 区别: 不做 LIKE %x% 通配子串匹配, 用于 alias expansion 候选筛选.
+        输出按 task_count 降序.
+        """
+        q = query.strip()
+        if not isinstance(q, str) or not q:
+            return []
+
+        match_mode = (match_mode or "exact").lower()
+        if match_mode not in ("exact", "word_boundary"):
+            raise ValueError(f"invalid match_mode: {match_mode}")
+
+        if match_mode == "exact":
+            where = "LOWER(n.name) = LOWER(?) OR LOWER(al.value) = LOWER(?)"
+            params = (q, q)
+        else:
+            pattern = r"\b" + re.escape(q.lower()) + r"\b"
+            where = "LOWER(n.name) REGEXP ? OR LOWER(al.value) REGEXP ?"
+            params = (pattern, pattern)
+
+        with contextlib.closing(self._open_conn()) as conn:
+            c = conn.cursor()
+            c.execute(
+                f"""
+                SELECT
+                    n.name,
+                    n.entity_type,
+                    n.aliases,
+                    n.source_tasks,
+                    n.task_count
+                FROM nodes n
+                LEFT JOIN json_each(NULLIF(n.aliases, '')) al
+                WHERE {where}
+                GROUP BY n.rowid, n.name
+                ORDER BY n.task_count DESC
+                LIMIT ?
+                """,
+                (*params, limit),
+            )
+            rows = c.fetchall()
+
+        def _safe_load_json(s, default):
+            try:
+                return json.loads(s) if s else default
+            except (json.JSONDecodeError, TypeError):
+                return default
+
+        return [
+            {
+                "name": r[0],
+                "entity_type": r[1],
+                "aliases": _safe_load_json(r[2], []),
+                "source_tasks": _safe_load_json(r[3], []),
+                "task_count": r[4],
+            }
+            for r in rows
+        ]
+
     def bfs_expand(self, seed_entities: list[str], depth: int = 1, max_nodes: int = 50) -> set[str]:
         """从种子实体出发做 BFS 扩散，返回扩散到的所有实体名。
 
@@ -293,7 +381,7 @@ class KGDatabase:
 
     def get_top_entities(self, limit: int = 20) -> list[dict]:
         """获取关联 task 最多的 Top 实体"""
-        conn = sqlite3.connect(self.db_path)
+        conn = self._open_conn()
         c = conn.cursor()
         c.execute(
             "SELECT name, entity_type, aliases, source_tasks, task_count "
@@ -314,7 +402,7 @@ class KGDatabase:
 
     def get_stats(self) -> dict:
         """数据库统计信息"""
-        conn = sqlite3.connect(self.db_path)
+        conn = self._open_conn()
         c = conn.cursor()
         c.execute("SELECT COUNT(*) FROM nodes")
         node_count = c.fetchone()[0]
