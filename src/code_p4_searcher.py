@@ -294,6 +294,8 @@ class SessionSearcher:
                     "alias_expansion.enabled=true 但 KG DB 不可用, 降级为不扩展"
                 )
                 self.alias_expansion_enabled = False
+            else:
+                logger.info(f"alias_expansion enabled (kg_db={self.kg_db.db_path})")
         else:
             logger.info("alias_expansion disabled (config)")
 

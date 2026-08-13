@@ -52,7 +52,7 @@ reranker:
 # P4 query-side alias expansion (依赖 P5 输出的 KG, 仅扩展 sparse 路径)
 # 默认关闭; 验证召回质量后再翻 enabled: true
 alias_expansion:
-  enabled: false
+  enabled: true
   kg_db_path: ""                # 空 → 自动解析 output/{kg_auto_mode}/knowledge_graph.db
   kg_auto_mode: "entity"        # kg_db_path 为空时, 走哪个 extraction_mode
   max_idf_tokens: 3             # POS 过滤后, 按 IDF 降序取 top-K 个 token 进行扩展
@@ -62,7 +62,7 @@ alias_expansion:
   max_aliases_per_match: 2      # 每个 entity hit 最多取 2 个 term (canonical + 1 alias)
   max_total_extra_terms: 6      # 所有 hit 累计 extra term 上限
   case_sensitive: false         # KG 严格匹配是否大小写敏感 (false: insensitive)
-  match_mode: "exact"           # "exact" (==) | "word_boundary" (REGEXP \b...\b)
+  match_mode: "word_boundary"           # "exact" (==) | "word_boundary" (REGEXP \b...\b)
 
 logging:
   level: "INFO"
