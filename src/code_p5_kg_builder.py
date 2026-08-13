@@ -20,6 +20,7 @@ import yaml
 from openai import OpenAI
 from loguru import logger
 import networkx as nx
+import numpy as np
 
 from code_update_prompt_utils import load_prompt
 
@@ -1183,23 +1184,22 @@ class KGBuilder:
             )
         logger.info(f"已 upsert {len(points)} 个实体到 Qdrant")
 
-        # 3. 逐实体检索相似实体
+        # 3. 逐实体检索相似实体 (本地矩阵乘法, 替代 Qdrant round trip)
+        vec_matrix = np.asarray(vectors, dtype=np.float32)
+        sim_matrix = vec_matrix @ vec_matrix.T
+        n = len(entities)
         merge_candidates: dict[tuple[str, str], float] = {}
-        for name, vec in zip(entities, vectors):
-            hits = self.qdrant.query_points(
-                collection_name=self.entities_collection,
-                query=vec,
-                limit=5,
-                score_threshold=self.alignment_threshold,
-                with_payload=True,
-            )
-
-            for hit in hits.points:
-                hit_name = (hit.payload or {}).get("name", "")
-                if hit_name and hit_name != name and hit.score >= self.alignment_threshold:
-                    pair = tuple(sorted([name, hit_name]))
-                    if pair not in merge_candidates or hit.score > merge_candidates[pair]:
-                        merge_candidates[pair] = hit.score
+        for i in range(n):
+            sims = sim_matrix[i].copy()
+            sims[i] = 0.0
+            above = np.where(sims >= self.alignment_threshold)[0]
+            for j in above:
+                if j <= i:
+                    continue
+                pair = tuple(sorted([entities[i], entities[j]]))
+                score = float(sims[j])
+                if score > merge_candidates.get(pair, 0.0):
+                    merge_candidates[pair] = score
 
         logger.info(f"发现 {len(merge_candidates)} 对候选合并实体 (threshold={self.alignment_threshold})")
 
