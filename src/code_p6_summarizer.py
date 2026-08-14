@@ -91,6 +91,7 @@ class SessionSummarizer:
         model: str = DEFAULT_MODEL,
         max_context_tokens: int = 12000,
         max_tasks: int = 10,
+        searcher=None,
     ):
         """
         Args:
@@ -98,8 +99,9 @@ class SessionSummarizer:
             model: LLM 模型名
             max_context_tokens: LLM 输入 token 预算
             max_tasks: 最多纳入总结的 Task 数
+            searcher: 外部传入的 SessionSearcher(共享 Qdrant 客户端时使用)
         """
-        self.searcher = SessionSearcher(config_path)
+        self.searcher = searcher if searcher is not None else SessionSearcher(config_path)
         self.model = model
         self.max_context_tokens = max_context_tokens
         self.max_tasks = max_tasks

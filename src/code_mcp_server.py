@@ -145,6 +145,40 @@ def get_tracer():
     return _tracer
 
 
+_shared_searcher = None
+
+
+def get_shared_searcher():
+    """同步初始化共享 SessionSearcher(调用方决定是否放到 executor 内)"""
+    global _shared_searcher
+    if _shared_searcher is None:
+        os.chdir(_project_root)
+        from code_p4_searcher import SessionSearcher
+        _shared_searcher = SessionSearcher(str(_project_root / "config" / "code_p3_config.yaml"))
+        logger.info("共享 SessionSearcher 初始化完成")
+    return _shared_searcher
+
+
+_skeleton = None
+
+
+def get_skeleton():
+    """延迟初始化 SummarySkeleton(整段 init 放到 executor,避免阻塞 async 循环)"""
+    global _skeleton
+    if _skeleton is None:
+        def _init():
+            from code_p6b_skeleton import SummarySkeleton
+            from code_p6_summarizer import SessionSummarizer
+            summarizer = SessionSummarizer(
+                str(_project_root / "config" / "code_p3_config.yaml"),
+                searcher=get_shared_searcher(),
+            )
+            return SummarySkeleton(get_db(), summarizer, get_tracer())
+        _skeleton = _rag_executor.submit(_init).result()
+        logger.info("SummarySkeleton 初始化完成")
+    return _skeleton
+
+
 def _task_to_dict(task_id: str) -> Optional[dict]:
     """从缓存中获取 task 详情"""
     t = get_task_cache().get(task_id)
@@ -171,8 +205,10 @@ mcp = FastMCP(
         "使用 graph_rag_search 做完整的图谱增强搜索。"
         "使用 list_sessions / get_session_tasks 浏览和下钻 session。"
         "使用 trace_decision 追踪实体的决策链（选用/选型/排除/替换/依赖）。"
+        "使用 skeleton_summarize 生成带决策链注入的图谱骨架主题总结。"
         "当用户说'继续''接着''上次'等延续性词语时，优先调用 query_kg 注入历史上下文。"
         "当用户说'为什么选 XX''XX 的选型对比'时，优先调用 trace_decision。"
+        "当用户说'总结 XX'时，优先调用 skeleton_summarize。"
     ),
 )
 
@@ -296,19 +332,16 @@ def graph_rag_search(query: str, top_k: int = 5, use_graph: bool = True) -> dict
     """
     t0 = time.time()
 
-    # 延迟导入（避免 stdio 启动时加载重型依赖）
     try:
-        from code_p4_searcher import SessionSearcher
         from code_p5e_graph_rag import GraphRAGSearcher
     except ImportError as e:
         return {"error": f"Graph-RAG 依赖缺失: {e}"}
 
     def _init_rag():
-        # 如果预热已完成（排队期间 _rag 已被设置），直接复用
         if hasattr(graph_rag_search, "_rag"):
             return graph_rag_search._rag
         os.chdir(_project_root)
-        searcher = SessionSearcher(str(_project_root / "config" / "code_p3_config.yaml"))
+        searcher = get_shared_searcher()
         kg_db = get_db()
         return GraphRAGSearcher(searcher, kg_db)
 
@@ -463,6 +496,68 @@ def trace_decision(entity: str, max_hops: int = 2) -> dict:
     }
 
 
+@mcp.tool()
+def skeleton_summarize(
+    topic: str,
+    max_tasks: int = 5,
+    use_decision_trace: bool = True,
+) -> dict:
+    """带决策链注入的图谱骨架主题总结(P6b)。
+
+    流程:定位主题实体 → BFS 扩散 → 收集 task → 决策链追踪 → 骨架构建 → LLM 生成。
+    适用于"总结 XX"类查询,输出结构化"决策逻辑→选型对比→技术细节→评价建议"。
+    首次调用会加载 SessionSummarizer(embedding + Reranker + LLM client),约 30-50s。
+
+    Args:
+        topic: 主题关键词,如 'FlashAttention', '序列并行'
+        max_tasks: 最多纳入的 task 数,默认 5
+        use_decision_trace: 是否注入决策链上下文,默认 True
+    """
+    t0 = time.time()
+    try:
+        skeleton = get_skeleton()
+        result = _rag_executor.submit(
+            skeleton.generate_summary,
+            topic,
+            use_decision_trace,
+            max_tasks,
+        ).result()
+    except Exception as e:
+        logger.error(f"skeleton_summarize 异常: {e}")
+        return {
+            "error": f"{type(e).__name__}: {e}",
+            "topic": topic,
+            "elapsed_ms": int((time.time() - t0) * 1000),
+        }
+
+    return {
+        "topic": result.topic,
+        "summary": result.summary,
+        "skeleton": result.skeleton,
+        "decision_chain": {
+            "root_entity": result.decision_chain.root_entity,
+            "hop_count": result.decision_chain.hop_count,
+            "step_count": len(result.decision_chain.steps),
+            "steps": [
+                {
+                    "entity": s.entity,
+                    "related_entity": s.related_entity,
+                    "relation": s.relation,
+                    "category": s.category,
+                    "hop": s.hop,
+                    "direction": s.direction,
+                    "source_task": s.source_task,
+                    "weight": s.weight,
+                }
+                for s in result.decision_chain.steps
+            ],
+        },
+        "task_summaries": result.task_summaries,
+        "elapsed_ms": int((time.time() - t0) * 1000),
+        "debug": result.debug,
+    }
+
+
 # ============================================================
 # 入口
 # ============================================================
@@ -480,9 +575,8 @@ if __name__ == "__main__":
     def _preheat_rag():
         try:
             os.chdir(_project_root)
-            from code_p4_searcher import SessionSearcher
             from code_p5e_graph_rag import GraphRAGSearcher
-            searcher = SessionSearcher(str(_project_root / "config" / "code_p3_config.yaml"))
+            searcher = get_shared_searcher()
             kg_db = get_db()
             graph_rag_search._rag = GraphRAGSearcher(searcher, kg_db)
             logger.info("GraphRAGSearcher 预热完成")
