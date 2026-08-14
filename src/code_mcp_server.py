@@ -159,21 +159,34 @@ def get_shared_searcher():
     return _shared_searcher
 
 
+_summarizer = None
+
+
+def get_summarizer():
+    """延迟初始化 SessionSummarizer(skeleton_summarize / summarize 共享同一实例)"""
+    global _summarizer
+    if _summarizer is None:
+        def _init():
+            from code_p6_summarizer import SessionSummarizer
+            return SessionSummarizer(
+                str(_project_root / "config" / "code_p3_config.yaml"),
+                searcher=get_shared_searcher(),
+            )
+        _summarizer = _rag_executor.submit(_init).result()
+        logger.info("SessionSummarizer 初始化完成(复用共享 searcher)")
+    return _summarizer
+
+
 _skeleton = None
 
 
 def get_skeleton():
-    """延迟初始化 SummarySkeleton(整段 init 放到 executor,避免阻塞 async 循环)"""
+    """延迟初始化 SummarySkeleton(复用 get_summarizer 避免重复构造)"""
     global _skeleton
     if _skeleton is None:
         def _init():
             from code_p6b_skeleton import SummarySkeleton
-            from code_p6_summarizer import SessionSummarizer
-            summarizer = SessionSummarizer(
-                str(_project_root / "config" / "code_p3_config.yaml"),
-                searcher=get_shared_searcher(),
-            )
-            return SummarySkeleton(get_db(), summarizer, get_tracer())
+            return SummarySkeleton(get_db(), get_summarizer(), get_tracer())
         _skeleton = _rag_executor.submit(_init).result()
         logger.info("SummarySkeleton 初始化完成")
     return _skeleton
@@ -206,9 +219,11 @@ mcp = FastMCP(
         "使用 list_sessions / get_session_tasks 浏览和下钻 session。"
         "使用 trace_decision 追踪实体的决策链（选用/选型/排除/替换/依赖）。"
         "使用 skeleton_summarize 生成带决策链注入的图谱骨架主题总结。"
+        "使用 summarize 生成自由叙事式跨 session 主题总结。"
         "当用户说'继续''接着''上次'等延续性词语时，优先调用 query_kg 注入历史上下文。"
         "当用户说'为什么选 XX''XX 的选型对比'时，优先调用 trace_decision。"
-        "当用户说'总结 XX'时，优先调用 skeleton_summarize。"
+        "当用户说'总结 XX 的相关工作'等开放性查询时，优先调用 summarize；"
+        "当用户说'总结 XX 的决策''XX 的演进'时，优先调用 skeleton_summarize。"
     ),
 )
 
@@ -553,6 +568,68 @@ def skeleton_summarize(
             ],
         },
         "task_summaries": result.task_summaries,
+        "elapsed_ms": int((time.time() - t0) * 1000),
+        "debug": result.debug,
+    }
+
+
+@mcp.tool()
+def summarize(
+    query: str,
+    top_k: int = 8,
+    time_from: str = "",
+    time_to: str = "",
+    use_graph_rag: bool = True,
+) -> dict:
+    """跨 Session 主题总结(P6)。
+
+    检索 Top-K 相关 task → (可选) 时间过滤 → 收集 chunk 内容 → LLM 生成主题总结。
+    与 skeleton_summarize 的区别:本工具是自由叙事式总结,不做骨架构建/决策链注入,
+    适用于"总结 XX 的相关工作"等开放性查询。
+    首次调用会加载 SessionSummarizer(embedding + Reranker + LLM),约 30-50s。
+
+    Args:
+        query: 自然语言查询,如 "我最近做过的性能优化工作"
+        top_k: 检索 Task 数,默认 8
+        time_from: 可选,起始日期(YYYY-MM-DD)
+        time_to: 可选,截止日期(YYYY-MM-DD)
+        use_graph_rag: 是否启用图谱增强检索,默认 True(利用已加载的 KG)
+    """
+    t0 = time.time()
+    time_range = (time_from, time_to) if (time_from or time_to) else None
+    try:
+        summarizer = get_summarizer()
+        result = _rag_executor.submit(
+            summarizer.summarize,
+            query,
+            top_k,
+            time_range,
+            use_graph_rag,
+        ).result()
+    except Exception as e:
+        logger.error(f"summarize 异常: {e}")
+        return {
+            "error": f"{type(e).__name__}: {e}",
+            "query": query,
+            "elapsed_ms": int((time.time() - t0) * 1000),
+        }
+
+    return {
+        "query": result.query,
+        "summary": result.summary,
+        "sources": [
+            {
+                "task_id": s.task_id,
+                "session_id": s.session_id,
+                "task_label": s.task_label,
+                "task_summary": s.task_summary,
+                "rerank_score": s.rerank_score,
+                "chunk_count": s.chunk_count,
+                "created_at": s.created_at,
+            }
+            for s in result.sources
+        ],
+        "total_tokens": result.total_tokens,
         "elapsed_ms": int((time.time() - t0) * 1000),
         "debug": result.debug,
     }
