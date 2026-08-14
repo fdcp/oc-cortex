@@ -1,7 +1,7 @@
 # MCP Server 配置
 
 server:
-  db_path: "output/entity/knowledge_graph.db"
+  db_path: "output/triple/knowledge_graph.db"
   tasks_file: "output/tasks.jsonl"
 
 # 上下文注入参数（code_mcp_client.py 使用）

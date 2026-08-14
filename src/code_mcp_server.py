@@ -45,7 +45,7 @@ logger.remove()
 logger.add(sys.stderr, level="INFO", format="{time:HH:mm:ss} | {level} | {message}")
 
 # 默认数据库路径（仅在 config/code_mcp_config.yaml 缺失时使用，与该配置文件的默认值保持一致）
-DEFAULT_DB_PATH = "output/entity/knowledge_graph.db"
+DEFAULT_DB_PATH = "output/triple/knowledge_graph.db"
 
 
 def _load_config() -> dict:
@@ -108,6 +108,43 @@ def get_task_cache() -> dict:
     return _task_cache
 
 
+_session_index: Optional[dict] = None
+
+
+def _build_session_index() -> dict:
+    """延迟构建 session_id 反向索引"""
+    global _session_index
+    if _session_index is None:
+        idx: dict = {}
+        for t in get_task_cache().values():
+            sid = t.get("session_id")
+            if not sid:
+                continue
+            entry = idx.setdefault(sid, {"tasks": [], "first_at": "", "last_at": ""})
+            entry["tasks"].append(t)
+            ca = t.get("created_at") or ""
+            if not entry["first_at"] or (ca and ca < entry["first_at"]):
+                entry["first_at"] = ca
+            if not entry["last_at"] or (ca and ca > entry["last_at"]):
+                entry["last_at"] = ca
+        _session_index = idx
+        logger.info(f"Session 索引构建: {len(_session_index)} sessions")
+    return _session_index
+
+
+_tracer = None
+
+
+def get_tracer():
+    """延迟初始化 DecisionTracer"""
+    global _tracer
+    if _tracer is None:
+        from code_p6b_skeleton import DecisionTracer
+        _tracer = DecisionTracer(get_db(), max_hops=3)
+        logger.info("DecisionTracer 初始化完成")
+    return _tracer
+
+
 def _task_to_dict(task_id: str) -> Optional[dict]:
     """从缓存中获取 task 详情"""
     t = get_task_cache().get(task_id)
@@ -132,7 +169,10 @@ mcp = FastMCP(
         "使用 query_kg 从实体出发 BFS 扩散获取关联 task；"
         "使用 search_entities 模糊搜索实体名；"
         "使用 graph_rag_search 做完整的图谱增强搜索。"
+        "使用 list_sessions / get_session_tasks 浏览和下钻 session。"
+        "使用 trace_decision 追踪实体的决策链（选用/选型/排除/替换/依赖）。"
         "当用户说'继续''接着''上次'等延续性词语时，优先调用 query_kg 注入历史上下文。"
+        "当用户说'为什么选 XX''XX 的选型对比'时，优先调用 trace_decision。"
     ),
 )
 
@@ -323,6 +363,103 @@ def get_kg_stats() -> dict:
         "nodes": stats["nodes"],
         "edges": stats["edges"],
         "avg_task_count_per_entity": round(stats["avg_task_count_per_entity"], 2),
+    }
+
+
+@mcp.tool()
+def list_sessions(limit: int = 10) -> dict:
+    """列出最近活跃的 session(按最后任务时间倒序)。
+
+    用于浏览跨 session 历史,通常配合 get_session_tasks 下钻单个 session。
+
+    Args:
+        limit: 返回数量,默认 10
+    """
+    idx = _build_session_index()
+    sessions = []
+    for sid, entry in idx.items():
+        tasks_sorted = sorted(entry["tasks"], key=lambda t: t.get("created_at", ""))
+        sessions.append({
+            "session_id": sid,
+            "task_count": len(tasks_sorted),
+            "first_task_at": entry["first_at"],
+            "last_task_at": entry["last_at"],
+            "task_labels": [t.get("task_label", "") for t in tasks_sorted],
+        })
+    sessions.sort(key=lambda s: s["last_task_at"], reverse=True)
+    return {
+        "session_count": len(sessions),
+        "sessions": sessions[:limit],
+    }
+
+
+@mcp.tool()
+def get_session_tasks(session_id: str) -> dict:
+    """按 session_id 拿该 session 的完整 task 列表(按时间排序)。
+
+    通常由 list_sessions 找到 session_id 后调用,下钻看完整上下文。
+
+    Args:
+        session_id: 如 'ses_12c6bd8dfffevT51PypMW2v5Mx'
+    """
+    cache = get_task_cache()
+    tasks = [t for t in cache.values() if t.get("session_id") == session_id]
+    tasks.sort(key=lambda t: t.get("created_at", ""))
+    if not tasks:
+        return {
+            "error": f"未找到 session: {session_id}",
+            "session_id": session_id,
+            "task_count": 0,
+            "tasks": [],
+        }
+    return {
+        "session_id": session_id,
+        "task_count": len(tasks),
+        "tasks": [
+            {
+                "task_id": t["task_id"],
+                "task_label": t.get("task_label", ""),
+                "task_summary": t.get("task_summary", ""),
+                "created_at": t.get("created_at", ""),
+            }
+            for t in tasks
+        ],
+    }
+
+
+@mcp.tool()
+def trace_decision(entity: str, max_hops: int = 2) -> dict:
+    """从知识图谱中追踪实体的决策链(不调 LLM,纯 KG BFS)。
+
+    按 5 类决策关系(选用/选型/排除/替换/依赖)做 BFS 遍历,返回决策步骤及来源 task。
+    适用于"为什么选 XX""A 和 B 的选型对比"类问题。
+
+    Args:
+        entity: 起始实体名称(如 'FlashAttention', 'OpenCode')
+        max_hops: 最大追溯跳数,默认 2
+    """
+    t0 = time.time()
+    tracer = get_tracer()
+    chain = tracer.trace_decision(entity, max_hops=max_hops)
+    return {
+        "root_entity": chain.root_entity,
+        "hop_count": chain.hop_count,
+        "visited_entity_count": len(chain.visited_entities),
+        "visited_entities": chain.visited_entities,
+        "steps": [
+            {
+                "entity": s.entity,
+                "related_entity": s.related_entity,
+                "relation": s.relation,
+                "category": s.category,
+                "hop": s.hop,
+                "direction": s.direction,
+                "source_task": s.source_task,
+                "weight": s.weight,
+            }
+            for s in chain.steps
+        ],
+        "elapsed_ms": int((time.time() - t0) * 1000),
     }
 
 
