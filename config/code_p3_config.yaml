@@ -35,7 +35,8 @@ sparse:
 
 # Qdrant
 qdrant:
-  path: "./qdrant_data"   # 本地文件持久化路径
+  path: "./qdrant_data"   # 本地文件持久化路径 (embedded 模式)
+  url: null               # server 模式地址, 如 "http://localhost:6333"; 非空时优先于 path, 支持多实例并发
   collections:
     tasks: "tasks"
     chunks_summary: "chunks_summary"

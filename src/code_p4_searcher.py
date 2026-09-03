@@ -235,6 +235,7 @@ class SessionSearcher:
             batch_size=self.config.get("embedding.batch_size", 32),
             device=self.config.get("embedding.device", "cpu"),
             qdrant_path=_resolve_path(self.config.get("qdrant.path", "./qdrant_data")),
+            qdrant_url=(self.config.get("qdrant.url", "") or "").strip() or None,
             tasks_collection=self.config.get("qdrant.collections.tasks", "tasks"),
             chunks_summary_collection=self.config.get(
                 "qdrant.collections.chunks_summary", "chunks_summary"

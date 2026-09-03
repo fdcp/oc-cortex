@@ -44,6 +44,7 @@ embedding:
 # Qdrant (复用 Phase 3 存储, 新增 entities 集合)
 qdrant:
   path: "./qdrant_data"
+  url: null               # server 模式地址, 如 "http://localhost:6333"; 非空时优先于 path
   entities_collection: "entities"
 
 # 知识图谱

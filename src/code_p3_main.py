@@ -201,6 +201,7 @@ def main():
         batch_size=config.get("embedding.batch_size", 32),
         device=config.get("embedding.device", "cpu"),
         qdrant_path=config.get("qdrant.path", "./qdrant_data"),
+        qdrant_url=config.get("qdrant.url"),
         tasks_collection=config.get("qdrant.collections.tasks", "tasks"),
         chunks_summary_collection=config.get("qdrant.collections.chunks_summary", "chunks_summary"),
         chunks_cleaned_text_collection=config.get("qdrant.collections.chunks_cleaned_text", "chunks_cleaned_text"),

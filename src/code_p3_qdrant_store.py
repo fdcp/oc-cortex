@@ -22,6 +22,29 @@ from code_p1_models import Chunk
 
 
 # ============================================================
+# Qdrant 客户端工厂 (embedded path vs server url)
+# ============================================================
+
+def create_qdrant_client(
+    qdrant_path: str = "./qdrant_data",
+    qdrant_url: Optional[str] = None,
+):
+    """创建 Qdrant 客户端, server 模式优先。
+
+    - qdrant_url 非空 → server 模式 `QdrantClient(url=...)`, 支持多实例并发。
+    - 否则 → embedded 模式 `QdrantClient(path=...)`, 单进程独占目录。
+    """
+    from qdrant_client import QdrantClient
+
+    url = (qdrant_url or "").strip() or None
+    if url:
+        logger.info(f"初始化 Qdrant 客户端 (server 模式): {url}")
+        return QdrantClient(url=url)
+    logger.info(f"初始化 Qdrant 客户端 (embedded 模式): {qdrant_path}")
+    return QdrantClient(path=qdrant_path)
+
+
+# ============================================================
 # 检索结果
 # ============================================================
 
@@ -108,6 +131,7 @@ class Phase3Store:
         batch_size: int = 32,
         device: str = "auto",
         qdrant_path: str = "./qdrant_data",
+        qdrant_url: Optional[str] = None,
         tasks_collection: str = "tasks",
         chunks_summary_collection: str = "chunks_summary",
         chunks_cleaned_text_collection: str = "chunks_cleaned_text",
@@ -157,9 +181,11 @@ class Phase3Store:
                 raise
         logger.info("Dense 模型加载完成")
 
-        # 3. 初始化 Qdrant 客户端
-        logger.info(f"初始化 Qdrant 客户端: {qdrant_path}")
-        self.client = QdrantClient(path=qdrant_path)
+        # 3. 初始化 Qdrant 客户端 (url 优先, 为空则用本地 path)
+        self.qdrant_path = qdrant_path
+        self.qdrant_url = (qdrant_url or "").strip() or None
+        self.is_server_mode = self.qdrant_url is not None
+        self.client = create_qdrant_client(qdrant_path, qdrant_url)
 
         # 4. 稀疏检索初始化
         self._bm25_index: dict[str, object] = {}   # collection -> BM25Okapi
