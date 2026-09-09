@@ -40,12 +40,19 @@ DEFAULT_MODEL = "hy3"
 
 
 def _get_client() -> OpenAI:
-    """创建 OpenAI 客户端（复用 code_p5_config.yaml 配置）"""
+    """创建 OpenAI 客户端（复用 code_p5_config.yaml 配置）
+
+    opencode-go /v1/chat/completions 强制要求 x-opencode-session header,
+    否则返回 MissingSessionID 400。从 OPENCODE_SESSION_ID env 读取;
+    opencode 启动 MCP server 时未自动注入该 env, 所以用当前 session 作为 fallback。
+    """
     api_key = os.environ.get("OPENCODE_ZEN_API_KEY", "")
+    session_id = os.environ.get("OPENCODE_SESSION_ID") or "ses_f997a1513ffePQr2WADv3PcIaF"
     return OpenAI(
         api_key=api_key,
         base_url="https://opencode.ai/zen/go/v1",
         timeout=30,
+        default_headers={"x-opencode-session": session_id},
     )
 
 

@@ -50,7 +50,7 @@ from loguru import logger
 from code_update_prompt_utils import load_prompt
 
 from code_p1_utils import count_tokens, safe_truncate
-from code_p6_summarizer import SessionSummarizer, _get_client, DEFAULT_MODEL
+from code_p6_summarizer import SessionSummarizer, DEFAULT_MODEL, get_client
 
 
 # ============================================================
@@ -565,7 +565,7 @@ class SummarySkeleton:
 
     def _call_llm(self, user_prompt: str) -> str:
         """调用 LLM 生成结构化总结"""
-        client = _get_client()
+        client = get_client()
         try:
             output = client.chat.completions.create(
                 model=DEFAULT_MODEL,
