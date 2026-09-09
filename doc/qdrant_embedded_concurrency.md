@@ -3,7 +3,7 @@
 > 作者:Mavis (MiniMax Code)
 > 调研时间:2026-09-09
 > 关联事件:当天调试 `summarize` 工具时撞到 `RuntimeError: Storage folder ... already accessed by another instance`
-> 关联脚本:[`scripts/migrate_qdrant_to_server.py`](../scripts/migrate_qdrant_to_server.py)
+> 关联脚本:[`utils/migrate_qdrant_to_server.py`](../utils/migrate_qdrant_to_server.py)
 
 ---
 
@@ -260,10 +260,10 @@ Qdrant 早期(0.x 时代)embedded 用的是 **SQLite + 单文件**,目的是:
 
 ```bash
 # 1. 写迁移脚本
-$EDITOR scripts/migrate_qdrant_to_server.py
+$EDITOR utils/migrate_qdrant_to_server.py
 
 # 2. 跑迁移
-python3 scripts/migrate_qdrant_to_server.py
+python3 utils/migrate_qdrant_to_server.py
 # → 🎉 迁移完成: 1991 points, 总耗时 1.4s
 
 # 3. 验证
@@ -369,7 +369,7 @@ wait
 | Qdrant GitHub | `qdrant_client` Python 库 `QdrantClient.__init__` | `.lock` 创建逻辑 |
 | SQLite WAL 模式 | https://www.sqlite.org/wal.html | 验证 SQLite 并发能力 |
 | SQLite locking_mode | https://www.sqlite.org/pragma.html#pragma_locking_mode | locking 模式参考 |
-| 本项目 `migrate_qdrant_to_server.py` | [`scripts/`](../scripts/) | 实际迁移工具 |
+| 本项目 `migrate_qdrant_to_server.py` | [`utils/`](../utils/) | 实际迁移工具 |
 | 本项目 README "Qdrant 部署" 章节 | [`README.md`](../README.md) | 用户面部署指南 |
 | 本次会话上下文 | 9/9 多实例排查 | 实战案例 |
 

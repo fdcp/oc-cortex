@@ -3,10 +3,10 @@
 把本地 embedded Qdrant (qdrant_data/) 的数据迁移到 Docker Qdrant (http://localhost:6333)
 
 用法:
-  python scripts/migrate_qdrant_to_server.py
-  python scripts/migrate_qdrant_to_server.py --src ./qdrant_data --dst http://localhost:6333
-  python scripts/migrate_qdrant_to_server.py --collections tasks chunks_summary chunks_cleaned_text entities
-  python scripts/migrate_qdrant_to_server.py --dry-run
+  python utils/migrate_qdrant_to_server.py
+  python utils/migrate_qdrant_to_server.py --src ./qdrant_data --dst http://localhost:6333
+  python utils/migrate_qdrant_to_server.py --collections tasks chunks_summary chunks_cleaned_text entities
+  python utils/migrate_qdrant_to_server.py --dry-run
 
 注意:
   - 单进程运行 (本地 embedded 是单进程独占,会创建 .lock)

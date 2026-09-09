@@ -163,10 +163,10 @@ python3 src/code_p4_search_cli.py --query "..."
 
 ```bash
 # 1. 预览 schema（不写数据）
-python3 scripts/migrate_qdrant_to_server.py --dry-run
+python3 utils/migrate_qdrant_to_server.py --dry-run
 
 # 2. 全量迁移（自动 drop + recreate + upsert）
-python3 scripts/migrate_qdrant_to_server.py
+python3 utils/migrate_qdrant_to_server.py
 
 # 3. 验证 points_count
 curl http://localhost:6333/collections/tasks | jq .result.points_count
