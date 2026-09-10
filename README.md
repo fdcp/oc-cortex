@@ -181,6 +181,23 @@ curl http://localhost:6333/collections/tasks | jq .result.points_count
 
 典型耗时：~2000 points / 1.5 秒（本地 + 同机 Docker）。脚本内已用 `PointStruct` 适配 Qdrant 1.19+ 严格类型校验。
 
+### 备份与恢复 (snapshot)
+
+容器销毁后数据可能全丢，`utils/qdrant_snapshot.py` 提供 4 个子命令管理 snapshot：
+
+```bash
+# 1. 备份全部到 host 目录 (自动 download, 不会丢)
+python3 utils/qdrant_snapshot.py backup --out ./qdrant_snapshots/$(date +%Y%m%d)
+
+# 2. 列出 server 上已有 snapshots
+python3 utils/qdrant_snapshot.py list
+
+# 3. 从 host 恢复到 server (容器重建场景)
+python3 utils/qdrant_snapshot.py restore --in ./qdrant_snapshots/20260910
+```
+
+> ⚠️ **容器无 `-v` 挂载时, snapshot 必须下载到 host** (否则容器销毁 = snapshot 一起丢)。详见 [`utils/doc/qdrant_tools.md`](utils/doc/qdrant_tools.md)。
+
 ### 故障排查
 
 | 症状 | 原因 | 解决 |
@@ -190,8 +207,12 @@ curl http://localhost:6333/collections/tasks | jq .result.points_count
 | `Wrong input: Vector dimension error` | Query 向量维度与 collection 不匹配 | 检查 `embedding.dim`（默认 512）与 collection `vectors.size` 一致 |
 | MCP server 启动后看不到新数据 | `QDRANT_URL` 写在 env 而没持久化到 config | 把 `qdrant.url: http://localhost:6333` 写进 `config/code_p3_config.yaml` |
 | Docker qdrant 5 天没数据 | 配置指向了 server，但从未执行过 P3/P4 写入 | 跑一次 `python3 src/code_p3_main.py` 或用 `migrate_qdrant_to_server.py` 灌数据 |
+| 容器销毁后数据全没 | 容器没加 `-v /host/path:/qdrant/storage` 挂载 | 用 `utils/qdrant_snapshot.py restore --in <host备份目录>` 从最近 snapshot 恢复 |
+| `requests.exceptions.HTTPError: 502` 访问 Qdrant | shell 设了 `HTTP_PROXY=...` 把 localhost:6333 路由到外部代理 | `unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY` 后重跑；`qdrant_snapshot.py` 已内置 bypass |
 
 > 📌 **维护建议**:把 `QDRANT_URL` 同时写进 `code_p3_config.yaml` 的 `qdrant.url` 字段，避免 env 丢失后静默回退 embedded。
+
+📚 工具脚本 (`utils/migrate_qdrant_to_server.py`、`utils/qdrant_snapshot.py`) 详细用法见 [`utils/doc/qdrant_tools.md`](utils/doc/qdrant_tools.md)。
 
 ## MCP 集成
 
