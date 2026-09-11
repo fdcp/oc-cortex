@@ -206,6 +206,51 @@ RRF_score(d) = Σ 1 / (k + rank_i(d))
 
 两条 sparse 路径在 P4 RRF 融合时**互补**,任意删一条都会掉召回 (尤其是查询包含报错字符串、库名、文件名时)。
 
+### BM25 索引的不可变性 + 持久化优化方向
+
+**观察**: 对一个固定的 corpus (chunks_summary / chunks_cleaned_text), 4 个 BM25 值在 build 之后就不再变:
+
+| 值 | 来源 | 变不变 |
+|---|---|---|
+| TF (`doc_freqs`) | 单 doc 内的 token 计数 | doc 文本 + jieba 分词不变 → 不变 |
+| DF | 跨 doc 数 token | corpus 集合不变 → 不变 |
+| IDF | DF + N → 公式 | DF + N 不变 → 不变 |
+| `avgdl` | `sum(doc_len) / N` | corpus 集合不变 → 不变 |
+
+`rank_bm25.BM25Okapi` 在 build 时一次性算好塞进实例属性,运行时只读不重算 — 这本身就是一种"内存 cache"。
+
+**问题**: 内存 cache 进程死就没了。P4 新进程必须 `_rebuild_bm25_index()` 走一遍 jieba 切词 + 重建倒排表,在 234 doc / ~50 token/doc 量级实测 ~1-2s。
+
+**优化方向** (按实现代价递增):
+
+| 级别 | 做法 | 落盘内容 | 体积 | load 时间 |
+|---|---|---|---|---|
+| 轻量 | pickle 整个 `BM25Okapi` 实例 | `output/bm25_cache/{c}.pkl` | ~30 KB | ~10 ms |
+| 中等 | pickle `tokenized_corpus` + 元数据 | `output/bm25_cache/{c}_tokens.pkl` | ~12 KB | ~50 ms (现算 BM25) |
+| 完整 | 上面 + corpus hash 校验,corpus 变了自动 invalidate | + `output/bm25_cache/{c}.sha256` | + 32 B | 多 ~50-200 ms hash |
+
+**关键约束: corpus hash 校验**
+
+严格说语料不是 immutable 的:
+
+- 重跑 P2 → `chunks_summary` collection 内容变 (LLM 摘要可能改写),`doc_freqs` 全错位 → IDF 全错
+- 重跑 P1 → `chunks.jsonl` 变 → `chunks_cleaned_text` 变 → 同上
+- 手动 `delete + recreate` collection → 同上
+
+**所以持久化的 cache 必须带 corpus fingerprint** (e.g.):
+
+- 简单版: `sha256(concat(point_id + payload.summary))` (chunks_summary)
+- 严格版: Qdrant collection 的 `points_count` + 排序后 point_id 列表的 sha256
+- 校验流程: load cache 时重算 hash → 与缓存的 hash 比对 → 不一致就 rebuild
+
+**当前代码现状**: `Phase3Store` **不落盘 BM25 cache**,每次 P4 cold start 都重算。如果要加,改动点:
+
+- `code_p3_qdrant_store.py:_save_bm25_cache()` (build 末尾调)
+- `code_p3_qdrant_store.py:_load_bm25_cache(corpus_hash)` (init 时调)
+- `code_p4_searcher.py:_rebuild_bm25_index()` (fallback, corpus hash 不匹配时调)
+
+**性能 vs 正确性 trade-off**: 不做 hash 校验 → corpus 变了 cache 还在 → 检索结果悄悄错位;做了 hash 校验 → 多 ~50-200 ms hash 计算,换来正确性。
+
 ### BGE-M3 模式 (上线)
 
 - 使用 BGE-M3 模型生成 sparse vectors，存入 Qdrant 的 named sparse vectors
