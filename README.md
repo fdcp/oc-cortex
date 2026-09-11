@@ -189,6 +189,9 @@ curl http://localhost:6333/collections/tasks | jq .result.points_count
 # 1. 备份全部到 host 目录 (自动 download, 不会丢)
 python3 utils/qdrant_snapshot.py backup --out ./qdrant_snapshots/$(date +%Y%m%d)
 
+# 1b. 备份前先清空 server 端旧 snapshot (避免容器内累积)
+python3 utils/qdrant_snapshot.py backup --out ./qdrant_snapshots/$(date +%Y%m%d) --prune-server
+
 # 2. 列出 server 上已有 snapshots
 python3 utils/qdrant_snapshot.py list
 

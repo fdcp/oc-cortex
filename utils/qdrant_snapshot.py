@@ -8,6 +8,7 @@ Qdrant snapshot 管理工具: backup / restore / list / download
 
   # 2. 备份指定 collections
   python3 utils/qdrant_snapshot.py backup --out ./backups --collections tasks entities
+  python3 utils/qdrant_snapshot.py backup --out ./backups/$(date +%Y%m%d) --prune-server
 
   # 3. 列出 server 上已有 snapshots
   python3 utils/qdrant_snapshot.py list
@@ -25,6 +26,7 @@ Qdrant snapshot 管理工具: backup / restore / list / download
   --out <dir|file>     backup/download 输出路径 (backup 必须是 dir, download 可以是 dir 或 file)
   --in <dir>           restore 输入目录
   --collections ...    backup 子集 (默认全部)
+  --prune-server       backup 前先删 server 端该 collection 的所有旧 snapshot (避免容器内累积)
   --wait / --no-wait   restore 后是否等待 collection ready (默认 --wait)
 
 文件命名约定:
@@ -61,6 +63,21 @@ def _list_collections(host: str) -> list[str]:
     return [c["name"] for c in r.json()["result"]["collections"]]
 
 
+def _list_server_snapshots(host: str, cname: str) -> list[str]:
+    r = _NO_PROXY_SESSION.get(
+        _url(host, f"/collections/{cname}/snapshots"), timeout=TIMEOUT,
+    )
+    r.raise_for_status()
+    return [s["name"] for s in r.json()["result"]]
+
+
+def _delete_server_snapshot(host: str, cname: str, snap_name: str) -> None:
+    r = _NO_PROXY_SESSION.delete(
+        _url(host, f"/collections/{cname}/snapshots/{snap_name}"), timeout=TIMEOUT,
+    )
+    r.raise_for_status()
+
+
 def cmd_backup(args) -> int:
     out_dir = Path(args.out).expanduser().resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -70,6 +87,17 @@ def cmd_backup(args) -> int:
     else:
         collections = _list_collections(args.host)
         print(f"[auto] {len(collections)} collections: {collections}")
+
+    if args.prune_server:
+        print(f"[prune] 清空 server 端 {len(collections)} 个 collection 的旧 snapshot ...")
+        for cname in collections:
+            existing = _list_server_snapshots(args.host, cname)
+            for sname in existing:
+                try:
+                    _delete_server_snapshot(args.host, cname, sname)
+                    print(f"  prune  {cname}/{sname}")
+                except Exception as e:
+                    print(f"  FAIL prune {cname}/{sname}: {e}", file=sys.stderr)
 
     summary = []
     for cname in collections:
@@ -220,6 +248,11 @@ def main():
         nargs="+",
         default=None,
         help="指定子集, 默认全部",
+    )
+    p_bk.add_argument(
+        "--prune-server",
+        action="store_true",
+        help="backup 前先删 server 端该 collection 的所有旧 snapshot (避免容器内累积)",
     )
 
     p_rs = sub.add_parser("restore", help="从 host snapshot 恢复")

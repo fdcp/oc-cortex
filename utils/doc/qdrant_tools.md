@@ -70,6 +70,9 @@ python3 utils/qdrant_snapshot.py backup --out ./qdrant_snapshots/20260910
 # 2. 备份子集
 python3 utils/qdrant_snapshot.py backup --out ./backups --collections tasks entities
 
+# 2b. 备份前先清空 server 端旧 snapshot(避免容器内累积)
+python3 utils/qdrant_snapshot.py backup --out ./backups/$(date +%Y%m%d) --prune-server
+
 # 3. 列 server 上现有 snapshots
 python3 utils/qdrant_snapshot.py list
 python3 utils/qdrant_snapshot.py list --collection tasks
@@ -92,6 +95,7 @@ python3 utils/qdrant_snapshot.py download \
 | 全局 | `--host` | Qdrant URL(默认 `http://localhost:6333`) |
 | `backup` | `--out` | host 输出目录 |
 | `backup` | `--collections` | 子集,默认全部 |
+| `backup` | `--prune-server` | 先删 server 端该 collection 的旧 snapshot(避免容器内累积) |
 | `restore` | `--in` | snapshot 目录 |
 | `restore` | `--collection` | 只恢复指定 collection |
 | `restore` | `--wait` / `--no-wait` | 是否等 collection ready(默认 wait) |
