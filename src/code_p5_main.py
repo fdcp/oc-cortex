@@ -187,7 +187,7 @@ def main():
         embedding_cache_folder=config.get("embedding.cache_folder"),
         embedding_offline_mode=offline_mode,
         qdrant_path=config.get("qdrant.path", "./qdrant_data"),
-        qdrant_url=config.get("qdrant.url"),
+        qdrant_url=os.environ.get("QDRANT_URL") or config.get("qdrant.url"),
         entities_collection=config.get("qdrant.entities_collection", "entities"),
         alignment_threshold=config.get("knowledge_graph.entity_alignment_threshold", 0.92),
     )

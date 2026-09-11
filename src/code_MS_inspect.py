@@ -543,7 +543,11 @@ def main():
         ),
     }
     qdrant_path = _resolve_path(config.get("qdrant.path", "./qdrant_data"))
-    qdrant_url = (config.get("qdrant.url", "") or "").strip() or None
+    qdrant_url = (
+        os.environ.get("QDRANT_URL")
+        or (config.get("qdrant.url", "") or "").strip()
+        or None
+    )
     model_name = config.get("embedding.model", "BAAI/bge-small-zh-v1.5")
     device = config.get("embedding.device", "cpu")
     cache_folder = config.get("embedding.cache_folder", None)
