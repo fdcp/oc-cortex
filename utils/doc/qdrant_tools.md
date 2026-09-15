@@ -8,7 +8,11 @@
 | 脚本 | 用途 | 触发场景 |
 |---|---|---|
 | `migrate_qdrant_to_server.py` | embedded → server **一次性**数据迁移 | 项目从单机 embedded 切到多实例共享 server |
-| `qdrant_snapshot.py` | collection 快照管理(backup / restore / list / download) | 灾备、版本升级、跨实例复制 |
+| `qdrant_snapshot.py` | collection 快照管理(backup / restore / list / download) + 库函数 `drop_collections()` | 灾备、版本升级、跨实例复制;`drop_collections()` 由 `code_cleanup.py` 内部调用 |
+
+> `qdrant_snapshot.py` 同时暴露 **CLI 子命令**(`backup` / `restore` / `list` / `download`)与 **库函数** `drop_collections()`。
+> 后者**不**暴露 CLI 子命令 —— 用户面入口是 `python3 src/code_cleanup.py clean --p3 --yes`,
+> `code_cleanup.py` 通过 `sys.path.insert + from qdrant_snapshot import drop_collections` 调用,统一 dry-run / `--yes` / `--force` 流程。
 
 ---
 
@@ -166,6 +170,97 @@ v1.19 生成的 snapshot 不能在 v1.18 恢复。跨大版本升级前**先在�
 ### 4. `restore` 会覆盖现有 collection
 
 `PUT /collections/{name}/snapshots/recover?priority=snapshot` 会用 snapshot 覆盖同名 collection,**不会合并**。
+
+---
+
+## 库函数 `drop_collections()`
+
+`qdrant_snapshot.py` 除了 4 个 CLI 子命令,还暴露一个**库函数** `drop_collections()`,专供 `src/code_cleanup.py` 调用,**不**暴露 CLI 子命令。
+
+### 签名
+
+```python
+def drop_collections(
+    qdrant_url: str,
+    collections: list[str],
+    *,
+    auto_backup: bool = True,
+    backup_out: str | Path | None = None,
+    keep_host_backups: int = 3,
+    dry_run: bool = True,
+    force: bool = False,
+) -> dict:
+```
+
+### 返回 dict 结构
+
+```python
+{
+    "qdrant_url": str,                  # 实际 URL
+    "requested": list[str],             # 输入的 collection 名
+    "existing": list[str],              # server 上实际存在的
+    "missing": list[str],               # server 上不存在的
+    "would_drop": list[str],            # dry-run: 计划删的
+    "deleted": list[str],               # real: 实际删的
+    "points_count": dict[str, int],     # {cname: points_count}
+    "backup_path": Path | None,         # backup 目录路径
+    "backup_files": list[tuple[str, str]],  # [(cname, snap_file), ...]
+}
+```
+
+### 行为
+
+| 模式 | 动作 |
+|---|---|
+| `dry_run=True` | 仅 `GET /collections` + `GET /collections/{name}` 查询,**不创建 snapshot、不删除**;返回完整 plan |
+| `dry_run=False`,`auto_backup=True` | ① `POST /collections/{name}/snapshots` 创建 ② `GET` 流式下载到 `backup_out/<cname>__<snap>` ③ `_prune_host_backups` 保留最近 N 个 ④ `DELETE /collections/{name}` |
+| `dry_run=False`,`auto_backup=False` | 跳过 backup,直接 `DELETE /collections/{name}` |
+| `force=False`,real delete | 交互要求输入 `DELETE`(影响多客户端时)|
+| `force=True`,real delete | 跳过确认 |
+
+### 调用方: `code_cleanup.py`
+
+```python
+# src/code_cleanup.py:_cmd_clean_server
+import sys; sys.path.insert(0, str(REPO_ROOT / "utils"))
+from qdrant_snapshot import drop_collections
+
+# 1. dry-run 阶段: 取 plan
+plan_result = drop_collections(
+    qdrant_url="http://localhost:6333",
+    collections=server_collections,
+    dry_run=True,
+)
+
+# 2. 真删阶段 (--yes 后)
+result = drop_collections(
+    qdrant_url="http://localhost:6333",
+    collections=server_collections,
+    auto_backup=not args.no_backup,
+    backup_out=args.backup_out,
+    keep_host_backups=args.keep_host_backups,
+    dry_run=False,
+    force=args.force,
+)
+```
+
+### 为什么不暴露 CLI 子命令
+
+- 避免与 `code_cleanup.py` 的 dry-run 流程割裂(用户得手动 `--force` + 二次确认)
+- `code_cleanup.py` 是**唯一**面向用户的删除入口,统一处理 `--yes` / `--cascade` / `--all` / 安全断言 / orphan 检测
+- CLI 子命令会让用户能跳过这些保护直接调用,违反安全设计
+
+### 参数与 CLI flag 对应关系
+
+| `drop_collections` 参数 | 对应 `code_cleanup.py` flag |
+|---|---|
+| `qdrant_url` | 由 `QDRANT_URL` env 或 yaml `qdrant.url` 决定(自动检测) |
+| `collections` | 由 `--p3` / `--p5` 推导(P3→3 个,P5→1 个) |
+| `auto_backup=not args.no_backup` | `--no-backup` |
+| `backup_out=args.backup_out` | `--backup-out <path>` |
+| `keep_host_backups=args.keep_host_backups` | `--keep-host-backups <N>` |
+| `dry_run=not args.yes` | `--yes` |
+| `force=args.force` | `--force` |
 
 ---
 

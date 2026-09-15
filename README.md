@@ -279,17 +279,21 @@ python3 utils/qdrant_snapshot.py restore --in ./qdrant_snapshots/20260910
 
 ## 输出清理（code_cleanup）
 
-按 phase 选择性清理流水线产物，默认 dry-run，需显式 `--yes` 才真删。详见 `doc/code_cleanup_README.md`。
+按 phase 选择性清理流水线产物，默认 dry-run，需显式 `--yes` 才真删。**同时支持 embedded 和 server 两种 Qdrant 模式** —— server mode 下额外调 `drop_collections()` 删 collection（删前 auto-backup）。详见 `doc/code_cleanup_README.md`。
 
 ```bash
-# 列出所有 phase 产物
+# 列出所有 phase 产物 (server mode 会顺带列 server 上的 collections + snapshots)
 python3 src/code_cleanup.py list
 
-# 预览删除计划
+# 预览删除计划 (embedded / server 自动根据 QDRANT_URL 切换)
 python3 src/code_cleanup.py clean --p2
 
 # 真删 + 级联删除下游孤儿
 python3 src/code_cleanup.py clean --p1 --cascade --yes
+
+# server mode: 跳 backup / 跳过 'DELETE' 二次确认
+python3 src/code_cleanup.py clean --p3 --yes --no-backup
+python3 src/code_cleanup.py clean --p3 --yes --force   # 仅 CI 用
 ```
 
 ## 更多文档

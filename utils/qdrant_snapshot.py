@@ -2,6 +2,11 @@
 """
 Qdrant snapshot 管理工具: backup / restore / list / download
 
+库函数 (供 src/code_cleanup.py 调用, 不暴露 CLI 子命令):
+  drop_collections(qdrant_url, collections, *, auto_backup, backup_out,
+                   keep_host_backups, dry_run, force)
+  返回 dict, 含 requested/existing/missing/deleted/points_count/backup_path
+
 用法:
   # 1. 备份所有 collections 到 host
   python3 utils/qdrant_snapshot.py backup --out ./qdrant_snapshots/20260910
@@ -39,6 +44,9 @@ Qdrant snapshot 管理工具: backup / restore / list / download
   - 没 -v 挂载时, snapshot 必须在 host 留一份 (否则容器销毁 = 数据丢失)
 """
 import argparse
+import datetime
+import os
+import shutil
 import sys
 import time
 from pathlib import Path
@@ -71,11 +79,61 @@ def _list_server_snapshots(host: str, cname: str) -> list[str]:
     return [s["name"] for s in r.json()["result"]]
 
 
+def _list_server_snapshots_full(host: str, cname: str) -> list[dict]:
+    """返回完整 snapshot info: [{name, creation_time, size}, ...]
+
+    与 _list_server_snapshots(只取 name) 对应, 给 list 展示用.
+    """
+    r = _NO_PROXY_SESSION.get(
+        _url(host, f"/collections/{cname}/snapshots"), timeout=TIMEOUT,
+    )
+    r.raise_for_status()
+    return r.json()["result"]
+
+
 def _delete_server_snapshot(host: str, cname: str, snap_name: str) -> None:
     r = _NO_PROXY_SESSION.delete(
         _url(host, f"/collections/{cname}/snapshots/{snap_name}"), timeout=TIMEOUT,
     )
     r.raise_for_status()
+
+
+def _do_backup(host: str, collections: list[str], out_dir: Path) -> list[tuple[str, str | None, float]]:
+    """Core backup logic: create snapshot per collection, download to host.
+    Returns [(cname, snap_name, size_mb), ...] where snap_name is None on failure."""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    summary = []
+    for cname in collections:
+        print(f"\n[{cname}]")
+        t0 = time.time()
+        try:
+            r = _NO_PROXY_SESSION.post(
+                _url(host, f"/collections/{cname}/snapshots"),
+                timeout=TIMEOUT,
+            )
+            r.raise_for_status()
+            snap_name = r.json()["result"]["name"]
+            print(f"  create  {snap_name} ({time.time() - t0:.2f}s)")
+
+            t1 = time.time()
+            r = _NO_PROXY_SESSION.get(
+                _url(host, f"/collections/{cname}/snapshots/{snap_name}"),
+                timeout=TIMEOUT,
+                stream=True,
+            )
+            r.raise_for_status()
+            out_path = out_dir / f"{cname}__{snap_name}"
+            with open(out_path, "wb") as f:
+                for chunk in r.iter_content(chunk_size=CHUNK):
+                    if chunk:
+                        f.write(chunk)
+            size_mb = out_path.stat().st_size / 1024 / 1024
+            print(f"  download {out_path.name} ({size_mb:.2f} MB, {time.time() - t1:.2f}s)")
+            summary.append((cname, snap_name, size_mb))
+        except Exception as e:
+            print(f"  FAIL: {e}", file=sys.stderr)
+            summary.append((cname, None, 0))
+    return summary
 
 
 def cmd_backup(args) -> int:
@@ -99,38 +157,7 @@ def cmd_backup(args) -> int:
                 except Exception as e:
                     print(f"  FAIL prune {cname}/{sname}: {e}", file=sys.stderr)
 
-    summary = []
-    for cname in collections:
-        print(f"\n[{cname}]")
-        t0 = time.time()
-        try:
-            r = _NO_PROXY_SESSION.post(
-                _url(args.host, f"/collections/{cname}/snapshots"),
-                timeout=TIMEOUT,
-            )
-            r.raise_for_status()
-            snap_name = r.json()["result"]["name"]
-            print(f"  create  {snap_name} ({time.time() - t0:.2f}s)")
-
-            t1 = time.time()
-            r = _NO_PROXY_SESSION.get(
-                _url(args.host, f"/collections/{cname}/snapshots/{snap_name}"),
-                timeout=TIMEOUT,
-                stream=True,
-            )
-            r.raise_for_status()
-            out_path = out_dir / f"{cname}__{snap_name}"
-            with open(out_path, "wb") as f:
-                for chunk in r.iter_content(chunk_size=CHUNK):
-                    if chunk:
-                        f.write(chunk)
-            size_mb = out_path.stat().st_size / 1024 / 1024
-            print(f"  download {out_path.name} ({size_mb:.2f} MB, {time.time() - t1:.2f}s)")
-            summary.append((cname, snap_name, size_mb))
-        except Exception as e:
-            print(f"  FAIL: {e}", file=sys.stderr)
-            summary.append((cname, None, 0))
-
+    summary = _do_backup(args.host, collections, out_dir)
     ok = sum(1 for s in summary if s[1])
     print(f"\n=== backup 完成 ({ok}/{len(summary)} ok) ===")
     print(f"输出目录: {out_dir}")
@@ -228,6 +255,173 @@ def cmd_download(args) -> int:
                 f.write(chunk)
     print(f"  OK {out_path.stat().st_size / 1024 / 1024:.2f} MB")
     return 0
+
+
+def _get_collection_info(host: str, cname: str) -> dict | None:
+    """Return collection info dict, or None if collection doesn't exist."""
+    r = _NO_PROXY_SESSION.get(_url(host, f"/collections/{cname}"), timeout=TIMEOUT)
+    if r.status_code == 404:
+        return None
+    r.raise_for_status()
+    return r.json().get("result") or None
+
+
+def _delete_collection(host: str, cname: str) -> None:
+    """Delete a collection via Qdrant REST API. Raises on failure."""
+    r = _NO_PROXY_SESSION.delete(_url(host, f"/collections/{cname}"), timeout=TIMEOUT)
+    r.raise_for_status()
+
+
+def _confirm_force_destructive(url: str, collections: list[str], points_count: dict[str, int]) -> None:
+    """Interactive confirmation for destructive ops on shared server."""
+    total = sum(points_count.get(c, 0) for c in collections)
+    print(f"\n⚠️  即将在 server 上删除 {len(collections)} 个 collection ({total} 个 points):", flush=True)
+    for c in collections:
+        print(f"  - {c} ({points_count.get(c, 0)} points)", flush=True)
+    print(f"server: {url}", flush=True)
+    print("此操作影响所有连接此 server 的客户端 (多 IDE / MCP / opencode 进程).", flush=True)
+    confirm = input('输入 "DELETE" 确认 (回车取消): ').strip()
+    if confirm != "DELETE":
+        print("已取消.", flush=True)
+        sys.exit(0)
+
+
+def _prune_host_backups(parent_dir: Path, keep: int) -> None:
+    """Keep only the most recent N backup dirs in parent_dir. Delete the rest."""
+    if keep <= 0 or not parent_dir.is_dir():
+        return
+    subdirs = [d for d in parent_dir.iterdir() if d.is_dir()]
+    subdirs.sort(key=lambda d: d.stat().st_mtime, reverse=True)
+    for old in subdirs[keep:]:
+        try:
+            shutil.rmtree(old)
+            print(f"  prune host backup (keep {keep}): {old.name}", flush=True)
+        except Exception as e:
+            print(f"  FAIL prune {old}: {e}", file=sys.stderr)
+
+
+def drop_collections(
+    qdrant_url: str,
+    collections: list[str],
+    *,
+    auto_backup: bool = True,
+    backup_out: str | Path | None = None,
+    keep_host_backups: int = 3,
+    dry_run: bool = True,
+    force: bool = False,
+) -> dict:
+    """Drop collections from Qdrant server. Optional auto-backup before deletion.
+
+    库函数: 由 src/code_cleanup.py 调用. 不暴露 CLI 子命令.
+
+    Args:
+        qdrant_url: Qdrant server URL (required)
+        collections: list of collection names to drop
+        auto_backup: create snapshot to host before deletion (default True)
+        backup_out: where to save snapshots (default: ./qdrant_snapshots/<timestamp>/)
+        keep_host_backups: how many recent backup dirs to retain on host
+                          (default 3, 0 = keep all)
+        dry_run: only return plan, do not delete, do not backup (default True)
+        force: required when other clients may be connected (prompts for "DELETE")
+
+    Returns:
+        dict with:
+        - qdrant_url: actual URL used
+        - requested: list of input collection names
+        - existing: list of collections that actually exist on server
+        - missing: list of collections not found on server
+        - would_drop: collections that would be deleted (when dry_run)
+        - deleted: collections actually deleted
+        - points_count: {collection_name: int}
+        - backup_path: path to backup directory (if auto_backup and not dry_run)
+        - backup_files: list of snapshot files created
+
+    Raises:
+        RuntimeError: if qdrant_url is empty or server is unreachable.
+
+    输出策略:
+        dry_run=True:  静默, 只查 server 状态 (list_collections + get_collection_info), 返回 plan
+        dry_run=False: 打印 [backup] / [drop] 进度日志, auto_backup 时先 backup 再 delete
+    """
+    if not qdrant_url:
+        raise RuntimeError("qdrant_url 为空")
+
+    requested = list(collections)
+
+    try:
+        existing_in_server = set(_list_collections(qdrant_url))
+    except Exception as e:
+        raise RuntimeError(f"无法连接 Qdrant server {qdrant_url}: {e}")
+
+    existing = [c for c in requested if c in existing_in_server]
+    missing = [c for c in requested if c not in existing_in_server]
+
+    points_count: dict[str, int] = {}
+    for cname in existing:
+        info = _get_collection_info(qdrant_url, cname)
+        points_count[cname] = (info or {}).get("points_count", 0)
+
+    if dry_run:
+        return {
+            "qdrant_url": qdrant_url,
+            "requested": requested,
+            "existing": existing,
+            "missing": missing,
+            "would_drop": list(existing),
+            "deleted": [],
+            "points_count": points_count,
+            "backup_path": None,
+            "backup_files": [],
+        }
+
+    backup_path: Path | None = None
+    backup_files: list[str] = []
+    if auto_backup and existing:
+        ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        if backup_out:
+            backup_path = Path(backup_out).expanduser().resolve()
+        else:
+            backup_path = (Path.cwd() / "qdrant_snapshots" / ts).resolve()
+        backup_path.mkdir(parents=True, exist_ok=True)
+        print(f"[backup] -> {backup_path}", flush=True)
+        summary = _do_backup(qdrant_url, existing, backup_path)
+        for cname, snap_name, size_mb in summary:
+            if snap_name:
+                backup_files.append(f"{cname}__{snap_name}")
+
+        if keep_host_backups > 0:
+            _prune_host_backups(backup_path.parent, keep_host_backups)
+
+    if not force and existing:
+        _confirm_force_destructive(qdrant_url, existing, points_count)
+
+    deleted: list[str] = []
+    if existing:
+        print(f"[drop] 正在删除 {len(existing)} 个 collection ...", flush=True)
+        for cname in existing:
+            try:
+                _delete_collection(qdrant_url, cname)
+                deleted.append(cname)
+                print(f"  delete  {cname}", flush=True)
+            except Exception as e:
+                print(f"  FAIL delete {cname}: {e}", file=sys.stderr)
+    else:
+        if missing:
+            print(f"[drop] server 上没有任何 requested collection (全部 missing): {missing}", flush=True)
+        else:
+            print("[drop] 没有要删的 collection", flush=True)
+
+    return {
+        "qdrant_url": qdrant_url,
+        "requested": requested,
+        "existing": existing,
+        "missing": missing,
+        "would_drop": [],
+        "deleted": deleted,
+        "points_count": points_count,
+        "backup_path": str(backup_path) if backup_path else None,
+        "backup_files": backup_files,
+    }
 
 
 def main():
