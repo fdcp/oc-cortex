@@ -102,7 +102,7 @@ python code_p3_search_demo.py --mode all --query "GPU对比分析"
 
 **chunks_summary 集合** -- 每个 point 代表一个对话轮次的摘要：
 - Dense 向量来源: `summary` (Phase 2 生成的 chunk 摘要)
-- 无 BM25 索引
+- BM25 索引来源: `summary` (同上文本, `upsert_chunks_summary` 同样调用 `build_bm25_index`,见 `code_p3_qdrant_store.py:633`)
 - Payload: `chunk_id`, `session_id`, `turn_index`, `task_id`, `summary`, `raw_size_tokens`, `cleaned_size_tokens`, `created_at`
 
 **chunks_cleaned_text 集合** -- 每个 point 代表一个对话轮次的原始对话：
@@ -139,10 +139,117 @@ RRF_score(d) = Σ 1 / (k + rank_i(d))
 ### BM25 模式 (开发)
 
 - 使用 jieba 中文分词构建 BM25 索引 (in-memory, rank_bm25 库)
-- BM25 索引仅在 `chunks_cleaned_text` 集合的 upsert 时构建
-- `tasks` 和 `chunks_summary` 集合只做 dense 向量存储
+- BM25 索引在 `chunks_summary` (LLM 摘要) 和 `chunks_cleaned_text` (cleaned_text) 两个集合的 upsert 时都构建
+- `tasks` 集合只做 dense 向量存储 (无 BM25)
 - 检索时 Dense 从 Qdrant 获取，BM25 从内存获取，Python 层面做 RRF 融合
 - 适合快速迭代，数据量 < 10K 时性能很好
+
+### 存储分离: Dense vs Sparse
+
+**核心事实** (用户最容易踩坑的认知误区):
+
+| 数据类型 | 存哪里 | 持久化 |
+|---|---|---|
+| Dense 向量 (BGE-small-zh 512d) | Qdrant 服务端 | ✅ 跟着 Qdrant 走 (snapshot/-v) |
+| Payload (chunk_id, task_id, summary 等) | Qdrant 服务端 | ✅ 同上 |
+| BM25 倒排索引 | **Python 进程内存** (`Phase3Store._bm25_index[collection]`) | ❌ **不落盘,进程死就没了** |
+
+```
+           ┌───────────────────────────────────────────────┐
+           │  Qdrant Server (持久化)                       │
+           │   tasks                  ──→  dense vectors   │
+           │   chunks_summary         ──→  dense vectors   │
+           │   chunks_cleaned_text    ──→  dense vectors   │
+           └───────────────────────────────────────────────┘
+                              ↕  HTTP (qdrant-client)
+           ┌───────────────────────────────────────────────┐
+           │  Phase3Store 进程内存 (不持久化)              │
+           │   _bm25_index[chunks_summary]       (LLM 摘要) │
+           │   _bm25_index[chunks_cleaned_text]  (cleaned)  │
+           └───────────────────────────────────────────────┘
+                              ↕  rank_bm25 BM25Okapi
+                          Sparse 检索
+```
+
+**为什么 BM25 不进 Qdrant?** Qdrant 原生支持的是 BGE-M3 那样的 named sparse vector (dense + sparse 一起存),不直接支持 BM25 这类外部倒排索引算法;BM25 用 `rank_bm25` 库在 Python 进程内现算。
+
+**当前默认 config 下,3 个 collection 的实际用途**:
+
+| Collection | Dense 用? | BM25 用? | 实际检索路径 |
+|---|---|---|---|
+| `tasks` | ✅ P4 dense search 主路径 | ❌ (无 BM25) | `search_dense(query)` |
+| `chunks_summary` | ❌ (config `sparse.chunks_summary_method: sparse`) | ✅ 内存 BM25 (LLM 摘要) | `search_sparse_bm25_tokens` |
+| `chunks_cleaned_text` | ❌ (P4 代码无 dense 路径) | ✅ 内存 BM25 (cleaned_text) | `search_sparse_bm25_tokens` |
+
+**配置开关 `sparse.chunks_summary_method`**:
+
+- `sparse` (默认): chunks_summary 走 BM25/BGE-M3 内存检索
+- `dense`: chunks_summary 改走 dense 检索,直接用 Qdrant 已存的 BGE(summary) 向量 (绕过 BM25,失去 alias expansion 能力)
+
+`chunks_cleaned_text` 没有这个开关,P4 代码里**没有 dense 路径**,那批 dense 向量**始终是死数据** (~960 KB in 234 points)。
+
+**BM25 持久化边界**:
+
+| 场景 | Dense 还在? | BM25 还在? |
+|---|---|---|
+| Qdrant 容器销毁/重启 | ✅ (snapshot / -v 恢复) | ✅ 不受影响 (本来就不在 Qdrant) |
+| P3 进程退出 | ✅ | ❌ 进程内存丢了 |
+| P4 新进程启动 | ✅ | ⚠️ `code_p4_searcher.py:_rebuild_bm25_index()` 自动从 Qdrant 拉文本重算 |
+| Qdrant 容器重建 + P4 重启 | ✅ (从 snapshot 恢复) | ❌ 需先跑 P3 或等 P4 自动 rebuild |
+
+**Q: 同一 chunk 为什么存 2 个 collection?**
+
+| Collection | Dense 向量化的文本 | BM25 索引化的文本 | 召回特点 |
+|---|---|---|---|
+| `chunks_summary` | LLM 摘要 (精炼) | LLM 摘要 | 同义词友好,代码符号 / 路径 / 报错串可能丢 |
+| `chunks_cleaned_text` | cleaned_text (原始) | cleaned_text | 字面值命中强,调试 / 错误消息 / 类名 / 库名必备 |
+
+两条 sparse 路径在 P4 RRF 融合时**互补**,任意删一条都会掉召回 (尤其是查询包含报错字符串、库名、文件名时)。
+
+### BM25 索引的不可变性 + 持久化优化方向
+
+**观察**: 对一个固定的 corpus (chunks_summary / chunks_cleaned_text), 4 个 BM25 值在 build 之后就不再变:
+
+| 值 | 来源 | 变不变 |
+|---|---|---|
+| TF (`doc_freqs`) | 单 doc 内的 token 计数 | doc 文本 + jieba 分词不变 → 不变 |
+| DF | 跨 doc 数 token | corpus 集合不变 → 不变 |
+| IDF | DF + N → 公式 | DF + N 不变 → 不变 |
+| `avgdl` | `sum(doc_len) / N` | corpus 集合不变 → 不变 |
+
+`rank_bm25.BM25Okapi` 在 build 时一次性算好塞进实例属性,运行时只读不重算 — 这本身就是一种"内存 cache"。
+
+**问题**: 内存 cache 进程死就没了。P4 新进程必须 `_rebuild_bm25_index()` 走一遍 jieba 切词 + 重建倒排表,在 234 doc / ~50 token/doc 量级实测 ~1-2s。
+
+**优化方向** (按实现代价递增):
+
+| 级别 | 做法 | 落盘内容 | 体积 | load 时间 |
+|---|---|---|---|---|
+| 轻量 | pickle 整个 `BM25Okapi` 实例 | `output/bm25_cache/{c}.pkl` | ~30 KB | ~10 ms |
+| 中等 | pickle `tokenized_corpus` + 元数据 | `output/bm25_cache/{c}_tokens.pkl` | ~12 KB | ~50 ms (现算 BM25) |
+| 完整 | 上面 + corpus hash 校验,corpus 变了自动 invalidate | + `output/bm25_cache/{c}.sha256` | + 32 B | 多 ~50-200 ms hash |
+
+**关键约束: corpus hash 校验**
+
+严格说语料不是 immutable 的:
+
+- 重跑 P2 → `chunks_summary` collection 内容变 (LLM 摘要可能改写),`doc_freqs` 全错位 → IDF 全错
+- 重跑 P1 → `chunks.jsonl` 变 → `chunks_cleaned_text` 变 → 同上
+- 手动 `delete + recreate` collection → 同上
+
+**所以持久化的 cache 必须带 corpus fingerprint** (e.g.):
+
+- 简单版: `sha256(concat(point_id + payload.summary))` (chunks_summary)
+- 严格版: Qdrant collection 的 `points_count` + 排序后 point_id 列表的 sha256
+- 校验流程: load cache 时重算 hash → 与缓存的 hash 比对 → 不一致就 rebuild
+
+**当前代码现状**: `Phase3Store` **不落盘 BM25 cache**,每次 P4 cold start 都重算。如果要加,改动点:
+
+- `code_p3_qdrant_store.py:_save_bm25_cache()` (build 末尾调)
+- `code_p3_qdrant_store.py:_load_bm25_cache(corpus_hash)` (init 时调)
+- `code_p4_searcher.py:_rebuild_bm25_index()` (fallback, corpus hash 不匹配时调)
+
+**性能 vs 正确性 trade-off**: 不做 hash 校验 → corpus 变了 cache 还在 → 检索结果悄悄错位;做了 hash 校验 → 多 ~50-200 ms hash 计算,换来正确性。
 
 ### BGE-M3 模式 (上线)
 

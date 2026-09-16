@@ -543,6 +543,11 @@ def main():
         ),
     }
     qdrant_path = _resolve_path(config.get("qdrant.path", "./qdrant_data"))
+    qdrant_url = (
+        os.environ.get("QDRANT_URL")
+        or (config.get("qdrant.url", "") or "").strip()
+        or None
+    )
     model_name = config.get("embedding.model", "BAAI/bge-small-zh-v1.5")
     device = config.get("embedding.device", "cpu")
     cache_folder = config.get("embedding.cache_folder", None)
@@ -556,15 +561,20 @@ def main():
 
     print("+" + "-"*54 + "+")
     print("|  Qdrant 数据检视 -- 里程碑检视工具                 |")
-    print(f"|  嵌入式 Qdrant ({qdrant_path})")
+    if qdrant_url:
+        print(f"|  Qdrant server ({qdrant_url})")
+    else:
+        print(f"|  嵌入式 Qdrant ({qdrant_path})")
     print("+" + "-"*54 + "+")
 
-    if not qdrant_path.exists():
-        print(f"\nQdrant 数据目录不存在: {qdrant_path}")
-        print("请先运行 code_p3_main.py 写入数据")
-        sys.exit(1)
-
-    client = QdrantClient(path=str(qdrant_path))
+    if qdrant_url:
+        client = QdrantClient(url=qdrant_url)
+    else:
+        if not qdrant_path.exists():
+            print(f"\nQdrant 数据目录不存在: {qdrant_path}")
+            print("请先运行 code_p3_main.py 写入数据")
+            sys.exit(1)
+        client = QdrantClient(path=str(qdrant_path))
 
     show_collection_stats(client)
     show_sample_payloads(client, collections, n=args.samples)

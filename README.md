@@ -5,7 +5,7 @@
 从 [OpenCode](https://github.com/sst/opencode) 会话历史中提取结构化知识，构建跨 session 知识图谱，支持语义搜索、Graph-RAG、主题总结与决策溯源。
 
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![Qdrant](https://img.shields.io/badge/Qdrant-embedded-red.svg)](https://qdrant.tech/)
+[![Qdrant](https://img.shields.io/badge/Qdrant-1.19-blue.svg)](https://qdrant.tech/)
 [![MCP](https://img.shields.io/badge/MCP-stdio-orange.svg)](https://modelcontextprotocol.io/)
 [![Status](https://img.shields.io/badge/status-active-green.svg)]()
 
@@ -101,7 +101,7 @@ oc_sess_graph/
 ├── prompts/             # LLM Prompt 模板
 ├── doc/                  # 各 Phase 详细文档 + 系统架构图（SVG）
 ├── output/               # 流水线输出（gitignore）
-├── qdrant_data/          # 嵌入式 Qdrant（gitignore）
+├── qdrant_data/          # 嵌入式 Qdrant 存储目录（gitignore，可选；生产推荐用 server 模式）
 ├── tests/                # P2/P5 benchmark 脚本
 ├── lib/                  # pyvis 前端资源
 ├── requirements.txt
@@ -126,6 +126,96 @@ python3 src/code_p6_cli.py "opencode 功能" --graph-rag
 # 时间范围过滤
 python3 src/code_p6_cli.py "性能优化" --time-from 2026-07-01 --time-to 2026-07-15
 ```
+
+## Qdrant 部署
+
+P3 把向量数据存进 Qdrant 集合（`tasks` / `chunks_summary` / `chunks_cleaned_text` / `entities`），支持两种部署模式，由 `qdrant.url` 配置字段或 `QDRANT_URL` 环境变量切换：
+
+| 模式 | 触发条件 | 多进程 | 适用场景 |
+|---|---|---|---|
+| **Embedded** | `qdrant.url` 为空且无 `QDRANT_URL` 环境变量 | ❌ 单进程独占（文件锁） | 单机脚本、build pipeline、CI 任务 |
+| **Server** | `qdrant.url: "http://host:port"` 或 `QDRANT_URL=http://...` | ✅ 任意多客户端 | 多 IDE/多 session 共享、生产部署 |
+
+**优先级**:`QDRANT_URL` 环境变量 > `config/*.yaml` 里的 `qdrant.url` > 默认 embedded。
+
+### Server 模式快速启动
+
+```bash
+# 1. 启动 Qdrant server（Docker）
+docker run -d --name qdrant \
+  -p 6333:6333 -p 6334:6334 \
+  -v $(pwd)/qdrant_data_server:/qdrant/storage \
+  qdrant/qdrant:v1.19.0
+
+# 2. 验证
+curl http://localhost:6333/healthz
+# → healthz check passed
+
+# 3. 让所有 phase 工具走 server 模式
+export QDRANT_URL=http://localhost:6333
+python3 src/code_p3_main.py    # 写入时会建 collection
+python3 src/code_p4_search_cli.py --query "..."
+```
+
+### 从 Embedded 迁移到 Server
+
+代码内置迁移脚本，一次性把 `qdrant_data/` 的本地数据搬到 server：
+
+```bash
+# 1. 预览 schema（不写数据）
+python3 utils/migrate_qdrant_to_server.py --dry-run
+
+# 2. 全量迁移（自动 drop + recreate + upsert）
+python3 utils/migrate_qdrant_to_server.py
+
+# 3. 验证 points_count
+curl http://localhost:6333/collections/tasks | jq .result.points_count
+```
+
+参数：
+- `--src <path>`（默认 `./qdrant_data`）
+- `--dst <url>`（默认 `http://localhost:6333`）
+- `--collections tasks chunks_summary ...`（子集迁移）
+- `--no-recreate`（追加模式，dst 集合必须已存在）
+- `--batch-size 200`（scroll 批次）
+
+典型耗时：~2000 points / 1.5 秒（本地 + 同机 Docker）。脚本内已用 `PointStruct` 适配 Qdrant 1.19+ 严格类型校验。
+
+### 备份与恢复 (snapshot)
+
+容器销毁后数据可能全丢，`utils/qdrant_snapshot.py` 提供 4 个子命令管理 snapshot：
+
+```bash
+# 1. 备份全部到 host 目录 (自动 download, 不会丢)
+python3 utils/qdrant_snapshot.py backup --out ./qdrant_snapshots/$(date +%Y%m%d)
+
+# 1b. 备份前先清空 server 端旧 snapshot (避免容器内累积)
+python3 utils/qdrant_snapshot.py backup --out ./qdrant_snapshots/$(date +%Y%m%d) --prune-server
+
+# 2. 列出 server 上已有 snapshots
+python3 utils/qdrant_snapshot.py list
+
+# 3. 从 host 恢复到 server (容器重建场景)
+python3 utils/qdrant_snapshot.py restore --in ./qdrant_snapshots/20260910
+```
+
+> ⚠️ **容器无 `-v` 挂载时, snapshot 必须下载到 host** (否则容器销毁 = snapshot 一起丢)。详见 [`utils/doc/qdrant_tools.md`](utils/doc/qdrant_tools.md)。
+
+### 故障排查
+
+| 症状 | 原因 | 解决 |
+|---|---|---|
+| `RuntimeError: Storage folder ... already accessed by another instance` | Embedded 模式被多进程同时打开 | 杀掉残留 `code_mcp_server.py` 进程，或切换到 server 模式 |
+| 搜索 `vector_results: 0` 但 `points_count > 0` | Server 集合存在但 optimizer 未建索引（< `full_scan_threshold=10000` 用全扫描，不走 HNSW） | 正常现象，1–2 秒后会回填；或调高 `indexing_threshold` |
+| `Wrong input: Vector dimension error` | Query 向量维度与 collection 不匹配 | 检查 `embedding.dim`（默认 512）与 collection `vectors.size` 一致 |
+| MCP server 启动后看不到新数据 | `QDRANT_URL` 写在 env 而没持久化到 config | 把 `qdrant.url: http://localhost:6333` 写进 `config/code_p3_config.yaml` |
+| Docker qdrant 5 天没数据 | 配置指向了 server，但从未执行过 P3/P4 写入 | 跑一次 `python3 src/code_p3_main.py` 或用 `migrate_qdrant_to_server.py` 灌数据 |
+| 容器销毁后数据全没 | 容器没加 `-v /host/path:/qdrant/storage` 挂载 | 用 `utils/qdrant_snapshot.py restore --in <host备份目录>` 从最近 snapshot 恢复 |
+| `requests.exceptions.HTTPError: 502` 访问 Qdrant | shell 设了 `HTTP_PROXY=...` 把 localhost:6333 路由到外部代理 | `unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY` 后重跑；`qdrant_snapshot.py` 已内置 bypass |
+
+> 📌 **维护建议**:把 `QDRANT_URL` 同时写进 `code_p3_config.yaml` 的 `qdrant.url` 字段，避免 env 丢失后静默回退 embedded。
+
+📚 工具脚本 (`utils/migrate_qdrant_to_server.py`、`utils/qdrant_snapshot.py`) 详细用法见 [`utils/doc/qdrant_tools.md`](utils/doc/qdrant_tools.md)。
 
 ## MCP 集成
 
@@ -189,17 +279,21 @@ python3 src/code_p6_cli.py "性能优化" --time-from 2026-07-01 --time-to 2026-
 
 ## 输出清理（code_cleanup）
 
-按 phase 选择性清理流水线产物，默认 dry-run，需显式 `--yes` 才真删。详见 `doc/code_cleanup_README.md`。
+按 phase 选择性清理流水线产物，默认 dry-run，需显式 `--yes` 才真删。**同时支持 embedded 和 server 两种 Qdrant 模式** —— server mode 下额外调 `drop_collections()` 删 collection（删前 auto-backup）。详见 `doc/code_cleanup_README.md`。
 
 ```bash
-# 列出所有 phase 产物
+# 列出所有 phase 产物 (server mode 会顺带列 server 上的 collections + snapshots)
 python3 src/code_cleanup.py list
 
-# 预览删除计划
+# 预览删除计划 (embedded / server 自动根据 QDRANT_URL 切换)
 python3 src/code_cleanup.py clean --p2
 
 # 真删 + 级联删除下游孤儿
 python3 src/code_cleanup.py clean --p1 --cascade --yes
+
+# server mode: 跳 backup / 跳过 'DELETE' 二次确认
+python3 src/code_cleanup.py clean --p3 --yes --no-backup
+python3 src/code_cleanup.py clean --p3 --yes --force   # 仅 CI 用
 ```
 
 ## 更多文档

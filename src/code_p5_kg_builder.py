@@ -319,6 +319,7 @@ class KGBuilder:
         embedding_cache_folder: Optional[str] = None,
         embedding_offline_mode: bool = True,
         qdrant_path: str = "./qdrant_data",
+        qdrant_url: Optional[str] = None,
         entities_collection: str = "entities",
         alignment_threshold: float = 0.92,
     ):
@@ -375,11 +376,18 @@ class KGBuilder:
                 raise
         logger.info("Embedding 模型加载完成")
 
-        # Qdrant 客户端
+        # Qdrant 客户端 (url 优先server模式, 为空则本地 embedded)
         from qdrant_client import QdrantClient
         from qdrant_client.http import models as rest
         self._rest = rest
-        self.qdrant = QdrantClient(path=qdrant_path)
+        self.qdrant_url = (qdrant_url or "").strip() or None
+        self.qdrant_path = qdrant_path
+        if self.qdrant_url:
+            logger.info(f"初始化 Qdrant 客户端 (server 模式): {self.qdrant_url}")
+            self.qdrant = QdrantClient(url=self.qdrant_url)
+        else:
+            logger.info(f"初始化 Qdrant 客户端 (embedded 模式): {qdrant_path}")
+            self.qdrant = QdrantClient(path=qdrant_path)
 
         # 确保 entities 集合存在
         self._ensure_entities_collection()

@@ -33,22 +33,12 @@ from openai import OpenAI
 from code_update_prompt_utils import load_prompt
 
 from code_p1_utils import count_tokens, safe_truncate
+from code_llm_client import DEFAULT_MODEL, get_client
 from code_p4_searcher import SessionSearcher, SessionSearchResult
-
-# ============================================================
-# LLM 客户端（复用 code_p5e 模式）
-# ============================================================
-
-DEFAULT_MODEL = "nemotron-3-ultra-free"
 
 
 def _get_client() -> OpenAI:
-    api_key = os.environ.get("OPENCODE_ZEN_API_KEY", "")
-    return OpenAI(
-        api_key=api_key,
-        base_url="https://opencode.ai/zen/v1",
-        timeout=120,
-    )
+    return get_client(model_name=DEFAULT_MODEL)
 
 
 # ============================================================
@@ -96,7 +86,7 @@ class SessionSummarizer:
         """
         Args:
             config_path: Phase 3 配置文件路径
-            model: LLM 模型名
+            model: LLM 模型名（注册在 config/opencode_models.yaml）
             max_context_tokens: LLM 输入 token 预算
             max_tasks: 最多纳入总结的 Task 数
             searcher: 外部传入的 SessionSearcher(共享 Qdrant 客户端时使用)
@@ -109,7 +99,7 @@ class SessionSummarizer:
 
     def _get_llm_client(self) -> OpenAI:
         if self._client is None:
-            self._client = _get_client()
+            self._client = get_client(model_name=self.model)
         return self._client
 
     def summarize(
