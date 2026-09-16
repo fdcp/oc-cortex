@@ -40,14 +40,18 @@ P5 支持两种提取模式（`run_phase5.sh` 一次跑完两种 + 可视化）�
 graph LR
     A[OpenCode Sessions] -->|P1 切分/清洗| B[chunks.jsonl]
     B -->|P2 LLM 提取| C[tasks.jsonl + chunk summary]
-    C -->|P3 向量化| D[(Qdrant<br/>3 collections)]
+    C -->|P3 向量化| D[(Qdrant<br/>tasks/chunks)]
     C -->|P5 LLM 抽取| E[(Knowledge Graph<br/>SQLite)]
-    D --> F[P4 混合搜索]
-    D --> G[P6 总结]
-    E --> G
-    E --> H[P6b 决策溯源]
-    D & E --> I[Graph-RAG]
-    E --> J[MCP Server]
+    C -->|P5 实体对齐<br/>向量相似| F[(Qdrant<br/>entities)]
+    D --> G[P4 混合搜索]
+    D --> H[P5e Graph-RAG]
+    F --> H
+    E --> H
+    G --> I[P6 总结]
+    H --> I
+    H --> J[P6b 决策溯源]
+    E --> J
+    D & E --> K[MCP Server]
 ```
 
 | Phase | 说明 | 详细文档 |
@@ -60,7 +64,7 @@ graph LR
 | **P5e** SQLite + Graph-RAG | 图谱持久化 + 向量检索 + 图 BFS 扩散 + Reranker 合并 | [`doc/code_p5e.md`](doc/code_p5e.md) |
 | **P6** 跨 Session 总结 | Top-K Task → Token 裁剪 → LLM 主题总结 | [`doc/code_p6.md`](doc/code_p6.md) |
 | **P6b** 决策溯源 + 骨架总结 | 多 hop 决策链追踪 + 图结构注入的因果总结 | [`doc/code_p6b.md`](doc/code_p6b.md) |
-| **MCP** MCP Server | 5 个工具，Claude Code / Codex / OpenCode / QoderWork 即插即用 | [`doc/code_mcp.md`](doc/code_mcp.md) |
+| **MCP** MCP Server | 10 个工具，Claude Code / Codex / OpenCode / QoderWork 即插即用 | [`doc/code_mcp.md`](doc/code_mcp.md) |
 
 ## 快速开始
 
@@ -98,13 +102,17 @@ python3 src/code_p6b_cli.py trace "FlashAttention"
 oc_sess_graph/
 ├── src/                  # Python 源码（扁平结构，code_p{N}_ 前缀区分 phase）
 ├── config/               # YAML 配置文件
-├── prompts/             # LLM Prompt 模板
-├── doc/                  # 各 Phase 详细文档 + 系统架构图（SVG）
+├── prompts/              # LLM Prompt 模板
+├── doc/                  # 各 Phase 详细文档 + 系统架构图（SVG）+ 专利交底书
 ├── output/               # 流水线输出（gitignore）
 ├── qdrant_data/          # 嵌入式 Qdrant 存储目录（gitignore，可选；生产推荐用 server 模式）
-├── tests/                # P2/P5 benchmark 脚本
+├── tests/                # P2/P4/P5/P5e benchmark 脚本（独立 CLI，非 pytest）
+├── utils/                # Qdrant 迁移/快照工具 + 文档
+├── tools/                # 专利 DOCX 生成脚本（md2docx + patchers）
+├── skills/               # OpenCode benchmark skill 定义（phase2 / phase5）
 ├── lib/                  # pyvis 前端资源
 ├── requirements.txt
+├── run_phase5.sh         # P5 一键运行（triple + entity 两模式 + 可视化）
 └── install.sh            # 安装脚本（集安装 + 模型下载）
 ```
 
@@ -219,15 +227,19 @@ python3 utils/qdrant_snapshot.py restore --in ./qdrant_snapshots/20260910
 
 ## MCP 集成
 
-将知识图谱作为 MCP Server 加载到你的 AI 编码工具，开箱即用 5 个工具：
+将知识图谱作为 MCP Server 加载到你的 AI 编码工具，开箱即用 10 个工具：
 
-| 工具 | 说明 |
-|------|------|
-| `query_kg` | BFS 扩散查询，获取实体关联 task |
-| `search_entities` | 模糊搜索实体 |
-| `get_entity_info` | 实体详情（节点 + 边） |
-| `graph_rag_search` | Graph-RAG 增强搜索 |
-| `get_kg_stats` | 图谱统计信息 |
+| 类别 | 工具 | 说明 |
+|------|------|------|
+| 检索 | `query_kg` | BFS 扩散查询，从实体出发获取关联 task |
+| | `search_entities` | 实体模糊搜索 |
+| | `get_entity_info` | 实体详情（节点 + 边） |
+| | `graph_rag_search` | Graph-RAG 增强搜索（向量 + 图谱 + Reranker） |
+| 统计 | `get_kg_stats` | 图谱统计 / 健康检查 |
+| 浏览 | `list_sessions` / `get_session_tasks` | 跨 session 历史浏览与下钻 |
+| 溯源 | `trace_decision` | 决策链追踪（选用/选型/排除/替换/依赖，不调 LLM） |
+| 总结 | `summarize` | 自由叙事式跨 session 主题总结 |
+| | `skeleton_summarize` | 骨架总结（决策链 + 图结构注入） |
 
 <details>
 <summary><b>客户端配置</b></summary>
@@ -274,6 +286,8 @@ python3 utils/qdrant_snapshot.py restore --in ./qdrant_snapshots/20260910
 | `config/code_p6_config.yaml` | P6 | 总结 LLM, token 预算, 搜索参数, 时间过滤 |
 | `config/code_p6b_config.yaml` | P6b | 决策关系分类, BFS 参数, 数据库路径 |
 | `config/code_mcp_config.yaml` | MCP | 服务 DB 路径, 上下文注入参数 |
+| `config/opencode_models.yaml` | 全局 | OpenCode 可用模型清单（`code_update_opencode_models.py` 维护） |
+| `config/prompts_table.yaml` | 全局 | Prompt 模板索引表 |
 
 > 注：`code_p3_config.yaml` 被 P3/P4/P6/P6b 共用；P6/P6b 的 YAML 为 advisory，实际参数硬编码在 `code_p6_summarizer.py` / `code_p6b_skeleton.py`。
 
@@ -300,5 +314,7 @@ python3 src/code_cleanup.py clean --p3 --yes --force   # 仅 CI 用
 
 - `doc/` — 各 Phase 详细设计文档 + 系统架构 SVG 图（`fig1`~`fig6`） + 各 phase README
 - `doc/code_p4_README.md` / `doc/code_p5_README.md` — 搜索与图谱核心模块设计
+- `doc/code_mcp.md` — MCP Server 工具详解、实战搭配模式与性能基线
+- `utils/doc/qdrant_tools.md` — Qdrant 迁移与快照工具详细用法
 - `prompts/` — 所有 LLM Prompt 模板
-- `tests/` — P2 / P5 benchmark 脚本（独立 CLI 程序，非 pytest）
+- `tests/` — P2 / P4 / P5 / P5e benchmark 脚本（独立 CLI 程序，非 pytest）
