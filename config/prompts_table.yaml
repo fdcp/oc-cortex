@@ -19,7 +19,7 @@ prompts:
 - name: SESSION_TASK_PROMPT
   file: prompts/p2_session_task_extraction.md
   start_line: 7
-  end_line: 71
+  end_line: 72
 - name: SKELETON_SYSTEM_PROMPT
   file: prompts/p6_p6b_summarization.md
   start_line: 64

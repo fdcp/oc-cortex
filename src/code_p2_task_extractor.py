@@ -607,16 +607,53 @@ class TaskExtractor:
                     f"Task '{tasks[best_task_idx].task_label}'"
                 )
 
-        # 5. 检查重复归属
+        # 5. 重复归属仲裁: 一个 chunk 只允许属于一个 task (归属唯一性)
         chunk_task_count: dict[str, int] = {}
         for t in tasks:
             for cid in t.chunk_ids:
                 chunk_task_count[cid] = chunk_task_count.get(cid, 0) + 1
-        duplicates = {k: v for k, v in chunk_task_count.items() if v > 1}
+        duplicates = {k for k, v in chunk_task_count.items() if v > 1}
         if duplicates:
             logger.warning(
-                f"Session {session_id}: {len(duplicates)} 个 chunk 被多个 task 引用"
+                f"Session {session_id}: {len(duplicates)} 个 chunk 被多个 task 引用, "
+                f"自动仲裁保留最优归属"
             )
+
+            def _owner_score(task: Task, dup_cid: str) -> float:
+                # 其他 chunk 与 dup 的最小 turn 距离, 距离越小归属越强;
+                # task 只含 dup 自身时视为最强归属 (这个 chunk 撑起了整个 task)
+                turn = chunk_turn_map[dup_cid]
+                others = [
+                    chunk_turn_map.get(c, 0)
+                    for c in task.chunk_ids
+                    if c != dup_cid
+                ]
+                if not others:
+                    return float("inf")
+                return -min(abs(t - turn) for t in others)
+
+            resolved: list[Task] = []
+            for dup_cid in sorted(duplicates, key=lambda x: chunk_turn_map.get(x, 0)):
+                owners = [t for t in tasks if dup_cid in t.chunk_ids]
+                best = owners[0]
+                for cand in owners[1:]:
+                    # 严格大于: 同分时保留先出现的 task (LLM 输出顺序通常是主→次)
+                    if _owner_score(cand, dup_cid) > _owner_score(best, dup_cid):
+                        best = cand
+                for t in tasks:
+                    if t is not best and dup_cid in t.chunk_ids:
+                        t.chunk_ids.remove(dup_cid)
+                        resolved.append(t)
+                logger.info(
+                    f"  dedupe: {dup_cid} (turn {chunk_turn_map[dup_cid]}) "
+                    f"保留在 '{best.task_label}'"
+                )
+            for t in resolved:
+                if not t.chunk_ids:
+                    logger.warning(
+                        f"Session {session_id}: task '{t.task_label}' "
+                        f"仲裁后失去全部 chunk_ids"
+                    )
 
         summaries_written = sum(1 for c in chunks if c.task_summary)
         return tasks, summaries_written, len(chunks)
