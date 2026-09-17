@@ -218,6 +218,10 @@ def main():
         help="task 输出路径"
     )
     parser.add_argument(
+        "--chunk-summaries", default=None,
+        help="chunk 总结输出路径 (覆盖配置文件 output.chunk_summaries)"
+    )
+    parser.add_argument(
         "--limit", type=int, default=None,
         help="只处理前 N 个 session (快速验证)"
     )
@@ -263,7 +267,10 @@ def main():
     sessions_chunks = group_chunks_by_session(chunks)
     logger.info(f"共 {len(sessions_chunks)} 个 session")
 
-    summary_file = config.get("output.chunk_summaries", "./output/chunks_summary_p2.jsonl")
+    summary_file = (
+        args.chunk_summaries
+        or config.get("output.chunk_summaries", "./output/chunks_summary_p2.jsonl")
+    )
     checkpoint_path = (
         args.checkpoint
         or config.get("output.checkpoint", DEFAULT_CHECKPOINT)
