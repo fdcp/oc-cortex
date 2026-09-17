@@ -1,0 +1,1335 @@
+{
+  "query": "GPU的对比和选型",
+  "use_graph_rag": true,
+  "top_k": 5,
+  "rerank_multiplier": 1.0,
+  "graph_channel_weight": 0.3,
+  "outer_rrf_k": 30,
+  "bfs_depth": 1,
+  "max_expand_nodes": 30,
+  "max_graph_tasks": 50,
+  "stages": {
+    "1_llm_entity_extraction": {
+      "input": {
+        "query": "GPU的对比和选型",
+        "model": "hy3",
+        "max_tokens": 2000,
+        "temperature": 0.1
+      },
+      "output": [
+        "GPU"
+      ],
+      "n_extracted": 1,
+      "elapsed_ms": 12896
+    },
+    "2_seed_entity_match": {
+      "input": {
+        "extracted_entities": [
+          "GPU"
+        ]
+      },
+      "output_seed_entities": [
+        "GPU"
+      ],
+      "match_details": [
+        {
+          "extracted": "GPU",
+          "matched": "GPU",
+          "match_type": "exact",
+          "task_count": 1
+        }
+      ],
+      "exact_count": 1,
+      "fuzzy_count": 0,
+      "elapsed_ms": 0
+    },
+    "3_bfs_expand": {
+      "input": {
+        "seed_entities": [
+          "GPU"
+        ],
+        "depth": 1,
+        "max_nodes": 30
+      },
+      "output_expanded": [
+        "BF16",
+        "DDP",
+        "FP16",
+        "FP32",
+        "FlashAttention",
+        "GPU",
+        "HBM",
+        "HPC",
+        "HTML 教学网页",
+        "IEEE 754",
+        "Online Softmax",
+        "Patarasuk & Yuan",
+        "Reduce-Scatter",
+        "Ring-AllReduce",
+        "Roofline模型",
+        "SRAM",
+        "Tiling",
+        "flush-to-zero",
+        "分布式训练",
+        "大模型训练",
+        "标准Attention",
+        "次规格化数",
+        "深度学习",
+        "百度",
+        "硬件级舍入规则",
+        "算术强度",
+        "通信原语"
+      ],
+      "n_expanded": 27,
+      "edges_traversed_count": "见 Stage 4 详细 (从 expanded 拉所有节点的 source_tasks)",
+      "elapsed_ms": 3
+    },
+    "4_inverse_idf_accumulate": {
+      "input": {
+        "expanded_entities_count": 27,
+        "total_tasks_global_N": 76,
+        "max_graph_tasks": 50,
+        "formula": "task_score = sum over its entities: log(1 + N/task_count)"
+      },
+      "output": {
+        "n_unique_graph_tasks": 11,
+        "n_graph_candidates_after_truncate": 11,
+        "per_entity_contrib_all": [
+          {
+            "entity": "百度",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "算术强度",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "标准Attention",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "IEEE 754",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "flush-to-zero",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "SRAM",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "Roofline模型",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "深度学习",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "HPC",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "Ring-AllReduce",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "HBM",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "硬件级舍入规则",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "Patarasuk & Yuan",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "GPU",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "Tiling",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "次规格化数",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "FP16",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "HTML 教学网页",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "FP32",
+            "task_count": 1,
+            "formula": "log(1 + 76/1) = 4.343805",
+            "idf_contrib": 4.3438,
+            "n_source_tasks": 1
+          },
+          {
+            "entity": "Online Softmax",
+            "task_count": 2,
+            "formula": "log(1 + 76/2) = 3.663562",
+            "idf_contrib": 3.6636,
+            "n_source_tasks": 2
+          },
+          {
+            "entity": "BF16",
+            "task_count": 2,
+            "formula": "log(1 + 76/2) = 3.663562",
+            "idf_contrib": 3.6636,
+            "n_source_tasks": 2
+          },
+          {
+            "entity": "通信原语",
+            "task_count": 2,
+            "formula": "log(1 + 76/2) = 3.663562",
+            "idf_contrib": 3.6636,
+            "n_source_tasks": 2
+          },
+          {
+            "entity": "DDP",
+            "task_count": 2,
+            "formula": "log(1 + 76/2) = 3.663562",
+            "idf_contrib": 3.6636,
+            "n_source_tasks": 2
+          },
+          {
+            "entity": "大模型训练",
+            "task_count": 3,
+            "formula": "log(1 + 76/3) = 3.270836",
+            "idf_contrib": 3.2708,
+            "n_source_tasks": 3
+          },
+          {
+            "entity": "Reduce-Scatter",
+            "task_count": 3,
+            "formula": "log(1 + 76/3) = 3.270836",
+            "idf_contrib": 3.2708,
+            "n_source_tasks": 3
+          },
+          {
+            "entity": "分布式训练",
+            "task_count": 3,
+            "formula": "log(1 + 76/3) = 3.270836",
+            "idf_contrib": 3.2708,
+            "n_source_tasks": 3
+          },
+          {
+            "entity": "FlashAttention",
+            "task_count": 3,
+            "formula": "log(1 + 76/3) = 3.270836",
+            "idf_contrib": 3.2708,
+            "n_source_tasks": 3
+          }
+        ],
+        "per_task_score_all": [
+          {
+            "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T3",
+            "score": 39.9316,
+            "n_entities": 10,
+            "entities": [
+              "百度",
+              "Reduce-Scatter",
+              "深度学习",
+              "通信原语",
+              "HPC",
+              "Ring-AllReduce",
+              "分布式训练",
+              "Patarasuk & Yuan",
+              "GPU",
+              "DDP"
+            ]
+          },
+          {
+            "task_id": "ses_0ca8b3533ffeRk0KWh2cSqkKOa_T1",
+            "score": 34.0702,
+            "n_entities": 8,
+            "entities": [
+              "IEEE 754",
+              "BF16",
+              "flush-to-zero",
+              "硬件级舍入规则",
+              "次规格化数",
+              "FP16",
+              "HTML 教学网页",
+              "FP32"
+            ]
+          },
+          {
+            "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T2",
+            "score": 32.9972,
+            "n_entities": 8,
+            "entities": [
+              "Online Softmax",
+              "算术强度",
+              "标准Attention",
+              "SRAM",
+              "Roofline模型",
+              "HBM",
+              "Tiling",
+              "FlashAttention"
+            ]
+          },
+          {
+            "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T2",
+            "score": 10.2052,
+            "n_entities": 3,
+            "entities": [
+              "大模型训练",
+              "Reduce-Scatter",
+              "DDP"
+            ]
+          },
+          {
+            "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T3",
+            "score": 6.9344,
+            "n_entities": 2,
+            "entities": [
+              "Online Softmax",
+              "FlashAttention"
+            ]
+          },
+          {
+            "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+            "score": 6.9344,
+            "n_entities": 2,
+            "entities": [
+              "Reduce-Scatter",
+              "通信原语"
+            ]
+          },
+          {
+            "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T1",
+            "score": 6.5417,
+            "n_entities": 2,
+            "entities": [
+              "大模型训练",
+              "分布式训练"
+            ]
+          },
+          {
+            "task_id": "ses_0c4845647ffea08jfnkY5ArLEG_T2",
+            "score": 3.6636,
+            "n_entities": 1,
+            "entities": [
+              "BF16"
+            ]
+          },
+          {
+            "task_id": "ses_0c99b81bcffeAwdzQ0s8zld82L_T1",
+            "score": 3.2708,
+            "n_entities": 1,
+            "entities": [
+              "大模型训练"
+            ]
+          },
+          {
+            "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T4",
+            "score": 3.2708,
+            "n_entities": 1,
+            "entities": [
+              "分布式训练"
+            ]
+          },
+          {
+            "task_id": "ses_0c9e4a359ffeGDSrVSG2jNVB6n_T1",
+            "score": 3.2708,
+            "n_entities": 1,
+            "entities": [
+              "FlashAttention"
+            ]
+          }
+        ]
+      },
+      "elapsed_ms": 3
+    },
+    "5a_dense_tasks": {
+      "input": {
+        "query": "GPU的对比和选型",
+        "collection": "tasks",
+        "top_k": 25
+      },
+      "n_results": 25,
+      "top10": [
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+          "score": 0.69182,
+          "label": "NVIDIA SP与Ulysses并行策略对比"
+        },
+        {
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T2",
+          "score": 0.619429,
+          "label": "ZeRO显存优化原理与通信推导"
+        },
+        {
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T3",
+          "score": 0.616821,
+          "label": "AllReduce算法原理与历史溯源"
+        },
+        {
+          "task_id": "ses_0c4845647ffea08jfnkY5ArLEG_T1",
+          "score": 0.607437,
+          "label": "GPU算力对比与选型分析"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T1",
+          "score": 0.585502,
+          "label": "P5测试脚本对比与能力确认"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T6",
+          "score": 0.584293,
+          "label": "评估 Dense Embedding 替换方案"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T4",
+          "score": 0.582647,
+          "label": "P5实体对齐机制与配置解析"
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T2",
+          "score": 0.579117,
+          "label": "Roofline模型算术强度推导"
+        },
+        {
+          "task_id": "ses_04d77c8caffexlaTbA0HPB87oY_T1",
+          "score": 0.575232,
+          "label": "OMO 多 Agent 模型配置诊断与优化"
+        },
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+          "score": 0.572852,
+          "label": "SP原理剖析与Mermaid图解迭代"
+        }
+      ]
+    },
+    "5b_chunks_summary_aggregate": {
+      "input": {
+        "query": "GPU的对比和选型",
+        "method": "sparse",
+        "top_k_chunks": 75
+      },
+      "n_chunk_hits": 75,
+      "n_task_after_agg": 45,
+      "top10": [
+        {
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T3",
+          "score": 7.525334,
+          "label": "AllReduce算法原理与历史溯源"
+        },
+        {
+          "task_id": "ses_0ca8b3533ffeRk0KWh2cSqkKOa_T1",
+          "score": 5.655567,
+          "label": "开发浮点数格式转换与教学网页"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T8",
+          "score": 5.525269,
+          "label": "P4与P5图谱关系分析"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T16",
+          "score": 4.748641,
+          "label": "整合优化专利交底书生成Ver2"
+        },
+        {
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T2",
+          "score": 4.526417,
+          "label": "ZeRO显存优化原理与通信推导"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T14",
+          "score": 4.344854,
+          "label": "专利交底书整合与冗余清理"
+        },
+        {
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T7",
+          "score": 4.292624,
+          "label": "解释系统运行原理与完善文档"
+        },
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+          "score": 3.985926,
+          "label": "NVIDIA SP与Ulysses并行策略对比"
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T4",
+          "score": 3.69367,
+          "label": "FA1与FA2底层实现及并行类比"
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T3",
+          "score": 3.645662,
+          "label": "FA状态变量Shape澄清"
+        }
+      ]
+    },
+    "5c_chunks_cleaned_text_aggregate": {
+      "input": {
+        "query": "GPU的对比和选型",
+        "method": "bm25",
+        "top_k_chunks": 75
+      },
+      "n_chunk_hits": 75,
+      "n_task_after_agg": 41,
+      "top10": [
+        {
+          "task_id": "ses_0c4845647ffea08jfnkY5ArLEG_T1",
+          "score": 9.168549,
+          "label": "GPU算力对比与选型分析"
+        },
+        {
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T3",
+          "score": 8.104362,
+          "label": "AllReduce算法原理与历史溯源"
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T2",
+          "score": 7.836732,
+          "label": "Roofline模型算术强度推导"
+        },
+        {
+          "task_id": "ses_0c4845647ffea08jfnkY5ArLEG_T2",
+          "score": 7.817999,
+          "label": "A800拓扑诊断与NCCL调优"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T14",
+          "score": 7.799195,
+          "label": "专利交底书整合与冗余清理"
+        },
+        {
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T1",
+          "score": 7.307637,
+          "label": "DDP训练流程与参数同步机制"
+        },
+        {
+          "task_id": "ses_0ca8b3533ffeRk0KWh2cSqkKOa_T1",
+          "score": 7.150221,
+          "label": "开发浮点数格式转换与教学网页"
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T4",
+          "score": 7.111668,
+          "label": "FA1与FA2底层实现及并行类比"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T2",
+          "score": 6.824334,
+          "label": "Repo改动分析与Commit规划"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T9",
+          "score": 6.674997,
+          "label": "MCP模块功能与架构分析"
+        }
+      ]
+    },
+    "5d_chunk_rrf_fuse": {
+      "input": {
+        "summary_task_n": 45,
+        "sparse_task_n": 41,
+        "fuse_k": 60,
+        "formula": "RRF(d) = 1/(60 + rank_d),  score = sum(1/(k+rank))"
+      },
+      "n_fused": 60,
+      "top10": [
+        {
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T3",
+          "rrf_score": 0.032522,
+          "label": "AllReduce算法原理与历史溯源"
+        },
+        {
+          "task_id": "ses_0ca8b3533ffeRk0KWh2cSqkKOa_T1",
+          "rrf_score": 0.031054,
+          "label": "开发浮点数格式转换与教学网页"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T14",
+          "rrf_score": 0.030536,
+          "label": "专利交底书整合与冗余清理"
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T2",
+          "rrf_score": 0.029762,
+          "label": "Roofline模型算术强度推导"
+        },
+        {
+          "task_id": "ses_0c4845647ffea08jfnkY5ArLEG_T1",
+          "rrf_score": 0.02938,
+          "label": "GPU算力对比与选型分析"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T8",
+          "rrf_score": 0.029206,
+          "label": "P4与P5图谱关系分析"
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T4",
+          "rrf_score": 0.029199,
+          "label": "FA1与FA2底层实现及并行类比"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T16",
+          "rrf_score": 0.029139,
+          "label": "整合优化专利交底书生成Ver2"
+        },
+        {
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T1",
+          "rrf_score": 0.02885,
+          "label": "DDP训练流程与参数同步机制"
+        },
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+          "rrf_score": 0.028595,
+          "label": "NVIDIA SP与Ulysses并行策略对比"
+        }
+      ]
+    },
+    "5e_final_rrf_fuse": {
+      "input": {
+        "dense_n": 25,
+        "chunk_fused_n": 60,
+        "fuse_k": 60,
+        "n_candidates_target": 25
+      },
+      "n_candidates": 25,
+      "top10": [
+        {
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T3",
+          "rrf_score": 0.032266,
+          "label": "AllReduce算法原理与历史溯源"
+        },
+        {
+          "task_id": "ses_0c4845647ffea08jfnkY5ArLEG_T1",
+          "rrf_score": 0.03101,
+          "label": "GPU算力对比与选型分析"
+        },
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+          "rrf_score": 0.030679,
+          "label": "NVIDIA SP与Ulysses并行策略对比"
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T2",
+          "rrf_score": 0.030331,
+          "label": "Roofline模型算术强度推导"
+        },
+        {
+          "task_id": "ses_0ca8b3533ffeRk0KWh2cSqkKOa_T1",
+          "rrf_score": 0.030214,
+          "label": "开发浮点数格式转换与教学网页"
+        },
+        {
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T2",
+          "rrf_score": 0.030018,
+          "label": "ZeRO显存优化原理与通信推导"
+        },
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+          "rrf_score": 0.027619,
+          "label": "SP原理剖析与Mermaid图解迭代"
+        },
+        {
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T1",
+          "rrf_score": 0.02748,
+          "label": "DDP训练流程与参数同步机制"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T8",
+          "rrf_score": 0.0272,
+          "label": "P4与P5图谱关系分析"
+        },
+        {
+          "task_id": "ses_04d77c8caffexlaTbA0HPB87oY_T1",
+          "rrf_score": 0.026993,
+          "label": "OMO 多 Agent 模型配置诊断与优化"
+        }
+      ]
+    },
+    "5_vector_search_total": {
+      "input": {
+        "query": "GPU的对比和选型",
+        "vector_top_k": 5,
+        "candidate_multiplier_internal": 5,
+        "fuse_k": 60
+      },
+      "n_candidates_returned": 25,
+      "elapsed_ms": 18
+    },
+    "6_outer_rrf_merge": {
+      "input": {
+        "vector_candidates_n": 25,
+        "graph_candidates_n": 11,
+        "graph_channel_weight": 0.3,
+        "outer_rrf_k": 30,
+        "formula": "RRF(t) = (1-0.3)/(30 + rank_v) + 0.3/(30 + rank_g),  不在通道视为 rank=+inf"
+      },
+      "n_merged": 29,
+      "merged_full": [
+        {
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T3",
+          "v_rank": 1,
+          "g_rank": 1,
+          "v_rrf_score": 0.032266,
+          "g_raw_score": 39.9316,
+          "outer_rrf": 0.032258,
+          "label": "AllReduce算法原理与历史溯源"
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T2",
+          "v_rank": 4,
+          "g_rank": 3,
+          "v_rrf_score": 0.030331,
+          "g_raw_score": 32.9972,
+          "outer_rrf": 0.029679,
+          "label": "Roofline模型算术强度推导"
+        },
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+          "v_rank": 3,
+          "g_rank": 6,
+          "v_rrf_score": 0.030679,
+          "g_raw_score": 6.9344,
+          "outer_rrf": 0.029545,
+          "label": "NVIDIA SP与Ulysses并行策略对比"
+        },
+        {
+          "task_id": "ses_0ca8b3533ffeRk0KWh2cSqkKOa_T1",
+          "v_rank": 5,
+          "g_rank": 2,
+          "v_rrf_score": 0.030214,
+          "g_raw_score": 34.0702,
+          "outer_rrf": 0.029375,
+          "label": "开发浮点数格式转换与教学网页"
+        },
+        {
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T2",
+          "v_rank": 6,
+          "g_rank": 4,
+          "v_rrf_score": 0.030018,
+          "g_raw_score": 10.2052,
+          "outer_rrf": 0.028268,
+          "label": "ZeRO显存优化原理与通信推导"
+        },
+        {
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T1",
+          "v_rank": 8,
+          "g_rank": 7,
+          "v_rrf_score": 0.02748,
+          "g_raw_score": 6.5417,
+          "outer_rrf": 0.026529,
+          "label": "DDP训练流程与参数同步机制"
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T3",
+          "v_rank": 17,
+          "g_rank": 5,
+          "v_rrf_score": 0.023559,
+          "g_raw_score": 6.9344,
+          "outer_rrf": 0.023465,
+          "label": "FA状态变量Shape澄清"
+        },
+        {
+          "task_id": "ses_0c4845647ffea08jfnkY5ArLEG_T1",
+          "v_rank": 2,
+          "g_rank": null,
+          "v_rrf_score": 0.03101,
+          "g_raw_score": null,
+          "outer_rrf": 0.021875,
+          "label": "GPU算力对比与选型分析"
+        },
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+          "v_rank": 7,
+          "g_rank": null,
+          "v_rrf_score": 0.027619,
+          "g_raw_score": null,
+          "outer_rrf": 0.018919,
+          "label": "SP原理剖析与Mermaid图解迭代"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T8",
+          "v_rank": 9,
+          "g_rank": null,
+          "v_rrf_score": 0.0272,
+          "g_raw_score": null,
+          "outer_rrf": 0.017949,
+          "label": "P4与P5图谱关系分析"
+        },
+        {
+          "task_id": "ses_04d77c8caffexlaTbA0HPB87oY_T1",
+          "v_rank": 10,
+          "g_rank": null,
+          "v_rrf_score": 0.026993,
+          "g_raw_score": null,
+          "outer_rrf": 0.0175,
+          "label": "OMO 多 Agent 模型配置诊断与优化"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T1",
+          "v_rank": 11,
+          "g_rank": null,
+          "v_rrf_score": 0.026137,
+          "g_raw_score": null,
+          "outer_rrf": 0.017073,
+          "label": "P5测试脚本对比与能力确认"
+        },
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T3",
+          "v_rank": 12,
+          "g_rank": null,
+          "v_rrf_score": 0.025992,
+          "g_raw_score": null,
+          "outer_rrf": 0.016667,
+          "label": "NeMo Megatron Bridge定位与价值辨析"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T4",
+          "v_rank": 13,
+          "g_rank": null,
+          "v_rrf_score": 0.025452,
+          "g_raw_score": null,
+          "outer_rrf": 0.016279,
+          "label": "P5实体对齐机制与配置解析"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T6",
+          "v_rank": 14,
+          "g_rank": null,
+          "v_rrf_score": 0.024955,
+          "g_raw_score": null,
+          "outer_rrf": 0.015909,
+          "label": "评估 Dense Embedding 替换方案"
+        },
+        {
+          "task_id": "ses_0c99b81bcffeAwdzQ0s8zld82L_T2",
+          "v_rank": 15,
+          "g_rank": null,
+          "v_rrf_score": 0.02411,
+          "g_raw_score": null,
+          "outer_rrf": 0.015556,
+          "label": "编写优化器进阶指南v2"
+        },
+        {
+          "task_id": "ses_04b86396effeR5frMxXdiRtezt_T1",
+          "v_rank": 16,
+          "g_rank": null,
+          "v_rrf_score": 0.02381,
+          "g_raw_score": null,
+          "outer_rrf": 0.015217,
+          "label": "排查 opencode 中 Copilot 模型不可见问题"
+        },
+        {
+          "task_id": "ses_04d77c8caffexlaTbA0HPB87oY_T2",
+          "v_rank": 18,
+          "g_rank": null,
+          "v_rrf_score": 0.023235,
+          "g_raw_score": null,
+          "outer_rrf": 0.014583,
+          "label": "OMO 配置文件优化"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T7",
+          "v_rank": 19,
+          "g_rank": null,
+          "v_rrf_score": 0.023222,
+          "g_raw_score": null,
+          "outer_rrf": 0.014286,
+          "label": "规划 P5 稀疏向量改造方案"
+        },
+        {
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T6",
+          "v_rank": 20,
+          "g_rank": null,
+          "v_rrf_score": 0.022873,
+          "g_raw_score": null,
+          "outer_rrf": 0.014,
+          "label": "实现内容指纹与增量处理机制"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T12",
+          "v_rank": 21,
+          "g_rank": null,
+          "v_rrf_score": 0.022809,
+          "g_raw_score": null,
+          "outer_rrf": 0.013725,
+          "label": "GraphRAG业界应用调研"
+        },
+        {
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T2",
+          "v_rank": 22,
+          "g_rank": null,
+          "v_rrf_score": 0.021508,
+          "g_raw_score": null,
+          "outer_rrf": 0.013462,
+          "label": "编写并校验端到端测试指南"
+        },
+        {
+          "task_id": "ses_10772d114fferNiLEcTQ8YNd5k_T2",
+          "v_rank": 23,
+          "g_rank": null,
+          "v_rrf_score": 0.020966,
+          "g_raw_score": null,
+          "outer_rrf": 0.013208,
+          "label": "分析 omo 模型配置及影响"
+        },
+        {
+          "task_id": "ses_04e4b0b9cffe8OApx3qp7sRHb3_T1",
+          "v_rank": 24,
+          "g_rank": null,
+          "v_rrf_score": 0.020833,
+          "g_raw_score": null,
+          "outer_rrf": 0.012963,
+          "label": "排查 Copilot 无法显示 Claude 模型"
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T14",
+          "v_rank": 25,
+          "g_rank": null,
+          "v_rrf_score": 0.015873,
+          "g_raw_score": null,
+          "outer_rrf": 0.012727,
+          "label": "专利交底书整合与冗余清理"
+        },
+        {
+          "task_id": "ses_0c4845647ffea08jfnkY5ArLEG_T2",
+          "v_rank": null,
+          "g_rank": 8,
+          "v_rrf_score": null,
+          "g_raw_score": 3.6636,
+          "outer_rrf": 0.007895,
+          "label": "A800拓扑诊断与NCCL调优"
+        },
+        {
+          "task_id": "ses_0c99b81bcffeAwdzQ0s8zld82L_T1",
+          "v_rank": null,
+          "g_rank": 9,
+          "v_rrf_score": null,
+          "g_raw_score": 3.2708,
+          "outer_rrf": 0.007692,
+          "label": "编写优化器基础指南v1"
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T4",
+          "v_rank": null,
+          "g_rank": 10,
+          "v_rrf_score": null,
+          "g_raw_score": 3.2708,
+          "outer_rrf": 0.0075,
+          "label": "FA1与FA2底层实现及并行类比"
+        },
+        {
+          "task_id": "ses_0c9e4a359ffeGDSrVSG2jNVB6n_T1",
+          "v_rank": null,
+          "g_rank": 11,
+          "v_rrf_score": null,
+          "g_raw_score": 3.2708,
+          "outer_rrf": 0.007317,
+          "label": "BF16训练指南v4扩充"
+        }
+      ],
+      "elapsed_ms": 0
+    },
+    "7_rerank_full": {
+      "input": {
+        "query": "GPU的对比和选型",
+        "n_candidates_in": 29,
+        "top_k": 5,
+        "reranker_model": "Qwen/Qwen3-Reranker-0.6B"
+      },
+      "output": {
+        "rerank_input_n": 29,
+        "rerank_input_task_ids": [
+          "ses_053c0ac72ffe883RpIvqU1LUEw_T3",
+          "ses_0c5b6171bfferME7He2F8G6UuJ_T2",
+          "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+          "ses_0ca8b3533ffeRk0KWh2cSqkKOa_T1",
+          "ses_053c0ac72ffe883RpIvqU1LUEw_T2",
+          "ses_053c0ac72ffe883RpIvqU1LUEw_T1",
+          "ses_0c5b6171bfferME7He2F8G6UuJ_T3",
+          "ses_0c4845647ffea08jfnkY5ArLEG_T1",
+          "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+          "ses_0870d73a7ffehev1FO7HA2HSze_T8",
+          "ses_04d77c8caffexlaTbA0HPB87oY_T1",
+          "ses_0870d73a7ffehev1FO7HA2HSze_T1",
+          "ses_12c6bd8dfffevT51PypMW2v5Mx_T3",
+          "ses_0870d73a7ffehev1FO7HA2HSze_T4",
+          "ses_0870d73a7ffehev1FO7HA2HSze_T6",
+          "ses_0c99b81bcffeAwdzQ0s8zld82L_T2",
+          "ses_04b86396effeR5frMxXdiRtezt_T1",
+          "ses_04d77c8caffexlaTbA0HPB87oY_T2",
+          "ses_0870d73a7ffehev1FO7HA2HSze_T7",
+          "ses_04b987deaffeKfDUR5b1Y99vcx_T6",
+          "ses_0870d73a7ffehev1FO7HA2HSze_T12",
+          "ses_04b987deaffeKfDUR5b1Y99vcx_T2",
+          "ses_10772d114fferNiLEcTQ8YNd5k_T2",
+          "ses_04e4b0b9cffe8OApx3qp7sRHb3_T1",
+          "ses_0870d73a7ffehev1FO7HA2HSze_T14",
+          "ses_0c4845647ffea08jfnkY5ArLEG_T2",
+          "ses_0c99b81bcffeAwdzQ0s8zld82L_T1",
+          "ses_0c5b6171bfferME7He2F8G6UuJ_T4",
+          "ses_0c9e4a359ffeGDSrVSG2jNVB6n_T1"
+        ],
+        "rerank_input_labels": [
+          "AllReduce算法原理与历史溯源",
+          "Roofline模型算术强度推导",
+          "NVIDIA SP与Ulysses并行策略对比",
+          "开发浮点数格式转换与教学网页",
+          "ZeRO显存优化原理与通信推导",
+          "DDP训练流程与参数同步机制",
+          "FA状态变量Shape澄清",
+          "GPU算力对比与选型分析",
+          "SP原理剖析与Mermaid图解迭代",
+          "P4与P5图谱关系分析",
+          "OMO 多 Agent 模型配置诊断与优化",
+          "P5测试脚本对比与能力确认",
+          "NeMo Megatron Bridge定位与价值辨析",
+          "P5实体对齐机制与配置解析",
+          "评估 Dense Embedding 替换方案",
+          "编写优化器进阶指南v2",
+          "排查 opencode 中 Copilot 模型不可见问题",
+          "OMO 配置文件优化",
+          "规划 P5 稀疏向量改造方案",
+          "实现内容指纹与增量处理机制",
+          "GraphRAG业界应用调研",
+          "编写并校验端到端测试指南",
+          "分析 omo 模型配置及影响",
+          "排查 Copilot 无法显示 Claude 模型",
+          "专利交底书整合与冗余清理",
+          "A800拓扑诊断与NCCL调优",
+          "编写优化器基础指南v1",
+          "FA1与FA2底层实现及并行类比",
+          "BF16训练指南v4扩充"
+        ],
+        "rerank_scores": [
+          {
+            "orig_index": 7,
+            "task_id": "ses_0c4845647ffea08jfnkY5ArLEG_T1",
+            "label": "GPU算力对比与选型分析",
+            "rerank_score": 0.992423
+          },
+          {
+            "orig_index": 2,
+            "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+            "label": "NVIDIA SP与Ulysses并行策略对比",
+            "rerank_score": 0.943348
+          },
+          {
+            "orig_index": 6,
+            "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T3",
+            "label": "FA状态变量Shape澄清",
+            "rerank_score": 0.878314
+          },
+          {
+            "orig_index": 11,
+            "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T1",
+            "label": "P5测试脚本对比与能力确认",
+            "rerank_score": 0.803174
+          },
+          {
+            "orig_index": 27,
+            "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T4",
+            "label": "FA1与FA2底层实现及并行类比",
+            "rerank_score": 0.758511
+          },
+          {
+            "orig_index": 15,
+            "task_id": "ses_0c99b81bcffeAwdzQ0s8zld82L_T2",
+            "label": "编写优化器进阶指南v2",
+            "rerank_score": 0.476793
+          },
+          {
+            "orig_index": 16,
+            "task_id": "ses_04b86396effeR5frMxXdiRtezt_T1",
+            "label": "排查 opencode 中 Copilot 模型不可见问题",
+            "rerank_score": 0.47658
+          },
+          {
+            "orig_index": 21,
+            "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T2",
+            "label": "编写并校验端到端测试指南",
+            "rerank_score": 0.472683
+          },
+          {
+            "orig_index": 12,
+            "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T3",
+            "label": "NeMo Megatron Bridge定位与价值辨析",
+            "rerank_score": 0.225417
+          },
+          {
+            "orig_index": 8,
+            "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+            "label": "SP原理剖析与Mermaid图解迭代",
+            "rerank_score": 0.105211
+          },
+          {
+            "orig_index": 18,
+            "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T7",
+            "label": "规划 P5 稀疏向量改造方案",
+            "rerank_score": 0.078926
+          },
+          {
+            "orig_index": 3,
+            "task_id": "ses_0ca8b3533ffeRk0KWh2cSqkKOa_T1",
+            "label": "开发浮点数格式转换与教学网页",
+            "rerank_score": 0.075858
+          },
+          {
+            "orig_index": 9,
+            "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T8",
+            "label": "P4与P5图谱关系分析",
+            "rerank_score": 0.054601
+          },
+          {
+            "orig_index": 23,
+            "task_id": "ses_04e4b0b9cffe8OApx3qp7sRHb3_T1",
+            "label": "排查 Copilot 无法显示 Claude 模型",
+            "rerank_score": 0.052814
+          },
+          {
+            "orig_index": 24,
+            "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T14",
+            "label": "专利交底书整合与冗余清理",
+            "rerank_score": 0.042563
+          },
+          {
+            "orig_index": 22,
+            "task_id": "ses_10772d114fferNiLEcTQ8YNd5k_T2",
+            "label": "分析 omo 模型配置及影响",
+            "rerank_score": 0.027796
+          },
+          {
+            "orig_index": 19,
+            "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T6",
+            "label": "实现内容指纹与增量处理机制",
+            "rerank_score": 0.016915
+          },
+          {
+            "orig_index": 26,
+            "task_id": "ses_0c99b81bcffeAwdzQ0s8zld82L_T1",
+            "label": "编写优化器基础指南v1",
+            "rerank_score": 0.011642
+          },
+          {
+            "orig_index": 5,
+            "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T1",
+            "label": "DDP训练流程与参数同步机制",
+            "rerank_score": 0.009268
+          },
+          {
+            "orig_index": 1,
+            "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T2",
+            "label": "Roofline模型算术强度推导",
+            "rerank_score": 0.006193
+          },
+          {
+            "orig_index": 0,
+            "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T3",
+            "label": "AllReduce算法原理与历史溯源",
+            "rerank_score": 0.004382
+          },
+          {
+            "orig_index": 4,
+            "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T2",
+            "label": "ZeRO显存优化原理与通信推导",
+            "rerank_score": 0.000296
+          },
+          {
+            "orig_index": 20,
+            "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T12",
+            "label": "GraphRAG业界应用调研",
+            "rerank_score": 0.000185
+          },
+          {
+            "orig_index": 10,
+            "task_id": "ses_04d77c8caffexlaTbA0HPB87oY_T1",
+            "label": "OMO 多 Agent 模型配置诊断与优化",
+            "rerank_score": 6.9e-05
+          },
+          {
+            "orig_index": 17,
+            "task_id": "ses_04d77c8caffexlaTbA0HPB87oY_T2",
+            "label": "OMO 配置文件优化",
+            "rerank_score": 3.7e-05
+          },
+          {
+            "orig_index": 14,
+            "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T6",
+            "label": "评估 Dense Embedding 替换方案",
+            "rerank_score": 2.9e-05
+          },
+          {
+            "orig_index": 28,
+            "task_id": "ses_0c9e4a359ffeGDSrVSG2jNVB6n_T1",
+            "label": "BF16训练指南v4扩充",
+            "rerank_score": 1.1e-05
+          },
+          {
+            "orig_index": 25,
+            "task_id": "ses_0c4845647ffea08jfnkY5ArLEG_T2",
+            "label": "A800拓扑诊断与NCCL调优",
+            "rerank_score": 1e-05
+          },
+          {
+            "orig_index": 13,
+            "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T4",
+            "label": "P5实体对齐机制与配置解析",
+            "rerank_score": 2e-06
+          }
+        ],
+        "top5_task_ids": [
+          "ses_0c4845647ffea08jfnkY5ArLEG_T1",
+          "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+          "ses_0c5b6171bfferME7He2F8G6UuJ_T3",
+          "ses_0870d73a7ffehev1FO7HA2HSze_T1",
+          "ses_0c5b6171bfferME7He2F8G6UuJ_T4"
+        ]
+      },
+      "elapsed_ms": 11318
+    },
+    "8_source_distribution": {
+      "top5_task_ids": [
+        "ses_0c4845647ffea08jfnkY5ArLEG_T1",
+        "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+        "ses_0c5b6171bfferME7He2F8G6UuJ_T3",
+        "ses_0870d73a7ffehev1FO7HA2HSze_T1",
+        "ses_0c5b6171bfferME7He2F8G6UuJ_T4"
+      ],
+      "source_distribution": {
+        "vector": 2,
+        "graph": 1,
+        "both": 2,
+        "neither": 0
+      }
+    }
+  },
+  "final_top_k": [
+    {
+      "rank": 1,
+      "task_id": "ses_0c4845647ffea08jfnkY5ArLEG_T1",
+      "label": "GPU算力对比与选型分析",
+      "task_summary": "为明确大模型硬件选型，对比了 V100 至 H200 的算力、显存及互联差异。明确 A800/H800 为 NVLink 阉割版，H200 算力同 H100 但显存与带宽大幅升级，并推导了其对长序列训练和推理的影响。结论：H200 在长上下文推理和长序列训练中优势显著；H800 因互联阉割在多卡大模型训练中性价比极低，仅适用单卡推理。",
+      "rerank_score": 0.992423,
+      "outer_rrf_score": 0.021875,
+      "v_rank": 2,
+      "g_rank": null,
+      "g_raw_score": null
+    },
+    {
+      "rank": 2,
+      "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+      "label": "NVIDIA SP与Ulysses并行策略对比",
+      "task_summary": "背景与目标：针对 8 GPU (TP=2, SP=4) 场景，澄清 Tensor Parallelism 与 Sequence Parallelism 的正交关系，并深度对比 NVIDIA SP 与 Ulysses 两种序列并行实现方案的通信机制与适用边界。\n核心产出与关键决策：确认 TP（切 head）与 SP（切 seq）完全正交。在 SP 实现上，NVIDIA SP 使用 all-gather/reduce-scatter，Ulysses 使用 all-to-all 进行 seq 与 head 的互换。决策明确两者在单一 attention 块内互斥，但在整个模型中可混合使用（如 attention 内用 Ulysses，非 attention 区域用 NVIDIA SP）。\n结论与意义：指出生产环境中主流倾向于纯 Ulysses 或 ring attention，NVIDIA SP 逐渐减少。该分析为多卡长序列训练时的通信原语选型和 hybrid 并行架构设计提供了清晰的理论指导。",
+      "rerank_score": 0.943348,
+      "outer_rrf_score": 0.029545,
+      "v_rank": 3,
+      "g_rank": 6,
+      "g_raw_score": 6.9344
+    },
+    {
+      "rank": 3,
+      "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T3",
+      "label": "FA状态变量Shape澄清",
+      "task_summary": "澄清了 FlashAttention 算法中用于 online softmax 的累加量 m（行最大值）和 l（指数和）的 shape 为 (B, H, N)（即每个 query 位置一个标量，无 head_dim 维度），并明确了其必须使用 FP32 精度以保证数值稳定性及反向传播的显存开销。",
+      "rerank_score": 0.878314,
+      "outer_rrf_score": 0.023465,
+      "v_rank": 17,
+      "g_rank": 5,
+      "g_raw_score": 6.9344
+    },
+    {
+      "rank": 4,
+      "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T1",
+      "label": "P5测试脚本对比与能力确认",
+      "task_summary": "背景与目标：为明确 Phase 5 阶段两个测试脚本的定位与能力边界，对比分析 `code_p5_benchmark.py` 与 `test_p5.py` 的功能实现及输出特性。核心产出与关键决策：确认 `code_p5_benchmark.py` 为轻量级三元组抽取探针（仅测抽取解析，无隔离），而 `test_p5.py` 为覆盖抽取-对齐-图谱构建全链路的工程化回归测试（含临时目录隔离与多格式报告）。同时明确两者均不支持 HTML 可视化输出（该功能由 `code_p5_main.py` 负责）。结论与意义：厘清了早期探针与完整回归测试的适用场景，为后续模型评测与可视化需求提供了准确的脚本选型依据。",
+      "rerank_score": 0.803174,
+      "outer_rrf_score": 0.017073,
+      "v_rank": 11,
+      "g_rank": null,
+      "g_raw_score": null
+    },
+    {
+      "rank": 5,
+      "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T4",
+      "label": "FA1与FA2底层实现及并行类比",
+      "task_summary": "背景：深入剖析 FlashAttention-1 与 FlashAttention-2 的底层 CUDA 实现差异及其与分布式训练概念的关联。核心产出：明确了 FA1 沿 head_dim 切分 K block 导致 warp 间需 syncwarp，而 FA2 改为沿序列行切分 K block 分配给不同 warp，通过 atomicAdd 累加结果消除同步阻塞；同时确认 FA2 支持 head_dim=256 并优化了反向传播。结论：FA2 的 work partitioning 本质上是“warp 粒度的序列并行”，与跨设备的 Ring Attention 思想同构。",
+      "rerank_score": 0.758511,
+      "outer_rrf_score": 0.0075,
+      "v_rank": null,
+      "g_rank": 10,
+      "g_raw_score": 3.2708
+    }
+  ],
+  "source_distribution": {
+    "vector": 2,
+    "graph": 1,
+    "both": 2,
+    "neither": 0
+  },
+  "wall_ms": 24242,
+  "db": "entity"
+}

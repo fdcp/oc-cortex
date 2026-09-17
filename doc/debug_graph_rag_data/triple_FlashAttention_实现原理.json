@@ -1,0 +1,473 @@
+{
+  "query": "FlashAttention 实现原理",
+  "top_k": 5,
+  "use_reranker": true,
+  "use_graph_rag": true,
+  "graph_channel_weight": 0.3,
+  "bfs_depth": 1,
+  "max_expand_nodes": 30,
+  "max_graph_tasks": 50,
+  "rerank_multiplier": 2.0,
+  "outer_rrf_k": 30,
+  "stages": [
+    {
+      "stage": "1_llm_entity_extraction",
+      "elapsed_ms": 21644,
+      "extracted_entities": [
+        "FlashAttention"
+      ],
+      "count": 1
+    },
+    {
+      "stage": "2_seed_entity_match",
+      "elapsed_ms": 1,
+      "seed_entities": [
+        "FlashAttention"
+      ],
+      "match_details": [
+        {
+          "extracted": "FlashAttention",
+          "matched": "FlashAttention",
+          "match_type": "exact",
+          "task_count": 3
+        }
+      ],
+      "exact_count": 1,
+      "fuzzy_count": 0
+    },
+    {
+      "stage": "3_bfs_expand",
+      "elapsed_ms": 2,
+      "expanded_entities": [
+        "BF16 混合精度训练",
+        "BF16混合精度训练指南",
+        "Compute-Bound",
+        "FlashAttention",
+        "GPU",
+        "GPU算力",
+        "HBM访问",
+        "N² HBM访问",
+        "Online Softmax",
+        "Roofline模型",
+        "Tiling",
+        "online softmax",
+        "√(Nd)/4",
+        "反向传播",
+        "数值稳定性",
+        "标准Attention",
+        "训练加速三件套"
+      ],
+      "expanded_count": 17,
+      "seed_to_expand_ratio": 17.0
+    },
+    {
+      "stage": "4_inverse_idf_accumulate",
+      "elapsed_ms": 4,
+      "total_tasks_global": 76,
+      "unique_graph_tasks": 4,
+      "graph_candidates_after_truncate": 4,
+      "top10_entity_contrib": [
+        {
+          "entity": "online softmax",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "√(Nd)/4",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "GPU算力",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "数值稳定性",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "BF16 混合精度训练",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "Tiling",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "Roofline模型",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "训练加速三件套",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "Compute-Bound",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "N² HBM访问",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        }
+      ],
+      "top10_task_scores": [
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T2",
+          "score": 46.0286,
+          "n_entities": 11
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T3",
+          "score": 19.2856,
+          "n_entities": 5
+        },
+        {
+          "task_id": "ses_0c9e4a359ffeGDSrVSG2jNVB6n_T1",
+          "score": 16.3023,
+          "n_entities": 4
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T4",
+          "score": 3.6636,
+          "n_entities": 1
+        }
+      ],
+      "id_contrib_distribution": {
+        "count": 17,
+        "contrib_min": 3.2708,
+        "contrib_max": 4.3438,
+        "contrib_mean": 4.2007,
+        "task_count_min": 1,
+        "task_count_max": 3,
+        "task_count_mean": 1.24
+      }
+    },
+    {
+      "stage": "5_vector_search",
+      "elapsed_ms": 38,
+      "retrieval_query": "FlashAttention 实现原理",
+      "vector_top_k_requested": 10,
+      "vector_results_count": 50,
+      "vector_score_stats": {
+        "count": 50,
+        "min": 0.014925,
+        "max": 0.032266,
+        "mean": 0.023321
+      },
+      "top10_vector_results": [
+        {
+          "rank": 1,
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T2",
+          "hybrid_score": 0.032266,
+          "label": "Roofline模型算术强度推导"
+        },
+        {
+          "rank": 2,
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T4",
+          "hybrid_score": 0.032266,
+          "label": "FA1与FA2底层实现及并行类比"
+        },
+        {
+          "rank": 3,
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T3",
+          "hybrid_score": 0.031514,
+          "label": "FA状态变量Shape澄清"
+        },
+        {
+          "rank": 4,
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T1",
+          "hybrid_score": 0.03101,
+          "label": "FSDP与SDPA概念澄清"
+        },
+        {
+          "rank": 5,
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+          "hybrid_score": 0.030777,
+          "label": "SP原理剖析与Mermaid图解迭代"
+        },
+        {
+          "rank": 6,
+          "task_id": "ses_0c4e0312affeUm1WYU03ISPgU2_T1",
+          "hybrid_score": 0.029412,
+          "label": "RoPE预计算函数实现解析"
+        },
+        {
+          "rank": 7,
+          "task_id": "ses_0e8898453ffeS7ByDo9zjP8Z8h_T2",
+          "hybrid_score": 0.029211,
+          "label": "并行训练尾部填充代码解析"
+        },
+        {
+          "rank": 8,
+          "task_id": "ses_0ca8b3533ffeRk0KWh2cSqkKOa_T1",
+          "hybrid_score": 0.028665,
+          "label": "开发浮点数格式转换与教学网页"
+        },
+        {
+          "rank": 9,
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T2",
+          "hybrid_score": 0.027973,
+          "label": "ZeRO显存优化原理与通信推导"
+        },
+        {
+          "rank": 10,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T9",
+          "hybrid_score": 0.027313,
+          "label": "MCP模块功能与架构分析"
+        }
+      ]
+    },
+    {
+      "stage": "6_outer_rrf_merge",
+      "elapsed_ms": 44412,
+      "merged_candidates": 50,
+      "outer_rrf_k": 30,
+      "graph_channel_weight": 0.3
+    },
+    {
+      "stage": "7_rerank",
+      "elapsed_ms": 44412,
+      "rerank_time_ms": 18713,
+      "use_reranker": true,
+      "final_count": 5
+    },
+    {
+      "stage": "8_source_distribution",
+      "elapsed_ms": 0,
+      "source_dist": {
+        "vector": 3,
+        "graph": 0,
+        "both": 2,
+        "neither": 0
+      },
+      "final_results": [
+        {
+          "rank": 1,
+          "task_id": "ses_0ca8b3533ffeRk0KWh2cSqkKOa_T1",
+          "source": "vector",
+          "rerank_score": 0.833325,
+          "hybrid_score": 0.018421,
+          "vector_rank": 8,
+          "graph_rank": null,
+          "graph_raw_score": null,
+          "label": "开发浮点数格式转换与教学网页",
+          "summary_preview": "为深入理解 IEEE 754 浮点数格式，开发了支持十进制与 FP32/FP16/BF16 互转的 HTML 教学网页。核心产出包括：实现双向转换与位可视化，采用硬件级舍入规则贴合 GPU 行为；新增计算示例演示典型数值计算过程；补充次规格"
+        },
+        {
+          "rank": 2,
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T4",
+          "source": "both",
+          "rerank_score": 0.697609,
+          "hybrid_score": 0.030699,
+          "vector_rank": 2,
+          "graph_rank": 4,
+          "graph_raw_score": 3.663562,
+          "label": "FA1与FA2底层实现及并行类比",
+          "summary_preview": "背景：深入剖析 FlashAttention-1 与 FlashAttention-2 的底层 CUDA 实现差异及其与分布式训练概念的关联。核心产出：明确了 FA1 沿 head_dim 切分 K block 导致 warp 间需 syn"
+        },
+        {
+          "rank": 3,
+          "task_id": "ses_0c9e4a359ffeGDSrVSG2jNVB6n_T1",
+          "source": "both",
+          "rerank_score": 0.577495,
+          "hybrid_score": 0.026164,
+          "vector_rank": 11,
+          "graph_rank": 3,
+          "graph_raw_score": 16.302252,
+          "label": "BF16训练指南v4扩充",
+          "summary_preview": "背景与目标：审查现有的 BF16 混合精度训练指南（v3），识别内容缺口并规划 v4 版本的扩充方案，以完善 LLM 训练的工程实践与前沿技术覆盖。\n核心产出与关键决策：识别出梯度累积、Activation Checkpointing、Fl"
+        },
+        {
+          "rank": 4,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T6",
+          "source": "vector",
+          "rerank_score": 0.48438,
+          "hybrid_score": 0.011475,
+          "vector_rank": 31,
+          "graph_rank": null,
+          "graph_raw_score": null,
+          "label": "评估 Dense Embedding 替换方案",
+          "summary_preview": "背景与目标：评估在系统中替换 Dense Embedding 模型的可行性、硬约束及实施步骤。\n核心产出与关键决策：确认代码层支持通过修改 YAML 配置替换 HuggingFace 兼容模型（如 BGE-base/large/m3），但必"
+        },
+        {
+          "rank": 5,
+          "task_id": "ses_0e8898453ffeS7ByDo9zjP8Z8h_T2",
+          "source": "vector",
+          "rerank_score": 0.426322,
+          "hybrid_score": 0.018919,
+          "vector_rank": 7,
+          "graph_rank": null,
+          "graph_raw_score": null,
+          "label": "并行训练尾部填充代码解析",
+          "summary_preview": "背景与目标：为解决 Megatron-LM 在开启序列并行（SP）或上下文并行（CP）时，因 packed sequence 物理宽度与 `cu_seqlens` 逻辑宽度不一致导致 attention gather 产生 NaN 梯度的问"
+        }
+      ]
+    },
+    {
+      "stage": "9_timing",
+      "elapsed_ms": 0,
+      "vector_time_ms": 11,
+      "graph_time_ms": 25686,
+      "rerank_time_ms": 18713,
+      "total_time_ms": 44412,
+      "per_stage_ms": [
+        {
+          "stage": "1_llm_entity_extraction",
+          "elapsed_ms": 21644
+        },
+        {
+          "stage": "2_seed_entity_match",
+          "elapsed_ms": 1
+        },
+        {
+          "stage": "3_bfs_expand",
+          "elapsed_ms": 2
+        },
+        {
+          "stage": "4_inverse_idf_accumulate",
+          "elapsed_ms": 4
+        },
+        {
+          "stage": "5_vector_search",
+          "elapsed_ms": 38
+        },
+        {
+          "stage": "6_outer_rrf_merge",
+          "elapsed_ms": 44412
+        },
+        {
+          "stage": "7_rerank",
+          "elapsed_ms": 44412
+        },
+        {
+          "stage": "8_source_distribution",
+          "elapsed_ms": 0
+        }
+      ]
+    }
+  ],
+  "query_entities": [
+    "FlashAttention"
+  ],
+  "seed_entities": [
+    "FlashAttention"
+  ],
+  "expanded_entities": [
+    "BF16 混合精度训练",
+    "BF16混合精度训练指南",
+    "Compute-Bound",
+    "FlashAttention",
+    "GPU",
+    "GPU算力",
+    "HBM访问",
+    "N² HBM访问",
+    "Online Softmax",
+    "Roofline模型",
+    "Tiling",
+    "online softmax",
+    "√(Nd)/4",
+    "反向传播",
+    "数值稳定性",
+    "标准Attention",
+    "训练加速三件套"
+  ],
+  "expanded_count": 17,
+  "vector_results_count": 50,
+  "source_distribution": {
+    "vector": 3,
+    "graph": 0,
+    "both": 2,
+    "neither": 0
+  },
+  "final_results": [
+    {
+      "rank": 1,
+      "task_id": "ses_0ca8b3533ffeRk0KWh2cSqkKOa_T1",
+      "source": "vector",
+      "rerank_score": 0.833325,
+      "hybrid_score": 0.018421,
+      "vector_rank": 8,
+      "graph_rank": null,
+      "graph_raw_score": null,
+      "label": "开发浮点数格式转换与教学网页",
+      "summary_preview": "为深入理解 IEEE 754 浮点数格式，开发了支持十进制与 FP32/FP16/BF16 互转的 HTML 教学网页。核心产出包括：实现双向转换与位可视化，采用硬件级舍入规则贴合 GPU 行为；新增计算示例演示典型数值计算过程；补充次规格"
+    },
+    {
+      "rank": 2,
+      "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T4",
+      "source": "both",
+      "rerank_score": 0.697609,
+      "hybrid_score": 0.030699,
+      "vector_rank": 2,
+      "graph_rank": 4,
+      "graph_raw_score": 3.663562,
+      "label": "FA1与FA2底层实现及并行类比",
+      "summary_preview": "背景：深入剖析 FlashAttention-1 与 FlashAttention-2 的底层 CUDA 实现差异及其与分布式训练概念的关联。核心产出：明确了 FA1 沿 head_dim 切分 K block 导致 warp 间需 syn"
+    },
+    {
+      "rank": 3,
+      "task_id": "ses_0c9e4a359ffeGDSrVSG2jNVB6n_T1",
+      "source": "both",
+      "rerank_score": 0.577495,
+      "hybrid_score": 0.026164,
+      "vector_rank": 11,
+      "graph_rank": 3,
+      "graph_raw_score": 16.302252,
+      "label": "BF16训练指南v4扩充",
+      "summary_preview": "背景与目标：审查现有的 BF16 混合精度训练指南（v3），识别内容缺口并规划 v4 版本的扩充方案，以完善 LLM 训练的工程实践与前沿技术覆盖。\n核心产出与关键决策：识别出梯度累积、Activation Checkpointing、Fl"
+    },
+    {
+      "rank": 4,
+      "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T6",
+      "source": "vector",
+      "rerank_score": 0.48438,
+      "hybrid_score": 0.011475,
+      "vector_rank": 31,
+      "graph_rank": null,
+      "graph_raw_score": null,
+      "label": "评估 Dense Embedding 替换方案",
+      "summary_preview": "背景与目标：评估在系统中替换 Dense Embedding 模型的可行性、硬约束及实施步骤。\n核心产出与关键决策：确认代码层支持通过修改 YAML 配置替换 HuggingFace 兼容模型（如 BGE-base/large/m3），但必"
+    },
+    {
+      "rank": 5,
+      "task_id": "ses_0e8898453ffeS7ByDo9zjP8Z8h_T2",
+      "source": "vector",
+      "rerank_score": 0.426322,
+      "hybrid_score": 0.018919,
+      "vector_rank": 7,
+      "graph_rank": null,
+      "graph_raw_score": null,
+      "label": "并行训练尾部填充代码解析",
+      "summary_preview": "背景与目标：为解决 Megatron-LM 在开启序列并行（SP）或上下文并行（CP）时，因 packed sequence 物理宽度与 `cu_seqlens` 逻辑宽度不一致导致 attention gather 产生 NaN 梯度的问"
+    }
+  ],
+  "total_time_ms": 44412,
+  "total_wall_ms": 66104,
+  "db": "triple",
+  "db_stats": {
+    "db_path": "output/triple/knowledge_graph.db",
+    "nodes": 1211,
+    "edges": 3353,
+    "modes": 1,
+    "avg_task_count_per_entity": 1.09
+  },
+  "wall_ms": 66104
+}

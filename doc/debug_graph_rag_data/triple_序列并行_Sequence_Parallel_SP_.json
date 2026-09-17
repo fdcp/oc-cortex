@@ -1,0 +1,507 @@
+{
+  "query": "序列并行(Sequence Parallel,SP)",
+  "top_k": 5,
+  "use_reranker": true,
+  "use_graph_rag": true,
+  "graph_channel_weight": 0.3,
+  "bfs_depth": 1,
+  "max_expand_nodes": 30,
+  "max_graph_tasks": 50,
+  "rerank_multiplier": 2.0,
+  "outer_rrf_k": 30,
+  "stages": [
+    {
+      "stage": "1_llm_entity_extraction",
+      "elapsed_ms": 14976,
+      "extracted_entities": [
+        "序列并行",
+        "Sequence Parallel",
+        "SP"
+      ],
+      "count": 3
+    },
+    {
+      "stage": "2_seed_entity_match",
+      "elapsed_ms": 3,
+      "seed_entities": [
+        "序列并行",
+        "SP",
+        "Sequence Parallelism"
+      ],
+      "match_details": [
+        {
+          "extracted": "序列并行",
+          "matched": "序列并行",
+          "match_type": "exact",
+          "task_count": 1
+        },
+        {
+          "extracted": "Sequence Parallel",
+          "matched": "Sequence Parallelism",
+          "match_type": "fuzzy",
+          "task_count": 3
+        },
+        {
+          "extracted": "SP",
+          "matched": "SP",
+          "match_type": "exact",
+          "task_count": 1
+        }
+      ],
+      "exact_count": 2,
+      "fuzzy_count": 1
+    },
+    {
+      "stage": "3_bfs_expand",
+      "elapsed_ms": 2,
+      "expanded_entities": [
+        "FlashAttention-2",
+        "Megatron-LM",
+        "NVIDIA SP",
+        "Ring Attention",
+        "SP",
+        "SP区域外",
+        "Sequence Parallelism",
+        "Tensor Parallelism",
+        "Ulysses",
+        "all-gather通信原语",
+        "attention gather NaN梯度问题",
+        "大模型分布式训练",
+        "大模型分布式训练并行",
+        "大模型分布式训练并行技术文档",
+        "序列并行",
+        "张量并行",
+        "张量并行=2",
+        "激活内存",
+        "纯张量并行"
+      ],
+      "expanded_count": 19,
+      "seed_to_expand_ratio": 6.333
+    },
+    {
+      "stage": "4_inverse_idf_accumulate",
+      "elapsed_ms": 2,
+      "total_tasks_global": 76,
+      "unique_graph_tasks": 6,
+      "graph_candidates_after_truncate": 6,
+      "top10_entity_contrib": [
+        {
+          "entity": "张量并行=2",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "all-gather通信原语",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "NVIDIA SP",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "Ring Attention",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "激活内存",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "大模型分布式训练并行技术文档",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "SP区域外",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "FlashAttention-2",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "大模型分布式训练并行",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "张量并行",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        }
+      ],
+      "top10_task_scores": [
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+          "score": 34.0702,
+          "n_entities": 8
+        },
+        {
+          "task_id": "ses_0a16b26dcffewGBp0akSLB5IZG_T1",
+          "score": 27.2929,
+          "n_entities": 7
+        },
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+          "score": 14.9418,
+          "n_entities": 4
+        },
+        {
+          "task_id": "ses_0e8898453ffeS7ByDo9zjP8Z8h_T2",
+          "score": 11.2782,
+          "n_entities": 3
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T4",
+          "score": 8.6876,
+          "n_entities": 2
+        },
+        {
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T1",
+          "score": 3.6636,
+          "n_entities": 1
+        }
+      ],
+      "id_contrib_distribution": {
+        "count": 19,
+        "contrib_min": 3.2708,
+        "contrib_max": 4.3438,
+        "contrib_mean": 4.1441,
+        "task_count_min": 1,
+        "task_count_max": 3,
+        "task_count_mean": 1.32
+      }
+    },
+    {
+      "stage": "5_vector_search",
+      "elapsed_ms": 42,
+      "retrieval_query": "序列并行(Sequence Parallel,SP)",
+      "vector_top_k_requested": 10,
+      "vector_results_count": 50,
+      "vector_score_stats": {
+        "count": 50,
+        "min": 0.016637,
+        "max": 0.032522,
+        "mean": 0.023338
+      },
+      "top10_vector_results": [
+        {
+          "rank": 1,
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+          "hybrid_score": 0.032522,
+          "label": "SP原理剖析与Mermaid图解迭代"
+        },
+        {
+          "rank": 2,
+          "task_id": "ses_0c4e0312affeUm1WYU03ISPgU2_T1",
+          "hybrid_score": 0.03101,
+          "label": "RoPE预计算函数实现解析"
+        },
+        {
+          "rank": 3,
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+          "hybrid_score": 0.030622,
+          "label": "NVIDIA SP与Ulysses并行策略对比"
+        },
+        {
+          "rank": 4,
+          "task_id": "ses_0e8898453ffeS7ByDo9zjP8Z8h_T2",
+          "hybrid_score": 0.030159,
+          "label": "并行训练尾部填充代码解析"
+        },
+        {
+          "rank": 5,
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T3",
+          "hybrid_score": 0.028595,
+          "label": "FA状态变量Shape澄清"
+        },
+        {
+          "rank": 6,
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T4",
+          "hybrid_score": 0.027629,
+          "label": "FA1与FA2底层实现及并行类比"
+        },
+        {
+          "rank": 7,
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T2",
+          "hybrid_score": 0.02739,
+          "label": "Roofline模型算术强度推导"
+        },
+        {
+          "rank": 8,
+          "task_id": "ses_04d77c8caffexlaTbA0HPB87oY_T2",
+          "hybrid_score": 0.026916,
+          "label": "OMO 配置文件优化"
+        },
+        {
+          "rank": 9,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T18",
+          "hybrid_score": 0.026743,
+          "label": "专利交底书格式迭代优化"
+        },
+        {
+          "rank": 10,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T5",
+          "hybrid_score": 0.02643,
+          "label": "澄清图谱构建流程及模型职责"
+        }
+      ]
+    },
+    {
+      "stage": "6_outer_rrf_merge",
+      "elapsed_ms": 36394,
+      "merged_candidates": 51,
+      "outer_rrf_k": 30,
+      "graph_channel_weight": 0.3
+    },
+    {
+      "stage": "7_rerank",
+      "elapsed_ms": 36394,
+      "rerank_time_ms": 19374,
+      "use_reranker": true,
+      "final_count": 5
+    },
+    {
+      "stage": "8_source_distribution",
+      "elapsed_ms": 0,
+      "source_dist": {
+        "vector": 2,
+        "graph": 0,
+        "both": 3,
+        "neither": 0
+      },
+      "final_results": [
+        {
+          "rank": 1,
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+          "source": "both",
+          "rerank_score": 0.997368,
+          "hybrid_score": 0.032258,
+          "vector_rank": 1,
+          "graph_rank": 1,
+          "graph_raw_score": 34.0702,
+          "label": "SP原理剖析与Mermaid图解迭代",
+          "summary_preview": "背景与目标：为深入理解 Megatron-LM 序列并行 (SP) 机制，系统梳理了 TP=2 场景下 SP 的张量切分、通信原语及激活内存优化原理，并迭代输出高兼容性的 Mermaid 架构图解。\n核心产出与关键决策：明确了 SP 区域外"
+        },
+        {
+          "rank": 2,
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+          "source": "both",
+          "rerank_score": 0.820469,
+          "hybrid_score": 0.030303,
+          "vector_rank": 3,
+          "graph_rank": 3,
+          "graph_raw_score": 14.941764,
+          "label": "NVIDIA SP与Ulysses并行策略对比",
+          "summary_preview": "背景与目标：针对 8 GPU (TP=2, SP=4) 场景，澄清 Tensor Parallelism 与 Sequence Parallelism 的正交关系，并深度对比 NVIDIA SP 与 Ulysses 两种序列并行实现方案的通"
+        },
+        {
+          "rank": 3,
+          "task_id": "ses_0e8898453ffeS7ByDo9zjP8Z8h_T2",
+          "source": "both",
+          "rerank_score": 0.558327,
+          "hybrid_score": 0.029412,
+          "vector_rank": 4,
+          "graph_rank": 4,
+          "graph_raw_score": 11.278203,
+          "label": "并行训练尾部填充代码解析",
+          "summary_preview": "背景与目标：为解决 Megatron-LM 在开启序列并行（SP）或上下文并行（CP）时，因 packed sequence 物理宽度与 `cu_seqlens` 逻辑宽度不一致导致 attention gather 产生 NaN 梯度的问"
+        },
+        {
+          "rank": 4,
+          "task_id": "ses_0ca8a24d9ffeHoz0wYkhYDDO4w_T2",
+          "source": "vector",
+          "rerank_score": 0.355775,
+          "hybrid_score": 0.012963,
+          "vector_rank": 24,
+          "graph_rank": null,
+          "graph_raw_score": null,
+          "label": "技术笔记静态站点整合与本地实施",
+          "summary_preview": "背景与目标：为整合分散的 7 个独立技术笔记 HTML 页面，需将其统一托管至 GitHub Pages 构建多页静态站点。\n核心产出与关键决策：采用“复制副本+注入式导航”策略，保持原文件不动。完成了站点目录结构搭建、公共导航脚本（nav"
+        },
+        {
+          "rank": 5,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T2",
+          "source": "vector",
+          "rerank_score": 0.214691,
+          "hybrid_score": 0.010145,
+          "vector_rank": 39,
+          "graph_rank": null,
+          "graph_raw_score": null,
+          "label": "Repo改动分析与Commit规划",
+          "summary_preview": "分析当前 repo 排除测试和 notebook 后的代码与文档改动，规划了 5 次原子化 Git commit 策略（包含 P4 检索器重构、3 份设计文档新增及一次性日志清理），并针对根目录临时文件提出删除或归档的决策选项，保留核心代码"
+        }
+      ]
+    },
+    {
+      "stage": "9_timing",
+      "elapsed_ms": 0,
+      "vector_time_ms": 11,
+      "graph_time_ms": 17007,
+      "rerank_time_ms": 19374,
+      "total_time_ms": 36394,
+      "per_stage_ms": [
+        {
+          "stage": "1_llm_entity_extraction",
+          "elapsed_ms": 14976
+        },
+        {
+          "stage": "2_seed_entity_match",
+          "elapsed_ms": 3
+        },
+        {
+          "stage": "3_bfs_expand",
+          "elapsed_ms": 2
+        },
+        {
+          "stage": "4_inverse_idf_accumulate",
+          "elapsed_ms": 2
+        },
+        {
+          "stage": "5_vector_search",
+          "elapsed_ms": 42
+        },
+        {
+          "stage": "6_outer_rrf_merge",
+          "elapsed_ms": 36394
+        },
+        {
+          "stage": "7_rerank",
+          "elapsed_ms": 36394
+        },
+        {
+          "stage": "8_source_distribution",
+          "elapsed_ms": 0
+        }
+      ]
+    }
+  ],
+  "query_entities": [
+    "序列并行",
+    "Sequence Parallel",
+    "SP"
+  ],
+  "seed_entities": [
+    "序列并行",
+    "SP",
+    "Sequence Parallelism"
+  ],
+  "expanded_entities": [
+    "FlashAttention-2",
+    "Megatron-LM",
+    "NVIDIA SP",
+    "Ring Attention",
+    "SP",
+    "SP区域外",
+    "Sequence Parallelism",
+    "Tensor Parallelism",
+    "Ulysses",
+    "all-gather通信原语",
+    "attention gather NaN梯度问题",
+    "大模型分布式训练",
+    "大模型分布式训练并行",
+    "大模型分布式训练并行技术文档",
+    "序列并行",
+    "张量并行",
+    "张量并行=2",
+    "激活内存",
+    "纯张量并行"
+  ],
+  "expanded_count": 19,
+  "vector_results_count": 50,
+  "source_distribution": {
+    "vector": 2,
+    "graph": 0,
+    "both": 3,
+    "neither": 0
+  },
+  "final_results": [
+    {
+      "rank": 1,
+      "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+      "source": "both",
+      "rerank_score": 0.997368,
+      "hybrid_score": 0.032258,
+      "vector_rank": 1,
+      "graph_rank": 1,
+      "graph_raw_score": 34.0702,
+      "label": "SP原理剖析与Mermaid图解迭代",
+      "summary_preview": "背景与目标：为深入理解 Megatron-LM 序列并行 (SP) 机制，系统梳理了 TP=2 场景下 SP 的张量切分、通信原语及激活内存优化原理，并迭代输出高兼容性的 Mermaid 架构图解。\n核心产出与关键决策：明确了 SP 区域外"
+    },
+    {
+      "rank": 2,
+      "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+      "source": "both",
+      "rerank_score": 0.820469,
+      "hybrid_score": 0.030303,
+      "vector_rank": 3,
+      "graph_rank": 3,
+      "graph_raw_score": 14.941764,
+      "label": "NVIDIA SP与Ulysses并行策略对比",
+      "summary_preview": "背景与目标：针对 8 GPU (TP=2, SP=4) 场景，澄清 Tensor Parallelism 与 Sequence Parallelism 的正交关系，并深度对比 NVIDIA SP 与 Ulysses 两种序列并行实现方案的通"
+    },
+    {
+      "rank": 3,
+      "task_id": "ses_0e8898453ffeS7ByDo9zjP8Z8h_T2",
+      "source": "both",
+      "rerank_score": 0.558327,
+      "hybrid_score": 0.029412,
+      "vector_rank": 4,
+      "graph_rank": 4,
+      "graph_raw_score": 11.278203,
+      "label": "并行训练尾部填充代码解析",
+      "summary_preview": "背景与目标：为解决 Megatron-LM 在开启序列并行（SP）或上下文并行（CP）时，因 packed sequence 物理宽度与 `cu_seqlens` 逻辑宽度不一致导致 attention gather 产生 NaN 梯度的问"
+    },
+    {
+      "rank": 4,
+      "task_id": "ses_0ca8a24d9ffeHoz0wYkhYDDO4w_T2",
+      "source": "vector",
+      "rerank_score": 0.355775,
+      "hybrid_score": 0.012963,
+      "vector_rank": 24,
+      "graph_rank": null,
+      "graph_raw_score": null,
+      "label": "技术笔记静态站点整合与本地实施",
+      "summary_preview": "背景与目标：为整合分散的 7 个独立技术笔记 HTML 页面，需将其统一托管至 GitHub Pages 构建多页静态站点。\n核心产出与关键决策：采用“复制副本+注入式导航”策略，保持原文件不动。完成了站点目录结构搭建、公共导航脚本（nav"
+    },
+    {
+      "rank": 5,
+      "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T2",
+      "source": "vector",
+      "rerank_score": 0.214691,
+      "hybrid_score": 0.010145,
+      "vector_rank": 39,
+      "graph_rank": null,
+      "graph_raw_score": null,
+      "label": "Repo改动分析与Commit规划",
+      "summary_preview": "分析当前 repo 排除测试和 notebook 后的代码与文档改动，规划了 5 次原子化 Git commit 策略（包含 P4 检索器重构、3 份设计文档新增及一次性日志清理），并针对根目录临时文件提出删除或归档的决策选项，保留核心代码"
+    }
+  ],
+  "total_time_ms": 36394,
+  "total_wall_ms": 51423,
+  "db": "triple",
+  "db_stats": {
+    "db_path": "output/triple/knowledge_graph.db",
+    "nodes": 1211,
+    "edges": 3353,
+    "modes": 1,
+    "avg_task_count_per_entity": 1.09
+  },
+  "wall_ms": 51423
+}

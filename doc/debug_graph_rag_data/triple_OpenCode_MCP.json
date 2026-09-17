@@ -1,0 +1,539 @@
+{
+  "query": "OpenCode MCP",
+  "top_k": 5,
+  "use_reranker": true,
+  "use_graph_rag": true,
+  "graph_channel_weight": 0.3,
+  "bfs_depth": 1,
+  "max_expand_nodes": 30,
+  "max_graph_tasks": 50,
+  "rerank_multiplier": 2.0,
+  "outer_rrf_k": 30,
+  "stages": [
+    {
+      "stage": "1_llm_entity_extraction",
+      "elapsed_ms": 17437,
+      "extracted_entities": [
+        "OpenCode",
+        "MCP"
+      ],
+      "count": 2
+    },
+    {
+      "stage": "2_seed_entity_match",
+      "elapsed_ms": 2,
+      "seed_entities": [
+        "OpenCode",
+        "MCP"
+      ],
+      "match_details": [
+        {
+          "extracted": "OpenCode",
+          "matched": "OpenCode",
+          "match_type": "exact",
+          "task_count": 17
+        },
+        {
+          "extracted": "MCP",
+          "matched": "MCP",
+          "match_type": "exact",
+          "task_count": 3
+        }
+      ],
+      "exact_count": 2,
+      "fuzzy_count": 0
+    },
+    {
+      "stage": "3_bfs_expand",
+      "elapsed_ms": 3,
+      "expanded_entities": [
+        ".omo/",
+        ".opencode/skills/",
+        "/compact",
+        "/compact命令",
+        "/fork命令",
+        "/new",
+        "/new命令",
+        "/sessions命令",
+        "GitHub Copilot",
+        "GitHub Copilot 的 Claude 模型",
+        "GraphRAG",
+        "MCP",
+        "MCP协议",
+        "MCP服务",
+        "OpenCode",
+        "OpenCode Zen",
+        "claude-code-compat-core兼容层",
+        "fa3.json",
+        "grep_app_searchGitHub",
+        "lsp_*",
+        "opencode.db",
+        "opencode/gpt-5-nano",
+        "session",
+        "付费模型",
+        "会话分支功能",
+        "会话数据处理流水线",
+        "免费模型资源",
+        "只读模式",
+        "核心能力边界",
+        "该 repo"
+      ],
+      "expanded_count": 30,
+      "seed_to_expand_ratio": 15.0
+    },
+    {
+      "stage": "4_inverse_idf_accumulate",
+      "elapsed_ms": 4,
+      "total_tasks_global": 76,
+      "unique_graph_tasks": 25,
+      "graph_candidates_after_truncate": 25,
+      "top10_entity_contrib": [
+        {
+          "entity": "会话分支功能",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "OpenCode Zen",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": ".opencode/skills/",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "opencode/gpt-5-nano",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "/compact",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "只读模式",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "/compact命令",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "grep_app_searchGitHub",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "/new命令",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "lsp_*",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        }
+      ],
+      "top10_task_scores": [
+        {
+          "task_id": "ses_0ec02cc6dffeH1O7QFPSrptpla_T1",
+          "score": 32.106,
+          "n_entities": 8
+        },
+        {
+          "task_id": "ses_04e86c806ffepxGVpAy3W5zsD9_T1",
+          "score": 14.7308,
+          "n_entities": 4
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T20",
+          "score": 12.7025,
+          "n_entities": 4
+        },
+        {
+          "task_id": "ses_0a16b26dcffewGBp0akSLB5IZG_T2",
+          "score": 10.387,
+          "n_entities": 3
+        },
+        {
+          "task_id": "ses_10772d114fferNiLEcTQ8YNd5k_T1",
+          "score": 10.387,
+          "n_entities": 3
+        },
+        {
+          "task_id": "ses_0ca8a24d9ffeHoz0wYkhYDDO4w_T1",
+          "score": 10.387,
+          "n_entities": 3
+        },
+        {
+          "task_id": "ses_04b86396effeR5frMxXdiRtezt_T1",
+          "score": 9.314,
+          "n_entities": 3
+        },
+        {
+          "task_id": "ses_0a53b6807ffex4xr4a0wNdi5EQ_T1",
+          "score": 9.0389,
+          "n_entities": 3
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T12",
+          "score": 8.6338,
+          "n_entities": 3
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T3",
+          "score": 6.0432,
+          "n_entities": 2
+        }
+      ],
+      "id_contrib_distribution": {
+        "count": 30,
+        "contrib_min": 1.6994,
+        "contrib_max": 4.3438,
+        "contrib_mean": 4.0938,
+        "task_count_min": 1,
+        "task_count_max": 17,
+        "task_count_mean": 1.83
+      }
+    },
+    {
+      "stage": "5_vector_search",
+      "elapsed_ms": 26,
+      "retrieval_query": "OpenCode MCP",
+      "vector_top_k_requested": 10,
+      "vector_results_count": 50,
+      "vector_score_stats": {
+        "count": 50,
+        "min": 0.013333,
+        "max": 0.032787,
+        "mean": 0.022656
+      },
+      "top10_vector_results": [
+        {
+          "rank": 1,
+          "task_id": "ses_10772d114fferNiLEcTQ8YNd5k_T3",
+          "hybrid_score": 0.032787,
+          "label": "排查 codegraph MCP 注册机制"
+        },
+        {
+          "rank": 2,
+          "task_id": "ses_04e86c806ffepxGVpAy3W5zsD9_T1",
+          "hybrid_score": 0.032002,
+          "label": "梳理 opencode 工具分类"
+        },
+        {
+          "rank": 3,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T9",
+          "hybrid_score": 0.031498,
+          "label": "MCP模块功能与架构分析"
+        },
+        {
+          "rank": 4,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T20",
+          "hybrid_score": 0.030331,
+          "label": "Session 历史追溯与总结"
+        },
+        {
+          "rank": 5,
+          "task_id": "ses_0ec02cc6dffeH1O7QFPSrptpla_T1",
+          "hybrid_score": 0.030077,
+          "label": "澄清 OpenCode /fork 命令"
+        },
+        {
+          "rank": 6,
+          "task_id": "ses_0a16b26dcffewGBp0akSLB5IZG_T2",
+          "hybrid_score": 0.029469,
+          "label": "调研免费模型及当前状态"
+        },
+        {
+          "rank": 7,
+          "task_id": "ses_10772d114fferNiLEcTQ8YNd5k_T1",
+          "hybrid_score": 0.028595,
+          "label": "安装 tmux 与 omo 插件"
+        },
+        {
+          "rank": 8,
+          "task_id": "ses_04d77c8caffexlaTbA0HPB87oY_T1",
+          "hybrid_score": 0.028372,
+          "label": "OMO 多 Agent 模型配置诊断与优化"
+        },
+        {
+          "rank": 9,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T13",
+          "hybrid_score": 0.028083,
+          "label": "MCP HTTP Server 配置与缺陷分析"
+        },
+        {
+          "rank": 10,
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T2",
+          "hybrid_score": 0.027984,
+          "label": "编写并校验端到端测试指南"
+        }
+      ]
+    },
+    {
+      "stage": "6_outer_rrf_merge",
+      "elapsed_ms": 32195,
+      "merged_candidates": 50,
+      "outer_rrf_k": 30,
+      "graph_channel_weight": 0.3
+    },
+    {
+      "stage": "7_rerank",
+      "elapsed_ms": 32195,
+      "rerank_time_ms": 18441,
+      "use_reranker": true,
+      "final_count": 5
+    },
+    {
+      "stage": "8_source_distribution",
+      "elapsed_ms": 0,
+      "source_dist": {
+        "vector": 1,
+        "graph": 0,
+        "both": 4,
+        "neither": 0
+      },
+      "final_results": [
+        {
+          "rank": 1,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T12",
+          "source": "both",
+          "rerank_score": 0.893309,
+          "hybrid_score": 0.024765,
+          "vector_rank": 11,
+          "graph_rank": 9,
+          "graph_raw_score": 8.633783,
+          "label": "GraphRAG业界应用调研",
+          "summary_preview": "背景与目标：调研 GraphRAG 用于 vibe coding memory 的业界现状，定位 repo 在赛道中的位置。核心产出与关键决策：确认 GraphRAG 作为跨 session AI 编程记忆是 2026 年主流方向。学术/框"
+        },
+        {
+          "rank": 2,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T20",
+          "source": "both",
+          "rerank_score": 0.851953,
+          "hybrid_score": 0.029679,
+          "vector_rank": 4,
+          "graph_rank": 3,
+          "graph_raw_score": 12.702485,
+          "label": "Session 历史追溯与总结",
+          "summary_preview": "追溯当前 opencode session 从创建至今的完整操作历史。背景：用户需要了解 session 全貌。核心产出：通过查询 opencode.db(ses_0870d73a7ffehev1FO7HA2HSze，258 条消息，171"
+        },
+        {
+          "rank": 3,
+          "task_id": "ses_04ba8451cffeeg4eVFN8BencC8_T1",
+          "source": "vector",
+          "rerank_score": 0.789234,
+          "hybrid_score": 0.009459,
+          "vector_rank": 44,
+          "graph_rank": null,
+          "graph_raw_score": null,
+          "label": "执行init-deep生成层级化文档",
+          "summary_preview": "为完善项目代码库导航与工程规范，执行 /init-deep 工作流生成并更新层级化 AGENTS.md 文件。通过 9 个后台代理深度探索代码结构与复杂度热点，完成目录评分。核心产出为更新 root/src/tests 文档以补充模块映射、"
+        },
+        {
+          "rank": 4,
+          "task_id": "ses_10772d114fferNiLEcTQ8YNd5k_T3",
+          "source": "both",
+          "rerank_score": 0.732592,
+          "hybrid_score": 0.029898,
+          "vector_rank": 1,
+          "graph_rank": 11,
+          "graph_raw_score": 6.043192,
+          "label": "排查 codegraph MCP 注册机制",
+          "summary_preview": "背景与目标：排查未安装的 codegraph 为何出现在 OpenCode 的 MCP 列表中，并理清其底层注册与加载机制。核心产出与关键决策：确认 codegraph 非 OpenCode 内置，而是由 omo 插件预置的占位配置（处于 "
+        },
+        {
+          "rank": 5,
+          "task_id": "ses_0a53b6807ffex4xr4a0wNdi5EQ_T1",
+          "source": "both",
+          "rerank_score": 0.63114,
+          "hybrid_score": 0.023804,
+          "vector_rank": 14,
+          "graph_rank": 8,
+          "graph_raw_score": 9.038924,
+          "label": "梳理 opencode 会话分布及属性",
+          "summary_preview": "背景与目标：为了解本机 opencode 会话的使用情况及 minimax 框架下子 agent 会话的存储机制。核心产出与关键决策：查询 opencode.db 确认共有 22 个 session，主要分布在 minimax agents"
+        }
+      ]
+    },
+    {
+      "stage": "9_timing",
+      "elapsed_ms": 0,
+      "vector_time_ms": 10,
+      "graph_time_ms": 13742,
+      "rerank_time_ms": 18441,
+      "total_time_ms": 32195,
+      "per_stage_ms": [
+        {
+          "stage": "1_llm_entity_extraction",
+          "elapsed_ms": 17437
+        },
+        {
+          "stage": "2_seed_entity_match",
+          "elapsed_ms": 2
+        },
+        {
+          "stage": "3_bfs_expand",
+          "elapsed_ms": 3
+        },
+        {
+          "stage": "4_inverse_idf_accumulate",
+          "elapsed_ms": 4
+        },
+        {
+          "stage": "5_vector_search",
+          "elapsed_ms": 26
+        },
+        {
+          "stage": "6_outer_rrf_merge",
+          "elapsed_ms": 32195
+        },
+        {
+          "stage": "7_rerank",
+          "elapsed_ms": 32195
+        },
+        {
+          "stage": "8_source_distribution",
+          "elapsed_ms": 0
+        }
+      ]
+    }
+  ],
+  "query_entities": [
+    "OpenCode",
+    "MCP"
+  ],
+  "seed_entities": [
+    "OpenCode",
+    "MCP"
+  ],
+  "expanded_entities": [
+    ".omo/",
+    ".opencode/skills/",
+    "/compact",
+    "/compact命令",
+    "/fork命令",
+    "/new",
+    "/new命令",
+    "/sessions命令",
+    "GitHub Copilot",
+    "GitHub Copilot 的 Claude 模型",
+    "GraphRAG",
+    "MCP",
+    "MCP协议",
+    "MCP服务",
+    "OpenCode",
+    "OpenCode Zen",
+    "claude-code-compat-core兼容层",
+    "fa3.json",
+    "grep_app_searchGitHub",
+    "lsp_*",
+    "opencode.db",
+    "opencode/gpt-5-nano",
+    "session",
+    "付费模型",
+    "会话分支功能",
+    "会话数据处理流水线",
+    "免费模型资源",
+    "只读模式",
+    "核心能力边界",
+    "该 repo"
+  ],
+  "expanded_count": 30,
+  "vector_results_count": 50,
+  "source_distribution": {
+    "vector": 1,
+    "graph": 0,
+    "both": 4,
+    "neither": 0
+  },
+  "final_results": [
+    {
+      "rank": 1,
+      "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T12",
+      "source": "both",
+      "rerank_score": 0.893309,
+      "hybrid_score": 0.024765,
+      "vector_rank": 11,
+      "graph_rank": 9,
+      "graph_raw_score": 8.633783,
+      "label": "GraphRAG业界应用调研",
+      "summary_preview": "背景与目标：调研 GraphRAG 用于 vibe coding memory 的业界现状，定位 repo 在赛道中的位置。核心产出与关键决策：确认 GraphRAG 作为跨 session AI 编程记忆是 2026 年主流方向。学术/框"
+    },
+    {
+      "rank": 2,
+      "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T20",
+      "source": "both",
+      "rerank_score": 0.851953,
+      "hybrid_score": 0.029679,
+      "vector_rank": 4,
+      "graph_rank": 3,
+      "graph_raw_score": 12.702485,
+      "label": "Session 历史追溯与总结",
+      "summary_preview": "追溯当前 opencode session 从创建至今的完整操作历史。背景：用户需要了解 session 全貌。核心产出：通过查询 opencode.db(ses_0870d73a7ffehev1FO7HA2HSze，258 条消息，171"
+    },
+    {
+      "rank": 3,
+      "task_id": "ses_04ba8451cffeeg4eVFN8BencC8_T1",
+      "source": "vector",
+      "rerank_score": 0.789234,
+      "hybrid_score": 0.009459,
+      "vector_rank": 44,
+      "graph_rank": null,
+      "graph_raw_score": null,
+      "label": "执行init-deep生成层级化文档",
+      "summary_preview": "为完善项目代码库导航与工程规范，执行 /init-deep 工作流生成并更新层级化 AGENTS.md 文件。通过 9 个后台代理深度探索代码结构与复杂度热点，完成目录评分。核心产出为更新 root/src/tests 文档以补充模块映射、"
+    },
+    {
+      "rank": 4,
+      "task_id": "ses_10772d114fferNiLEcTQ8YNd5k_T3",
+      "source": "both",
+      "rerank_score": 0.732592,
+      "hybrid_score": 0.029898,
+      "vector_rank": 1,
+      "graph_rank": 11,
+      "graph_raw_score": 6.043192,
+      "label": "排查 codegraph MCP 注册机制",
+      "summary_preview": "背景与目标：排查未安装的 codegraph 为何出现在 OpenCode 的 MCP 列表中，并理清其底层注册与加载机制。核心产出与关键决策：确认 codegraph 非 OpenCode 内置，而是由 omo 插件预置的占位配置（处于 "
+    },
+    {
+      "rank": 5,
+      "task_id": "ses_0a53b6807ffex4xr4a0wNdi5EQ_T1",
+      "source": "both",
+      "rerank_score": 0.63114,
+      "hybrid_score": 0.023804,
+      "vector_rank": 14,
+      "graph_rank": 8,
+      "graph_raw_score": 9.038924,
+      "label": "梳理 opencode 会话分布及属性",
+      "summary_preview": "背景与目标：为了解本机 opencode 会话的使用情况及 minimax 框架下子 agent 会话的存储机制。核心产出与关键决策：查询 opencode.db 确认共有 22 个 session，主要分布在 minimax agents"
+    }
+  ],
+  "total_time_ms": 32195,
+  "total_wall_ms": 49669,
+  "db": "triple",
+  "db_stats": {
+    "db_path": "output/triple/knowledge_graph.db",
+    "nodes": 1211,
+    "edges": 3353,
+    "modes": 1,
+    "avg_task_count_per_entity": 1.09
+  },
+  "wall_ms": 49669
+}

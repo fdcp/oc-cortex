@@ -1,0 +1,403 @@
+{
+  "query": "GPU的对比和选型",
+  "top_k": 5,
+  "use_reranker": true,
+  "use_graph_rag": true,
+  "graph_channel_weight": 0.3,
+  "bfs_depth": 1,
+  "max_expand_nodes": 30,
+  "max_graph_tasks": 50,
+  "rerank_multiplier": 2.0,
+  "outer_rrf_k": 30,
+  "stages": [
+    {
+      "stage": "1_llm_entity_extraction",
+      "elapsed_ms": 55312,
+      "extracted_entities": [
+        "GPU"
+      ],
+      "count": 1
+    },
+    {
+      "stage": "2_seed_entity_match",
+      "elapsed_ms": 2,
+      "seed_entities": [
+        "GPU"
+      ],
+      "match_details": [
+        {
+          "extracted": "GPU",
+          "matched": "GPU",
+          "match_type": "exact",
+          "task_count": 1
+        }
+      ],
+      "exact_count": 1,
+      "fuzzy_count": 0
+    },
+    {
+      "stage": "3_bfs_expand",
+      "elapsed_ms": 1,
+      "expanded_entities": [
+        "FlashAttention",
+        "GPU",
+        "flush-to-zero"
+      ],
+      "expanded_count": 3,
+      "seed_to_expand_ratio": 3.0
+    },
+    {
+      "stage": "4_inverse_idf_accumulate",
+      "elapsed_ms": 1,
+      "total_tasks_global": 76,
+      "unique_graph_tasks": 4,
+      "graph_candidates_after_truncate": 4,
+      "top10_entity_contrib": [
+        {
+          "entity": "flush-to-zero",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "GPU",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "FlashAttention",
+          "task_count": 3,
+          "idf_contrib": 3.2708,
+          "source_tasks": 3
+        }
+      ],
+      "top10_task_scores": [
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T2",
+          "score": 7.6146,
+          "n_entities": 2
+        },
+        {
+          "task_id": "ses_0ca8b3533ffeRk0KWh2cSqkKOa_T1",
+          "score": 4.3438,
+          "n_entities": 1
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T3",
+          "score": 3.2708,
+          "n_entities": 1
+        },
+        {
+          "task_id": "ses_0c9e4a359ffeGDSrVSG2jNVB6n_T1",
+          "score": 3.2708,
+          "n_entities": 1
+        }
+      ],
+      "id_contrib_distribution": {
+        "count": 3,
+        "contrib_min": 3.2708,
+        "contrib_max": 4.3438,
+        "contrib_mean": 3.9861,
+        "task_count_min": 1,
+        "task_count_max": 3,
+        "task_count_mean": 1.67
+      }
+    },
+    {
+      "stage": "5_vector_search",
+      "elapsed_ms": 40,
+      "retrieval_query": "GPU的对比和选型",
+      "vector_top_k_requested": 10,
+      "vector_results_count": 50,
+      "vector_score_stats": {
+        "count": 50,
+        "min": 0.017011,
+        "max": 0.032266,
+        "mean": 0.023439
+      },
+      "top10_vector_results": [
+        {
+          "rank": 1,
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T3",
+          "hybrid_score": 0.032266,
+          "label": "AllReduce算法原理与历史溯源"
+        },
+        {
+          "rank": 2,
+          "task_id": "ses_0c4845647ffea08jfnkY5ArLEG_T1",
+          "hybrid_score": 0.03101,
+          "label": "GPU算力对比与选型分析"
+        },
+        {
+          "rank": 3,
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+          "hybrid_score": 0.030679,
+          "label": "NVIDIA SP与Ulysses并行策略对比"
+        },
+        {
+          "rank": 4,
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T2",
+          "hybrid_score": 0.030331,
+          "label": "Roofline模型算术强度推导"
+        },
+        {
+          "rank": 5,
+          "task_id": "ses_0ca8b3533ffeRk0KWh2cSqkKOa_T1",
+          "hybrid_score": 0.030214,
+          "label": "开发浮点数格式转换与教学网页"
+        },
+        {
+          "rank": 6,
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T2",
+          "hybrid_score": 0.030018,
+          "label": "ZeRO显存优化原理与通信推导"
+        },
+        {
+          "rank": 7,
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+          "hybrid_score": 0.027619,
+          "label": "SP原理剖析与Mermaid图解迭代"
+        },
+        {
+          "rank": 8,
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T1",
+          "hybrid_score": 0.02748,
+          "label": "DDP训练流程与参数同步机制"
+        },
+        {
+          "rank": 9,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T8",
+          "hybrid_score": 0.0272,
+          "label": "P4与P5图谱关系分析"
+        },
+        {
+          "rank": 10,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T1",
+          "hybrid_score": 0.027013,
+          "label": "P5测试脚本对比与能力确认"
+        }
+      ]
+    },
+    {
+      "stage": "6_outer_rrf_merge",
+      "elapsed_ms": 64791,
+      "merged_candidates": 50,
+      "outer_rrf_k": 30,
+      "graph_channel_weight": 0.3
+    },
+    {
+      "stage": "7_rerank",
+      "elapsed_ms": 64791,
+      "rerank_time_ms": 18630,
+      "use_reranker": true,
+      "final_count": 5
+    },
+    {
+      "stage": "8_source_distribution",
+      "elapsed_ms": 0,
+      "source_dist": {
+        "vector": 5,
+        "graph": 0,
+        "both": 0,
+        "neither": 0
+      },
+      "final_results": [
+        {
+          "rank": 1,
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T3",
+          "source": "vector",
+          "rerank_score": 0.893216,
+          "hybrid_score": 0.016667,
+          "vector_rank": 12,
+          "graph_rank": null,
+          "graph_raw_score": null,
+          "label": "NeMo Megatron Bridge定位与价值辨析",
+          "summary_preview": "背景与目标：解答 NeMo Megatron Bridge 的核心定位，辨析其与 Megatron 原生 convert_checkpoint 工具的区别，并评估其在实际工程中的价值与边界。\n核心产出与关键决策：明确 Bridge 是连接 "
+        },
+        {
+          "rank": 2,
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T1",
+          "source": "vector",
+          "rerank_score": 0.836555,
+          "hybrid_score": 0.008974,
+          "vector_rank": 48,
+          "graph_rank": null,
+          "graph_raw_score": null,
+          "label": "FSDP与SDPA概念澄清",
+          "summary_preview": "澄清了 PyTorch 中 FSDP（1.11引入，支持多精度，含三种分片策略）与 SDPA（2.0引入，与精度正交，含 MATH/FLASH/EFFICIENT 三种后端）的版本演进、精度支持及核心实现分类。"
+        },
+        {
+          "rank": 3,
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T4",
+          "source": "vector",
+          "rerank_score": 0.709824,
+          "hybrid_score": 0.014894,
+          "vector_rank": 17,
+          "graph_rank": null,
+          "graph_raw_score": null,
+          "label": "FA1与FA2底层实现及并行类比",
+          "summary_preview": "背景：深入剖析 FlashAttention-1 与 FlashAttention-2 的底层 CUDA 实现差异及其与分布式训练概念的关联。核心产出：明确了 FA1 沿 head_dim 切分 K block 导致 warp 间需 syn"
+        },
+        {
+          "rank": 4,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T10",
+          "source": "vector",
+          "rerank_score": 0.600188,
+          "hybrid_score": 0.00875,
+          "vector_rank": 50,
+          "graph_rank": null,
+          "graph_raw_score": null,
+          "label": "模型可用性确认",
+          "summary_preview": "用户询问模型可用性但指代不明确（涉及 deepseek-v4-flash-free/nemotron-3-ultra-free/mimo-v2.5-free/hy3-free）。plan mode 下无法实际验证 API 调用，仅确认代码层"
+        },
+        {
+          "rank": 5,
+          "task_id": "ses_0a53b6807ffex4xr4a0wNdi5EQ_T1",
+          "source": "vector",
+          "rerank_score": 0.524395,
+          "hybrid_score": 0.010145,
+          "vector_rank": 39,
+          "graph_rank": null,
+          "graph_raw_score": null,
+          "label": "梳理 opencode 会话分布及属性",
+          "summary_preview": "背景与目标：为了解本机 opencode 会话的使用情况及 minimax 框架下子 agent 会话的存储机制。核心产出与关键决策：查询 opencode.db 确认共有 22 个 session，主要分布在 minimax agents"
+        }
+      ]
+    },
+    {
+      "stage": "9_timing",
+      "elapsed_ms": 0,
+      "vector_time_ms": 14,
+      "graph_time_ms": 46145,
+      "rerank_time_ms": 18630,
+      "total_time_ms": 64790,
+      "per_stage_ms": [
+        {
+          "stage": "1_llm_entity_extraction",
+          "elapsed_ms": 55312
+        },
+        {
+          "stage": "2_seed_entity_match",
+          "elapsed_ms": 2
+        },
+        {
+          "stage": "3_bfs_expand",
+          "elapsed_ms": 1
+        },
+        {
+          "stage": "4_inverse_idf_accumulate",
+          "elapsed_ms": 1
+        },
+        {
+          "stage": "5_vector_search",
+          "elapsed_ms": 40
+        },
+        {
+          "stage": "6_outer_rrf_merge",
+          "elapsed_ms": 64791
+        },
+        {
+          "stage": "7_rerank",
+          "elapsed_ms": 64791
+        },
+        {
+          "stage": "8_source_distribution",
+          "elapsed_ms": 0
+        }
+      ]
+    }
+  ],
+  "query_entities": [
+    "GPU"
+  ],
+  "seed_entities": [
+    "GPU"
+  ],
+  "expanded_entities": [
+    "FlashAttention",
+    "GPU",
+    "flush-to-zero"
+  ],
+  "expanded_count": 3,
+  "vector_results_count": 50,
+  "source_distribution": {
+    "vector": 5,
+    "graph": 0,
+    "both": 0,
+    "neither": 0
+  },
+  "final_results": [
+    {
+      "rank": 1,
+      "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T3",
+      "source": "vector",
+      "rerank_score": 0.893216,
+      "hybrid_score": 0.016667,
+      "vector_rank": 12,
+      "graph_rank": null,
+      "graph_raw_score": null,
+      "label": "NeMo Megatron Bridge定位与价值辨析",
+      "summary_preview": "背景与目标：解答 NeMo Megatron Bridge 的核心定位，辨析其与 Megatron 原生 convert_checkpoint 工具的区别，并评估其在实际工程中的价值与边界。\n核心产出与关键决策：明确 Bridge 是连接 "
+    },
+    {
+      "rank": 2,
+      "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T1",
+      "source": "vector",
+      "rerank_score": 0.836555,
+      "hybrid_score": 0.008974,
+      "vector_rank": 48,
+      "graph_rank": null,
+      "graph_raw_score": null,
+      "label": "FSDP与SDPA概念澄清",
+      "summary_preview": "澄清了 PyTorch 中 FSDP（1.11引入，支持多精度，含三种分片策略）与 SDPA（2.0引入，与精度正交，含 MATH/FLASH/EFFICIENT 三种后端）的版本演进、精度支持及核心实现分类。"
+    },
+    {
+      "rank": 3,
+      "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T4",
+      "source": "vector",
+      "rerank_score": 0.709824,
+      "hybrid_score": 0.014894,
+      "vector_rank": 17,
+      "graph_rank": null,
+      "graph_raw_score": null,
+      "label": "FA1与FA2底层实现及并行类比",
+      "summary_preview": "背景：深入剖析 FlashAttention-1 与 FlashAttention-2 的底层 CUDA 实现差异及其与分布式训练概念的关联。核心产出：明确了 FA1 沿 head_dim 切分 K block 导致 warp 间需 syn"
+    },
+    {
+      "rank": 4,
+      "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T10",
+      "source": "vector",
+      "rerank_score": 0.600188,
+      "hybrid_score": 0.00875,
+      "vector_rank": 50,
+      "graph_rank": null,
+      "graph_raw_score": null,
+      "label": "模型可用性确认",
+      "summary_preview": "用户询问模型可用性但指代不明确（涉及 deepseek-v4-flash-free/nemotron-3-ultra-free/mimo-v2.5-free/hy3-free）。plan mode 下无法实际验证 API 调用，仅确认代码层"
+    },
+    {
+      "rank": 5,
+      "task_id": "ses_0a53b6807ffex4xr4a0wNdi5EQ_T1",
+      "source": "vector",
+      "rerank_score": 0.524395,
+      "hybrid_score": 0.010145,
+      "vector_rank": 39,
+      "graph_rank": null,
+      "graph_raw_score": null,
+      "label": "梳理 opencode 会话分布及属性",
+      "summary_preview": "背景与目标：为了解本机 opencode 会话的使用情况及 minimax 框架下子 agent 会话的存储机制。核心产出与关键决策：查询 opencode.db 确认共有 22 个 session，主要分布在 minimax agents"
+    }
+  ],
+  "total_time_ms": 64790,
+  "total_wall_ms": 120150,
+  "db": "triple",
+  "db_stats": {
+    "db_path": "output/triple/knowledge_graph.db",
+    "nodes": 1211,
+    "edges": 3353,
+    "modes": 1,
+    "avg_task_count_per_entity": 1.09
+  },
+  "wall_ms": 120150
+}

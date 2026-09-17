@@ -1,0 +1,529 @@
+{
+  "query": "OpenCode",
+  "top_k": 5,
+  "use_reranker": true,
+  "use_graph_rag": true,
+  "graph_channel_weight": 0.3,
+  "bfs_depth": 1,
+  "max_expand_nodes": 30,
+  "max_graph_tasks": 50,
+  "rerank_multiplier": 2.0,
+  "outer_rrf_k": 30,
+  "stages": [
+    {
+      "stage": "1_llm_entity_extraction",
+      "elapsed_ms": 18022,
+      "extracted_entities": [
+        "OpenCode"
+      ],
+      "count": 1
+    },
+    {
+      "stage": "2_seed_entity_match",
+      "elapsed_ms": 1,
+      "seed_entities": [
+        "OpenCode"
+      ],
+      "match_details": [
+        {
+          "extracted": "OpenCode",
+          "matched": "OpenCode",
+          "match_type": "exact",
+          "task_count": 17
+        }
+      ],
+      "exact_count": 1,
+      "fuzzy_count": 0
+    },
+    {
+      "stage": "3_bfs_expand",
+      "elapsed_ms": 0,
+      "expanded_entities": [
+        ".omo/",
+        ".opencode/skills/",
+        "/compact",
+        "/compact命令",
+        "/fork命令",
+        "/new",
+        "/new命令",
+        "/sessions命令",
+        "GitHub Copilot",
+        "GitHub Copilot 的 Claude 模型",
+        "GraphRAG",
+        "MCP协议",
+        "MCP服务",
+        "OpenCode",
+        "OpenCode Zen",
+        "claude-code-compat-core",
+        "claude-code-compat-core兼容层",
+        "fa3.json",
+        "grep_app_searchGitHub",
+        "lsp_*",
+        "opencode.db",
+        "opencode/gpt-5-nano",
+        "session",
+        "付费模型",
+        "会话分支功能",
+        "会话数据处理流水线",
+        "免费模型资源",
+        "只读模式",
+        "核心能力边界",
+        "该 repo"
+      ],
+      "expanded_count": 30,
+      "seed_to_expand_ratio": 30.0
+    },
+    {
+      "stage": "4_inverse_idf_accumulate",
+      "elapsed_ms": 6,
+      "total_tasks_global": 76,
+      "unique_graph_tasks": 23,
+      "graph_candidates_after_truncate": 23,
+      "top10_entity_contrib": [
+        {
+          "entity": "会话分支功能",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "OpenCode Zen",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": ".opencode/skills/",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "opencode/gpt-5-nano",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "/compact",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "只读模式",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "/compact命令",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "grep_app_searchGitHub",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "/new命令",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "claude-code-compat-core",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        }
+      ],
+      "top10_task_scores": [
+        {
+          "task_id": "ses_0ec02cc6dffeH1O7QFPSrptpla_T1",
+          "score": 32.106,
+          "n_entities": 8
+        },
+        {
+          "task_id": "ses_04e86c806ffepxGVpAy3W5zsD9_T1",
+          "score": 14.7308,
+          "n_entities": 4
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T20",
+          "score": 12.7025,
+          "n_entities": 4
+        },
+        {
+          "task_id": "ses_0a16b26dcffewGBp0akSLB5IZG_T2",
+          "score": 10.387,
+          "n_entities": 3
+        },
+        {
+          "task_id": "ses_10772d114fferNiLEcTQ8YNd5k_T1",
+          "score": 10.387,
+          "n_entities": 3
+        },
+        {
+          "task_id": "ses_0ca8a24d9ffeHoz0wYkhYDDO4w_T1",
+          "score": 10.387,
+          "n_entities": 3
+        },
+        {
+          "task_id": "ses_10772d114fferNiLEcTQ8YNd5k_T3",
+          "score": 10.387,
+          "n_entities": 3
+        },
+        {
+          "task_id": "ses_04b86396effeR5frMxXdiRtezt_T1",
+          "score": 9.314,
+          "n_entities": 3
+        },
+        {
+          "task_id": "ses_0a53b6807ffex4xr4a0wNdi5EQ_T1",
+          "score": 9.0389,
+          "n_entities": 3
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T3",
+          "score": 6.0432,
+          "n_entities": 2
+        }
+      ],
+      "id_contrib_distribution": {
+        "count": 30,
+        "contrib_min": 1.6994,
+        "contrib_max": 4.3438,
+        "contrib_mean": 4.1296,
+        "task_count_min": 1,
+        "task_count_max": 17,
+        "task_count_mean": 1.77
+      }
+    },
+    {
+      "stage": "5_vector_search",
+      "elapsed_ms": 19,
+      "retrieval_query": "OpenCode",
+      "vector_top_k_requested": 10,
+      "vector_results_count": 50,
+      "vector_score_stats": {
+        "count": 50,
+        "min": 0.009346,
+        "max": 0.032522,
+        "mean": 0.016449
+      },
+      "top10_vector_results": [
+        {
+          "rank": 1,
+          "task_id": "ses_0ec02cc6dffeH1O7QFPSrptpla_T1",
+          "hybrid_score": 0.032522,
+          "label": "澄清 OpenCode /fork 命令"
+        },
+        {
+          "rank": 2,
+          "task_id": "ses_10772d114fferNiLEcTQ8YNd5k_T3",
+          "hybrid_score": 0.032522,
+          "label": "排查 codegraph MCP 注册机制"
+        },
+        {
+          "rank": 3,
+          "task_id": "ses_0a16b26dcffewGBp0akSLB5IZG_T2",
+          "hybrid_score": 0.031258,
+          "label": "调研免费模型及当前状态"
+        },
+        {
+          "rank": 4,
+          "task_id": "ses_10772d114fferNiLEcTQ8YNd5k_T1",
+          "hybrid_score": 0.029857,
+          "label": "安装 tmux 与 omo 插件"
+        },
+        {
+          "rank": 5,
+          "task_id": "ses_04d77c8caffexlaTbA0HPB87oY_T1",
+          "hybrid_score": 0.029139,
+          "label": "OMO 多 Agent 模型配置诊断与优化"
+        },
+        {
+          "rank": 6,
+          "task_id": "ses_10772d114fferNiLEcTQ8YNd5k_T2",
+          "hybrid_score": 0.02901,
+          "label": "分析 omo 模型配置及影响"
+        },
+        {
+          "rank": 7,
+          "task_id": "ses_0a53b6807ffex4xr4a0wNdi5EQ_T1",
+          "hybrid_score": 0.028191,
+          "label": "梳理 opencode 会话分布及属性"
+        },
+        {
+          "rank": 8,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T9",
+          "hybrid_score": 0.027052,
+          "label": "MCP模块功能与架构分析"
+        },
+        {
+          "rank": 9,
+          "task_id": "ses_04b987deaffeKfDUR5b1Y99vcx_T6",
+          "hybrid_score": 0.026786,
+          "label": "实现内容指纹与增量处理机制"
+        },
+        {
+          "rank": 10,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T11",
+          "hybrid_score": 0.026547,
+          "label": "Repo架构定位确认"
+        }
+      ]
+    },
+    {
+      "stage": "6_outer_rrf_merge",
+      "elapsed_ms": 28935,
+      "merged_candidates": 50,
+      "outer_rrf_k": 30,
+      "graph_channel_weight": 0.3
+    },
+    {
+      "stage": "7_rerank",
+      "elapsed_ms": 28935,
+      "rerank_time_ms": 17464,
+      "use_reranker": true,
+      "final_count": 5
+    },
+    {
+      "stage": "8_source_distribution",
+      "elapsed_ms": 0,
+      "source_dist": {
+        "vector": 1,
+        "graph": 0,
+        "both": 4,
+        "neither": 0
+      },
+      "final_results": [
+        {
+          "rank": 1,
+          "task_id": "ses_0ec02cc6dffeH1O7QFPSrptpla_T1",
+          "source": "both",
+          "rerank_score": 0.983085,
+          "hybrid_score": 0.032258,
+          "vector_rank": 1,
+          "graph_rank": 1,
+          "graph_raw_score": 32.106024,
+          "label": "澄清 OpenCode /fork 命令",
+          "summary_preview": "用户询问 OpenCode 中 `/fork` 命令的含义与用法。经查阅官方文档确认：OpenCode 并不支持 `/fork` 命令，其内置命令集为 `/new`、`/clear`、`/compact`、`/sessions`、`/mod"
+        },
+        {
+          "rank": 2,
+          "task_id": "ses_04edfa1f2ffey5A7mn4t5lm1YW_T4",
+          "source": "vector",
+          "rerank_score": 0.979354,
+          "hybrid_score": 0.010145,
+          "vector_rank": 39,
+          "graph_rank": null,
+          "graph_raw_score": null,
+          "label": "排查 Git push 网络故障",
+          "summary_preview": "排查 `git push` 时的 HTTP/2 framing error 和超时问题，通过诊断排除 PAT 缺失，定位为 HTTPS 443 端口网络层不稳定，提供配置代理或切换 SSH 协议方案，最终由用户自行推送成功。"
+        },
+        {
+          "rank": 3,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T11",
+          "source": "both",
+          "rerank_score": 0.957912,
+          "hybrid_score": 0.023883,
+          "vector_rank": 10,
+          "graph_rank": 17,
+          "graph_raw_score": 4.343805,
+          "label": "Repo架构定位确认",
+          "summary_preview": "背景与目标：确认 repo 是否为跨 session RAG 系统。核心产出与关键决策：确认该 repo 是面向 opencode 会话历史的、基于知识图谱增强的跨 session Graph-RAG 系统（Cross-session Kn"
+        },
+        {
+          "rank": 4,
+          "task_id": "ses_10772d114fferNiLEcTQ8YNd5k_T3",
+          "source": "both",
+          "rerank_score": 0.924142,
+          "hybrid_score": 0.029983,
+          "vector_rank": 2,
+          "graph_rank": 7,
+          "graph_raw_score": 10.386997,
+          "label": "排查 codegraph MCP 注册机制",
+          "summary_preview": "背景与目标：排查未安装的 codegraph 为何出现在 OpenCode 的 MCP 列表中，并理清其底层注册与加载机制。核心产出与关键决策：确认 codegraph 非 OpenCode 内置，而是由 omo 插件预置的占位配置（处于 "
+        },
+        {
+          "rank": 5,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T5",
+          "source": "both",
+          "rerank_score": 0.904651,
+          "hybrid_score": 0.023333,
+          "vector_rank": 12,
+          "graph_rank": 15,
+          "graph_raw_score": 4.343805,
+          "label": "澄清图谱构建流程及模型职责",
+          "summary_preview": "背景与目标：为厘清 OpenCode 会话数据处理流水线中各阶段的模型调用逻辑，澄清 Phase 5 知识图谱构建中 LLM 与 Embedding 的职责边界，并梳理 P1-P5 的端到端流程。\n核心产出与关键决策：明确了 Phase 5"
+        }
+      ]
+    },
+    {
+      "stage": "9_timing",
+      "elapsed_ms": 0,
+      "vector_time_ms": 10,
+      "graph_time_ms": 11460,
+      "rerank_time_ms": 17464,
+      "total_time_ms": 28935,
+      "per_stage_ms": [
+        {
+          "stage": "1_llm_entity_extraction",
+          "elapsed_ms": 18022
+        },
+        {
+          "stage": "2_seed_entity_match",
+          "elapsed_ms": 1
+        },
+        {
+          "stage": "3_bfs_expand",
+          "elapsed_ms": 0
+        },
+        {
+          "stage": "4_inverse_idf_accumulate",
+          "elapsed_ms": 6
+        },
+        {
+          "stage": "5_vector_search",
+          "elapsed_ms": 19
+        },
+        {
+          "stage": "6_outer_rrf_merge",
+          "elapsed_ms": 28935
+        },
+        {
+          "stage": "7_rerank",
+          "elapsed_ms": 28935
+        },
+        {
+          "stage": "8_source_distribution",
+          "elapsed_ms": 0
+        }
+      ]
+    }
+  ],
+  "query_entities": [
+    "OpenCode"
+  ],
+  "seed_entities": [
+    "OpenCode"
+  ],
+  "expanded_entities": [
+    ".omo/",
+    ".opencode/skills/",
+    "/compact",
+    "/compact命令",
+    "/fork命令",
+    "/new",
+    "/new命令",
+    "/sessions命令",
+    "GitHub Copilot",
+    "GitHub Copilot 的 Claude 模型",
+    "GraphRAG",
+    "MCP协议",
+    "MCP服务",
+    "OpenCode",
+    "OpenCode Zen",
+    "claude-code-compat-core",
+    "claude-code-compat-core兼容层",
+    "fa3.json",
+    "grep_app_searchGitHub",
+    "lsp_*",
+    "opencode.db",
+    "opencode/gpt-5-nano",
+    "session",
+    "付费模型",
+    "会话分支功能",
+    "会话数据处理流水线",
+    "免费模型资源",
+    "只读模式",
+    "核心能力边界",
+    "该 repo"
+  ],
+  "expanded_count": 30,
+  "vector_results_count": 50,
+  "source_distribution": {
+    "vector": 1,
+    "graph": 0,
+    "both": 4,
+    "neither": 0
+  },
+  "final_results": [
+    {
+      "rank": 1,
+      "task_id": "ses_0ec02cc6dffeH1O7QFPSrptpla_T1",
+      "source": "both",
+      "rerank_score": 0.983085,
+      "hybrid_score": 0.032258,
+      "vector_rank": 1,
+      "graph_rank": 1,
+      "graph_raw_score": 32.106024,
+      "label": "澄清 OpenCode /fork 命令",
+      "summary_preview": "用户询问 OpenCode 中 `/fork` 命令的含义与用法。经查阅官方文档确认：OpenCode 并不支持 `/fork` 命令，其内置命令集为 `/new`、`/clear`、`/compact`、`/sessions`、`/mod"
+    },
+    {
+      "rank": 2,
+      "task_id": "ses_04edfa1f2ffey5A7mn4t5lm1YW_T4",
+      "source": "vector",
+      "rerank_score": 0.979354,
+      "hybrid_score": 0.010145,
+      "vector_rank": 39,
+      "graph_rank": null,
+      "graph_raw_score": null,
+      "label": "排查 Git push 网络故障",
+      "summary_preview": "排查 `git push` 时的 HTTP/2 framing error 和超时问题，通过诊断排除 PAT 缺失，定位为 HTTPS 443 端口网络层不稳定，提供配置代理或切换 SSH 协议方案，最终由用户自行推送成功。"
+    },
+    {
+      "rank": 3,
+      "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T11",
+      "source": "both",
+      "rerank_score": 0.957912,
+      "hybrid_score": 0.023883,
+      "vector_rank": 10,
+      "graph_rank": 17,
+      "graph_raw_score": 4.343805,
+      "label": "Repo架构定位确认",
+      "summary_preview": "背景与目标：确认 repo 是否为跨 session RAG 系统。核心产出与关键决策：确认该 repo 是面向 opencode 会话历史的、基于知识图谱增强的跨 session Graph-RAG 系统（Cross-session Kn"
+    },
+    {
+      "rank": 4,
+      "task_id": "ses_10772d114fferNiLEcTQ8YNd5k_T3",
+      "source": "both",
+      "rerank_score": 0.924142,
+      "hybrid_score": 0.029983,
+      "vector_rank": 2,
+      "graph_rank": 7,
+      "graph_raw_score": 10.386997,
+      "label": "排查 codegraph MCP 注册机制",
+      "summary_preview": "背景与目标：排查未安装的 codegraph 为何出现在 OpenCode 的 MCP 列表中，并理清其底层注册与加载机制。核心产出与关键决策：确认 codegraph 非 OpenCode 内置，而是由 omo 插件预置的占位配置（处于 "
+    },
+    {
+      "rank": 5,
+      "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T5",
+      "source": "both",
+      "rerank_score": 0.904651,
+      "hybrid_score": 0.023333,
+      "vector_rank": 12,
+      "graph_rank": 15,
+      "graph_raw_score": 4.343805,
+      "label": "澄清图谱构建流程及模型职责",
+      "summary_preview": "背景与目标：为厘清 OpenCode 会话数据处理流水线中各阶段的模型调用逻辑，澄清 Phase 5 知识图谱构建中 LLM 与 Embedding 的职责边界，并梳理 P1-P5 的端到端流程。\n核心产出与关键决策：明确了 Phase 5"
+    }
+  ],
+  "total_time_ms": 28935,
+  "total_wall_ms": 46986,
+  "db": "triple",
+  "db_stats": {
+    "db_path": "output/triple/knowledge_graph.db",
+    "nodes": 1211,
+    "edges": 3353,
+    "modes": 1,
+    "avg_task_count_per_entity": 1.09
+  },
+  "wall_ms": 46986
+}

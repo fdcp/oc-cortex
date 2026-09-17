@@ -1,0 +1,340 @@
+{
+  "query": "Qwen3 Reranker 精排",
+  "top_k": 5,
+  "use_reranker": true,
+  "use_graph_rag": true,
+  "graph_channel_weight": 0.3,
+  "bfs_depth": 1,
+  "max_expand_nodes": 30,
+  "max_graph_tasks": 50,
+  "rerank_multiplier": 2.0,
+  "outer_rrf_k": 30,
+  "stages": [
+    {
+      "stage": "1_llm_entity_extraction",
+      "elapsed_ms": 27385,
+      "extracted_entities": [
+        "Qwen3 Reranker",
+        "精排"
+      ],
+      "count": 2
+    },
+    {
+      "stage": "2_seed_entity_match",
+      "elapsed_ms": 5,
+      "seed_entities": [],
+      "match_details": [],
+      "exact_count": 0,
+      "fuzzy_count": 0
+    },
+    {
+      "stage": "3_bfs_expand",
+      "elapsed_ms": 0,
+      "expanded_entities": [],
+      "expanded_count": 0,
+      "seed_to_expand_ratio": 0.0
+    },
+    {
+      "stage": "4_inverse_idf_accumulate",
+      "elapsed_ms": 0,
+      "total_tasks_global": 76,
+      "unique_graph_tasks": 0,
+      "graph_candidates_after_truncate": 0,
+      "top10_entity_contrib": [],
+      "top10_task_scores": [],
+      "id_contrib_distribution": {
+        "count": 0
+      }
+    },
+    {
+      "stage": "5_vector_search",
+      "elapsed_ms": 68,
+      "retrieval_query": "Qwen3 Reranker 精排",
+      "vector_top_k_requested": 10,
+      "vector_results_count": 50,
+      "vector_score_stats": {
+        "count": 50,
+        "min": 0.014706,
+        "max": 0.032787,
+        "mean": 0.023111
+      },
+      "top10_vector_results": [
+        {
+          "rank": 1,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T8",
+          "hybrid_score": 0.032787,
+          "label": "P4与P5图谱关系分析"
+        },
+        {
+          "rank": 2,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T11",
+          "hybrid_score": 0.029644,
+          "label": "Repo架构定位确认"
+        },
+        {
+          "rank": 3,
+          "task_id": "ses_0c4845647ffea08jfnkY5ArLEG_T2",
+          "hybrid_score": 0.02879,
+          "label": "A800拓扑诊断与NCCL调优"
+        },
+        {
+          "rank": 4,
+          "task_id": "ses_0c9e4a359ffeGDSrVSG2jNVB6n_T1",
+          "hybrid_score": 0.028787,
+          "label": "BF16训练指南v4扩充"
+        },
+        {
+          "rank": 5,
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T4",
+          "hybrid_score": 0.028787,
+          "label": "FA1与FA2底层实现及并行类比"
+        },
+        {
+          "rank": 6,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T18",
+          "hybrid_score": 0.02773,
+          "label": "专利交底书格式迭代优化"
+        },
+        {
+          "rank": 7,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T7",
+          "hybrid_score": 0.027497,
+          "label": "规划 P5 稀疏向量改造方案"
+        },
+        {
+          "rank": 8,
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+          "hybrid_score": 0.02739,
+          "label": "SP原理剖析与Mermaid图解迭代"
+        },
+        {
+          "rank": 9,
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T2",
+          "hybrid_score": 0.027106,
+          "label": "ZeRO显存优化原理与通信推导"
+        },
+        {
+          "rank": 10,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T12",
+          "hybrid_score": 0.026876,
+          "label": "GraphRAG业界应用调研"
+        }
+      ]
+    },
+    {
+      "stage": "6_outer_rrf_merge",
+      "elapsed_ms": 72570,
+      "merged_candidates": 50,
+      "outer_rrf_k": 30,
+      "graph_channel_weight": 0.3
+    },
+    {
+      "stage": "7_rerank",
+      "elapsed_ms": 72570,
+      "rerank_time_ms": 19856,
+      "use_reranker": true,
+      "final_count": 5
+    },
+    {
+      "stage": "8_source_distribution",
+      "elapsed_ms": 0,
+      "source_dist": {
+        "vector": 5,
+        "graph": 0,
+        "both": 0,
+        "neither": 0
+      },
+      "final_results": [
+        {
+          "rank": 1,
+          "task_id": "ses_04e4b0b9cffe8OApx3qp7sRHb3_T1",
+          "source": "vector",
+          "rerank_score": 0.999268,
+          "hybrid_score": 0.010937,
+          "vector_rank": 34,
+          "graph_rank": null,
+          "graph_raw_score": null,
+          "label": "排查 Copilot 无法显示 Claude 模型",
+          "summary_preview": "背景与目标：解决 GitHub Copilot Pro+ 订阅下无法显示 Claude 模型的异常问题。核心产出与关键决策：通过系统级网络探查与 API 测试，确认国内环境及系统代理（127.0.0.1:7890）连通性正常，排除客户端与基"
+        },
+        {
+          "rank": 2,
+          "task_id": "ses_0c4845647ffea08jfnkY5ArLEG_T2",
+          "source": "vector",
+          "rerank_score": 0.994112,
+          "hybrid_score": 0.021212,
+          "vector_rank": 3,
+          "graph_rank": null,
+          "graph_raw_score": null,
+          "label": "A800拓扑诊断与NCCL调优",
+          "summary_preview": "针对 A800 集群分布式训练 NCCL AllReduce 耗时异常（单步 1.4s）问题，进行拓扑诊断与通信调优。确认服务器 NVLink 拓扑正常，定位瓶颈根因为未启用 DDP 梯度合并及混合精度。制定方案：将 DDP bucket "
+        },
+        {
+          "rank": 3,
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T3",
+          "source": "vector",
+          "rerank_score": 0.949669,
+          "hybrid_score": 0.014894,
+          "vector_rank": 17,
+          "graph_rank": null,
+          "graph_raw_score": null,
+          "label": "NeMo Megatron Bridge定位与价值辨析",
+          "summary_preview": "背景与目标：解答 NeMo Megatron Bridge 的核心定位，辨析其与 Megatron 原生 convert_checkpoint 工具的区别，并评估其在实际工程中的价值与边界。\n核心产出与关键决策：明确 Bridge 是连接 "
+        },
+        {
+          "rank": 4,
+          "task_id": "ses_0c99b81bcffeAwdzQ0s8zld82L_T2",
+          "source": "vector",
+          "rerank_score": 0.698844,
+          "hybrid_score": 0.010448,
+          "vector_rank": 37,
+          "graph_rank": null,
+          "graph_raw_score": null,
+          "label": "编写优化器进阶指南v2",
+          "summary_preview": "在 v1 基础上，针对 Adam/AdamW/Lion/Muon 四大核心优化器进行深度扩写，以强化数学原理、手算推导与面试问答。核心产出为 v2 版本的 Markdown 与 HTML 文件，大幅增加了硬核推导内容（如 Adam 偏差修正"
+        },
+        {
+          "rank": 5,
+          "task_id": "ses_04ba8451cffeeg4eVFN8BencC8_T1",
+          "source": "vector",
+          "rerank_score": 0.567937,
+          "hybrid_score": 0.009333,
+          "vector_rank": 45,
+          "graph_rank": null,
+          "graph_raw_score": null,
+          "label": "执行init-deep生成层级化文档",
+          "summary_preview": "为完善项目代码库导航与工程规范，执行 /init-deep 工作流生成并更新层级化 AGENTS.md 文件。通过 9 个后台代理深度探索代码结构与复杂度热点，完成目录评分。核心产出为更新 root/src/tests 文档以补充模块映射、"
+        }
+      ]
+    },
+    {
+      "stage": "9_timing",
+      "elapsed_ms": 0,
+      "vector_time_ms": 13,
+      "graph_time_ms": 52699,
+      "rerank_time_ms": 19856,
+      "total_time_ms": 72570,
+      "per_stage_ms": [
+        {
+          "stage": "1_llm_entity_extraction",
+          "elapsed_ms": 27385
+        },
+        {
+          "stage": "2_seed_entity_match",
+          "elapsed_ms": 5
+        },
+        {
+          "stage": "3_bfs_expand",
+          "elapsed_ms": 0
+        },
+        {
+          "stage": "4_inverse_idf_accumulate",
+          "elapsed_ms": 0
+        },
+        {
+          "stage": "5_vector_search",
+          "elapsed_ms": 68
+        },
+        {
+          "stage": "6_outer_rrf_merge",
+          "elapsed_ms": 72570
+        },
+        {
+          "stage": "7_rerank",
+          "elapsed_ms": 72570
+        },
+        {
+          "stage": "8_source_distribution",
+          "elapsed_ms": 0
+        }
+      ]
+    }
+  ],
+  "query_entities": [
+    "Qwen3 Reranker",
+    "精排"
+  ],
+  "seed_entities": [],
+  "expanded_entities": [],
+  "expanded_count": 0,
+  "vector_results_count": 50,
+  "source_distribution": {
+    "vector": 5,
+    "graph": 0,
+    "both": 0,
+    "neither": 0
+  },
+  "final_results": [
+    {
+      "rank": 1,
+      "task_id": "ses_04e4b0b9cffe8OApx3qp7sRHb3_T1",
+      "source": "vector",
+      "rerank_score": 0.999268,
+      "hybrid_score": 0.010937,
+      "vector_rank": 34,
+      "graph_rank": null,
+      "graph_raw_score": null,
+      "label": "排查 Copilot 无法显示 Claude 模型",
+      "summary_preview": "背景与目标：解决 GitHub Copilot Pro+ 订阅下无法显示 Claude 模型的异常问题。核心产出与关键决策：通过系统级网络探查与 API 测试，确认国内环境及系统代理（127.0.0.1:7890）连通性正常，排除客户端与基"
+    },
+    {
+      "rank": 2,
+      "task_id": "ses_0c4845647ffea08jfnkY5ArLEG_T2",
+      "source": "vector",
+      "rerank_score": 0.994112,
+      "hybrid_score": 0.021212,
+      "vector_rank": 3,
+      "graph_rank": null,
+      "graph_raw_score": null,
+      "label": "A800拓扑诊断与NCCL调优",
+      "summary_preview": "针对 A800 集群分布式训练 NCCL AllReduce 耗时异常（单步 1.4s）问题，进行拓扑诊断与通信调优。确认服务器 NVLink 拓扑正常，定位瓶颈根因为未启用 DDP 梯度合并及混合精度。制定方案：将 DDP bucket "
+    },
+    {
+      "rank": 3,
+      "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T3",
+      "source": "vector",
+      "rerank_score": 0.949669,
+      "hybrid_score": 0.014894,
+      "vector_rank": 17,
+      "graph_rank": null,
+      "graph_raw_score": null,
+      "label": "NeMo Megatron Bridge定位与价值辨析",
+      "summary_preview": "背景与目标：解答 NeMo Megatron Bridge 的核心定位，辨析其与 Megatron 原生 convert_checkpoint 工具的区别，并评估其在实际工程中的价值与边界。\n核心产出与关键决策：明确 Bridge 是连接 "
+    },
+    {
+      "rank": 4,
+      "task_id": "ses_0c99b81bcffeAwdzQ0s8zld82L_T2",
+      "source": "vector",
+      "rerank_score": 0.698844,
+      "hybrid_score": 0.010448,
+      "vector_rank": 37,
+      "graph_rank": null,
+      "graph_raw_score": null,
+      "label": "编写优化器进阶指南v2",
+      "summary_preview": "在 v1 基础上，针对 Adam/AdamW/Lion/Muon 四大核心优化器进行深度扩写，以强化数学原理、手算推导与面试问答。核心产出为 v2 版本的 Markdown 与 HTML 文件，大幅增加了硬核推导内容（如 Adam 偏差修正"
+    },
+    {
+      "rank": 5,
+      "task_id": "ses_04ba8451cffeeg4eVFN8BencC8_T1",
+      "source": "vector",
+      "rerank_score": 0.567937,
+      "hybrid_score": 0.009333,
+      "vector_rank": 45,
+      "graph_rank": null,
+      "graph_raw_score": null,
+      "label": "执行init-deep生成层级化文档",
+      "summary_preview": "为完善项目代码库导航与工程规范，执行 /init-deep 工作流生成并更新层级化 AGENTS.md 文件。通过 9 个后台代理深度探索代码结构与复杂度热点，完成目录评分。核心产出为更新 root/src/tests 文档以补充模块映射、"
+    }
+  ],
+  "total_time_ms": 72570,
+  "total_wall_ms": 100029,
+  "db": "triple",
+  "db_stats": {
+    "db_path": "output/triple/knowledge_graph.db",
+    "nodes": 1211,
+    "edges": 3353,
+    "modes": 1,
+    "avg_task_count_per_entity": 1.09
+  },
+  "wall_ms": 100029
+}

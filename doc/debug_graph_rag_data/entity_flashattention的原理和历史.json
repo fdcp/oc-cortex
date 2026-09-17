@@ -1,0 +1,540 @@
+{
+  "query": "flashattention的原理和历史",
+  "top_k": 5,
+  "use_reranker": true,
+  "use_graph_rag": true,
+  "graph_channel_weight": 0.3,
+  "bfs_depth": 1,
+  "max_expand_nodes": 30,
+  "max_graph_tasks": 50,
+  "rerank_multiplier": 2.0,
+  "outer_rrf_k": 30,
+  "stages": [
+    {
+      "stage": "1_llm_entity_extraction",
+      "elapsed_ms": 21973,
+      "extracted_entities": [
+        "flashattention"
+      ],
+      "count": 1
+    },
+    {
+      "stage": "2_seed_entity_match",
+      "elapsed_ms": 2,
+      "seed_entities": [
+        "FlashAttention-2",
+        "FlashAttention-1",
+        "FlashAttention"
+      ],
+      "match_details": [
+        {
+          "extracted": "flashattention",
+          "matched": "FlashAttention",
+          "match_type": "fuzzy",
+          "task_count": 3
+        },
+        {
+          "extracted": "flashattention",
+          "matched": "FlashAttention-1",
+          "match_type": "fuzzy",
+          "task_count": 1
+        },
+        {
+          "extracted": "flashattention",
+          "matched": "FlashAttention-2",
+          "match_type": "fuzzy",
+          "task_count": 1
+        }
+      ],
+      "exact_count": 0,
+      "fuzzy_count": 3
+    },
+    {
+      "stage": "3_bfs_expand",
+      "elapsed_ms": 3,
+      "expanded_entities": [
+        "CUDA",
+        "FlashAttention",
+        "FlashAttention-1",
+        "FlashAttention-2",
+        "GPU",
+        "HBM",
+        "HuggingFace",
+        "K block",
+        "NaN/Inf 诊断",
+        "NaN/Inf诊断",
+        "Online Softmax",
+        "QLoRA",
+        "Ring Attention",
+        "Roofline模型",
+        "SRAM",
+        "Tiling",
+        "atomicAdd",
+        "syncwarp",
+        "warp",
+        "分布式训练",
+        "反向传播",
+        "序列并行",
+        "指数和",
+        "显存开销",
+        "标准Attention",
+        "梯度累积",
+        "算术强度",
+        "累加量l",
+        "累加量m",
+        "行最大值"
+      ],
+      "expanded_count": 30,
+      "seed_to_expand_ratio": 10.0
+    },
+    {
+      "stage": "4_inverse_idf_accumulate",
+      "elapsed_ms": 3,
+      "total_tasks_global": 76,
+      "unique_graph_tasks": 9,
+      "graph_candidates_after_truncate": 9,
+      "top10_entity_contrib": [
+        {
+          "entity": "指数和",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "累加量l",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "行最大值",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "累加量m",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "HBM",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "显存开销",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "梯度累积",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "HuggingFace",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "算术强度",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        },
+        {
+          "entity": "syncwarp",
+          "task_count": 1,
+          "idf_contrib": 4.3438,
+          "source_tasks": 1
+        }
+      ],
+      "top10_task_scores": [
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T4",
+          "score": 41.0046,
+          "n_entities": 10
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T3",
+          "score": 32.9972,
+          "n_entities": 8
+        },
+        {
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T2",
+          "score": 32.9972,
+          "n_entities": 8
+        },
+        {
+          "task_id": "ses_0c9e4a359ffeGDSrVSG2jNVB6n_T1",
+          "score": 20.6461,
+          "n_entities": 5
+        },
+        {
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T3",
+          "score": 7.6146,
+          "n_entities": 2
+        },
+        {
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T6",
+          "score": 4.3438,
+          "n_entities": 1
+        },
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T2",
+          "score": 3.6636,
+          "n_entities": 1
+        },
+        {
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+          "score": 3.6636,
+          "n_entities": 1
+        },
+        {
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T1",
+          "score": 3.2708,
+          "n_entities": 1
+        }
+      ],
+      "id_contrib_distribution": {
+        "count": 30,
+        "contrib_min": 3.2708,
+        "contrib_max": 4.3438,
+        "contrib_mean": 4.2042,
+        "task_count_min": 1,
+        "task_count_max": 3,
+        "task_count_mean": 1.23
+      }
+    },
+    {
+      "stage": "5_vector_search",
+      "elapsed_ms": 86,
+      "retrieval_query": "flashattention的原理和历史",
+      "vector_top_k_requested": 10,
+      "vector_results_count": 50,
+      "vector_score_stats": {
+        "count": 50,
+        "min": 0.015873,
+        "max": 0.031258,
+        "mean": 0.022938
+      },
+      "top10_vector_results": [
+        {
+          "rank": 1,
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T3",
+          "hybrid_score": 0.031258,
+          "label": "FA状态变量Shape澄清"
+        },
+        {
+          "rank": 2,
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T1",
+          "hybrid_score": 0.03055,
+          "label": "SP原理剖析与Mermaid图解迭代"
+        },
+        {
+          "rank": 3,
+          "task_id": "ses_0e8898453ffeS7ByDo9zjP8Z8h_T2",
+          "hybrid_score": 0.029644,
+          "label": "并行训练尾部填充代码解析"
+        },
+        {
+          "rank": 4,
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T4",
+          "hybrid_score": 0.029643,
+          "label": "FA1与FA2底层实现及并行类比"
+        },
+        {
+          "rank": 5,
+          "task_id": "ses_0c5b6171bfferME7He2F8G6UuJ_T2",
+          "hybrid_score": 0.028893,
+          "label": "Roofline模型算术强度推导"
+        },
+        {
+          "rank": 6,
+          "task_id": "ses_0ca8a24d9ffeHoz0wYkhYDDO4w_T2",
+          "hybrid_score": 0.028778,
+          "label": "技术笔记静态站点整合与本地实施"
+        },
+        {
+          "rank": 7,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T9",
+          "hybrid_score": 0.028309,
+          "label": "MCP模块功能与架构分析"
+        },
+        {
+          "rank": 8,
+          "task_id": "ses_053c0ac72ffe883RpIvqU1LUEw_T2",
+          "hybrid_score": 0.027783,
+          "label": "ZeRO显存优化原理与通信推导"
+        },
+        {
+          "rank": 9,
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T3",
+          "hybrid_score": 0.02669,
+          "label": "NeMo Megatron Bridge定位与价值辨析"
+        },
+        {
+          "rank": 10,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T11",
+          "hybrid_score": 0.026614,
+          "label": "Repo架构定位确认"
+        }
+      ]
+    },
+    {
+      "stage": "6_outer_rrf_merge",
+      "elapsed_ms": 44980,
+      "merged_candidates": 50,
+      "outer_rrf_k": 30,
+      "graph_channel_weight": 0.3
+    },
+    {
+      "stage": "7_rerank",
+      "elapsed_ms": 44980,
+      "rerank_time_ms": 18881,
+      "use_reranker": true,
+      "final_count": 5
+    },
+    {
+      "stage": "8_source_distribution",
+      "elapsed_ms": 0,
+      "source_dist": {
+        "vector": 5,
+        "graph": 0,
+        "both": 0,
+        "neither": 0
+      },
+      "final_results": [
+        {
+          "rank": 1,
+          "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T3",
+          "source": "vector",
+          "rerank_score": 0.824462,
+          "hybrid_score": 0.017949,
+          "vector_rank": 9,
+          "graph_rank": null,
+          "graph_raw_score": null,
+          "label": "NeMo Megatron Bridge定位与价值辨析",
+          "summary_preview": "背景与目标：解答 NeMo Megatron Bridge 的核心定位，辨析其与 Megatron 原生 convert_checkpoint 工具的区别，并评估其在实际工程中的价值与边界。\n核心产出与关键决策：明确 Bridge 是连接 "
+        },
+        {
+          "rank": 2,
+          "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T20",
+          "source": "vector",
+          "rerank_score": 0.695958,
+          "hybrid_score": 0.011864,
+          "vector_rank": 29,
+          "graph_rank": null,
+          "graph_raw_score": null,
+          "label": "Session 历史追溯与总结",
+          "summary_preview": "追溯当前 opencode session 从创建至今的完整操作历史。背景：用户需要了解 session 全貌。核心产出：通过查询 opencode.db(ses_0870d73a7ffehev1FO7HA2HSze，258 条消息，171"
+        },
+        {
+          "rank": 3,
+          "task_id": "ses_0c99b81bcffeAwdzQ0s8zld82L_T1",
+          "source": "vector",
+          "rerank_score": 0.461017,
+          "hybrid_score": 0.011475,
+          "vector_rank": 31,
+          "graph_rank": null,
+          "graph_raw_score": null,
+          "label": "编写优化器基础指南v1",
+          "summary_preview": "为系统学习大模型训练中的参数更新机制，编写了一份涵盖理论、实战、手算与面试的优化器基础指南。核心产出为 Markdown 与 MathJax 渲染的深色主题 HTML 文件（optimizers_guide.*），内容涵盖梯度下降数学基础、"
+        },
+        {
+          "rank": 4,
+          "task_id": "ses_10772d114fferNiLEcTQ8YNd5k_T2",
+          "source": "vector",
+          "rerank_score": 0.319334,
+          "hybrid_score": 0.009091,
+          "vector_rank": 47,
+          "graph_rank": null,
+          "graph_raw_score": null,
+          "label": "分析 omo 模型配置及影响",
+          "summary_preview": "背景与目标：评估 omo 插件默认免费模型配置对 OpenCode 核心功能的影响，并确认原生 agent 的保留状态。核心产出与关键决策：解析 ~/.config/opencode/oh-my-openagent.json，确认 omo "
+        },
+        {
+          "rank": 5,
+          "task_id": "ses_0ca8a24d9ffeHoz0wYkhYDDO4w_T2",
+          "source": "vector",
+          "rerank_score": 0.262842,
+          "hybrid_score": 0.019444,
+          "vector_rank": 6,
+          "graph_rank": null,
+          "graph_raw_score": null,
+          "label": "技术笔记静态站点整合与本地实施",
+          "summary_preview": "背景与目标：为整合分散的 7 个独立技术笔记 HTML 页面，需将其统一托管至 GitHub Pages 构建多页静态站点。\n核心产出与关键决策：采用“复制副本+注入式导航”策略，保持原文件不动。完成了站点目录结构搭建、公共导航脚本（nav"
+        }
+      ]
+    },
+    {
+      "stage": "9_timing",
+      "elapsed_ms": 0,
+      "vector_time_ms": 14,
+      "graph_time_ms": 26083,
+      "rerank_time_ms": 18881,
+      "total_time_ms": 44979,
+      "per_stage_ms": [
+        {
+          "stage": "1_llm_entity_extraction",
+          "elapsed_ms": 21973
+        },
+        {
+          "stage": "2_seed_entity_match",
+          "elapsed_ms": 2
+        },
+        {
+          "stage": "3_bfs_expand",
+          "elapsed_ms": 3
+        },
+        {
+          "stage": "4_inverse_idf_accumulate",
+          "elapsed_ms": 3
+        },
+        {
+          "stage": "5_vector_search",
+          "elapsed_ms": 86
+        },
+        {
+          "stage": "6_outer_rrf_merge",
+          "elapsed_ms": 44980
+        },
+        {
+          "stage": "7_rerank",
+          "elapsed_ms": 44980
+        },
+        {
+          "stage": "8_source_distribution",
+          "elapsed_ms": 0
+        }
+      ]
+    }
+  ],
+  "query_entities": [
+    "flashattention"
+  ],
+  "seed_entities": [
+    "FlashAttention-2",
+    "FlashAttention-1",
+    "FlashAttention"
+  ],
+  "expanded_entities": [
+    "CUDA",
+    "FlashAttention",
+    "FlashAttention-1",
+    "FlashAttention-2",
+    "GPU",
+    "HBM",
+    "HuggingFace",
+    "K block",
+    "NaN/Inf 诊断",
+    "NaN/Inf诊断",
+    "Online Softmax",
+    "QLoRA",
+    "Ring Attention",
+    "Roofline模型",
+    "SRAM",
+    "Tiling",
+    "atomicAdd",
+    "syncwarp",
+    "warp",
+    "分布式训练",
+    "反向传播",
+    "序列并行",
+    "指数和",
+    "显存开销",
+    "标准Attention",
+    "梯度累积",
+    "算术强度",
+    "累加量l",
+    "累加量m",
+    "行最大值"
+  ],
+  "expanded_count": 30,
+  "vector_results_count": 50,
+  "source_distribution": {
+    "vector": 5,
+    "graph": 0,
+    "both": 0,
+    "neither": 0
+  },
+  "final_results": [
+    {
+      "rank": 1,
+      "task_id": "ses_12c6bd8dfffevT51PypMW2v5Mx_T3",
+      "source": "vector",
+      "rerank_score": 0.824462,
+      "hybrid_score": 0.017949,
+      "vector_rank": 9,
+      "graph_rank": null,
+      "graph_raw_score": null,
+      "label": "NeMo Megatron Bridge定位与价值辨析",
+      "summary_preview": "背景与目标：解答 NeMo Megatron Bridge 的核心定位，辨析其与 Megatron 原生 convert_checkpoint 工具的区别，并评估其在实际工程中的价值与边界。\n核心产出与关键决策：明确 Bridge 是连接 "
+    },
+    {
+      "rank": 2,
+      "task_id": "ses_0870d73a7ffehev1FO7HA2HSze_T20",
+      "source": "vector",
+      "rerank_score": 0.695958,
+      "hybrid_score": 0.011864,
+      "vector_rank": 29,
+      "graph_rank": null,
+      "graph_raw_score": null,
+      "label": "Session 历史追溯与总结",
+      "summary_preview": "追溯当前 opencode session 从创建至今的完整操作历史。背景：用户需要了解 session 全貌。核心产出：通过查询 opencode.db(ses_0870d73a7ffehev1FO7HA2HSze，258 条消息，171"
+    },
+    {
+      "rank": 3,
+      "task_id": "ses_0c99b81bcffeAwdzQ0s8zld82L_T1",
+      "source": "vector",
+      "rerank_score": 0.461017,
+      "hybrid_score": 0.011475,
+      "vector_rank": 31,
+      "graph_rank": null,
+      "graph_raw_score": null,
+      "label": "编写优化器基础指南v1",
+      "summary_preview": "为系统学习大模型训练中的参数更新机制，编写了一份涵盖理论、实战、手算与面试的优化器基础指南。核心产出为 Markdown 与 MathJax 渲染的深色主题 HTML 文件（optimizers_guide.*），内容涵盖梯度下降数学基础、"
+    },
+    {
+      "rank": 4,
+      "task_id": "ses_10772d114fferNiLEcTQ8YNd5k_T2",
+      "source": "vector",
+      "rerank_score": 0.319334,
+      "hybrid_score": 0.009091,
+      "vector_rank": 47,
+      "graph_rank": null,
+      "graph_raw_score": null,
+      "label": "分析 omo 模型配置及影响",
+      "summary_preview": "背景与目标：评估 omo 插件默认免费模型配置对 OpenCode 核心功能的影响，并确认原生 agent 的保留状态。核心产出与关键决策：解析 ~/.config/opencode/oh-my-openagent.json，确认 omo "
+    },
+    {
+      "rank": 5,
+      "task_id": "ses_0ca8a24d9ffeHoz0wYkhYDDO4w_T2",
+      "source": "vector",
+      "rerank_score": 0.262842,
+      "hybrid_score": 0.019444,
+      "vector_rank": 6,
+      "graph_rank": null,
+      "graph_raw_score": null,
+      "label": "技术笔记静态站点整合与本地实施",
+      "summary_preview": "背景与目标：为整合分散的 7 个独立技术笔记 HTML 页面，需将其统一托管至 GitHub Pages 构建多页静态站点。\n核心产出与关键决策：采用“复制副本+注入式导航”策略，保持原文件不动。完成了站点目录结构搭建、公共导航脚本（nav"
+    }
+  ],
+  "total_time_ms": 44979,
+  "total_wall_ms": 67049,
+  "db": "entity",
+  "db_stats": {
+    "db_path": "output/entity/knowledge_graph.db",
+    "nodes": 687,
+    "edges": 10757,
+    "modes": 1,
+    "avg_task_count_per_entity": 1.19
+  },
+  "wall_ms": 67050
+}
