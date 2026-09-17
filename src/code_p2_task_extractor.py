@@ -303,6 +303,14 @@ class TaskExtractor:
       - Token 预算管理
     """
 
+    @staticmethod
+    def _session_headers() -> dict:
+        session_id = (
+            os.environ.get("OPENCODE_SESSION_ID")
+            or f"cli-{os.getpid()}-{int(time.time())}"
+        )
+        return {"x-opencode-session": session_id}
+
     def __init__(
         self,
         model: str = "qwen-plus",
@@ -343,6 +351,9 @@ class TaskExtractor:
             api_key=self.api_key,
             base_url=self.base_url,
             timeout=self.timeout,
+            # opencode-go 端点要求 x-opencode-session header,
+            # 否则 400 MissingSessionID (同 code_p5e_graph_rag._get_client)
+            default_headers=self._session_headers(),
         )
 
         self._planner = BatchPlanner(
