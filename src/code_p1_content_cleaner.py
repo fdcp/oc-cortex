@@ -36,7 +36,7 @@ def _clean_tool_call(raw, max_error_length: int) -> CleanedToolCall:
     if tc_type == "bash":
         summary = raw.cmd or "(empty cmd)"
     elif tc_type == "mcp_call":
-        summary = raw.target or raw.action or "(empty target)"
+        summary = raw.action or raw.target or "(empty target)"
     else:
         summary = raw.action or raw.cmd or raw.target or "(unknown)"
 
