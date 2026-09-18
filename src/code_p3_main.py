@@ -132,6 +132,10 @@ def main():
         "--summaries", default=None,
         help="Phase 2 chunk summaries JSONL 文件路径 (覆盖配置文件)"
     )
+    parser.add_argument(
+        "--db_path", default=None,
+        help="Qdrant embedded 存储路径 (覆盖配置 qdrant.path)"
+    )
     args = parser.parse_args()
 
     # 1. 加载配置 (已在模块级别完成)
@@ -200,7 +204,7 @@ def main():
         dim=config.get("embedding.dim", 512),
         batch_size=config.get("embedding.batch_size", 32),
         device=config.get("embedding.device", "cpu"),
-        qdrant_path=config.get("qdrant.path", "./qdrant_data"),
+        qdrant_path=args.db_path or config.get("qdrant.path", "./qdrant_data"),
         qdrant_url=os.environ.get("QDRANT_URL") or config.get("qdrant.url"),
         tasks_collection=config.get("qdrant.collections.tasks", "tasks"),
         chunks_summary_collection=config.get("qdrant.collections.chunks_summary", "chunks_summary"),

@@ -25,6 +25,30 @@ from code_p1_models import Chunk
 # Qdrant 客户端工厂 (embedded path vs server url)
 # ============================================================
 
+def _clear_proxy_for_qdrant(url: str) -> None:
+    """server 模式下将 Qdrant 地址加入 NO_PROXY，避免系统代理把 localhost 请求
+    路由到外部代理 (clash 返回 502 / socks 客户端崩溃)。
+    仅当目标地址落在 loopback 时才处理，远端 server 交给用户自行配置。
+    """
+    import os
+    from urllib.parse import urlparse
+
+    host = urlparse(url).hostname or ""
+    if host not in ("localhost", "127.0.0.1", "::1"):
+        return
+
+    hosts = {"localhost", "127.0.0.1", "::1"}
+    for key, value in list(os.environ.items()):
+        lowered = key.lower()
+        if lowered == "no_proxy":
+            hosts.update(h.strip() for h in value.split(",") if h.strip())
+        elif "proxy" in lowered:
+            os.environ.pop(key, None)
+    os.environ["NO_PROXY"] = ",".join(sorted(hosts))
+    os.environ["no_proxy"] = os.environ["NO_PROXY"]
+    logger.info(f"server 模式指向 {host}, 设置 NO_PROXY={os.environ['NO_PROXY']} 绕开本机代理")
+
+
 def create_qdrant_client(
     qdrant_path: str = "./qdrant_data",
     qdrant_url: Optional[str] = None,
@@ -38,6 +62,7 @@ def create_qdrant_client(
 
     url = (qdrant_url or "").strip() or None
     if url:
+        _clear_proxy_for_qdrant(url)
         logger.info(f"初始化 Qdrant 客户端 (server 模式): {url}")
         return QdrantClient(url=url)
     logger.info(f"初始化 Qdrant 客户端 (embedded 模式): {qdrant_path}")

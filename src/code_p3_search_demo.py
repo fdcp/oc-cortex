@@ -100,6 +100,47 @@ def load_summaries(path: str) -> dict[str, str]:
 # 结果格式化
 # ============================================================
 
+def _rebuild_bm25_only(store, tasks, chunks, summaries) -> None:
+    """跳过 upsert 时, 从本地 JSONL 数据重建两个 chunk 集合的 BM25 索引."""
+    from code_p3_qdrant_store import _stable_uuid
+
+    chunk_to_task = {}
+    for t in tasks:
+        for cid in t.chunk_ids:
+            chunk_to_task[cid] = t.task_id
+
+    cleaned = ([], [], [])
+    summary = ([], [], [])
+    for c in chunks:
+        cleaned_text = c.cleaned_text()
+        if cleaned_text:
+            cleaned[0].append(cleaned_text)
+            cleaned[1].append(_stable_uuid(c.chunk_id))
+            cleaned[2].append({
+                "chunk_id": c.chunk_id,
+                "session_id": c.session_id,
+                "turn_index": c.turn_index,
+                "task_id": chunk_to_task.get(c.chunk_id, ""),
+            })
+        s = summaries.get(c.chunk_id, "")
+        if s:
+            summary[0].append(s)
+            summary[1].append(_stable_uuid(c.chunk_id))
+            summary[2].append({
+                "chunk_id": c.chunk_id,
+                "session_id": c.session_id,
+                "turn_index": c.turn_index,
+                "task_id": chunk_to_task.get(c.chunk_id, ""),
+                "summary": s,
+            })
+
+    store.build_bm25_index(
+        store.chunks_cleaned_text_collection, *cleaned
+    )
+    store.build_bm25_index(
+        store.chunks_summary_collection, *summary
+    )
+
 def fmt_search_results(results: list[SearchResult], title: str) -> str:
     """格式化单路检索结果"""
     lines = [f"\n{'=' * 50}", f"  {title}", f"{'=' * 50}"]
@@ -162,6 +203,27 @@ def main():
     )
     parser.add_argument("--query", default=None, help="自定义查询 (覆盖示例)")
     parser.add_argument("--top-k", type=int, default=5, help="返回结果数")
+    parser.add_argument(
+        "--tasks", default=None,
+        help="Phase 2 tasks JSONL 文件路径 (覆盖配置文件)"
+    )
+    parser.add_argument(
+        "--chunks", default=None,
+        help="Phase 1 chunks JSONL 文件路径 (覆盖配置文件)"
+    )
+    parser.add_argument(
+        "--summaries", default=None,
+        help="Phase 2 chunk summaries JSONL 文件路径 (覆盖配置文件)"
+    )
+    parser.add_argument(
+        "--db-path", default=None,
+        help="Qdrant embedded 存储路径 (覆盖配置 qdrant.path)"
+    )
+    parser.add_argument(
+        "--upsert", action="store_true",
+        help="先 upsert 再检索 (默认跳过 upsert, 直接用 Qdrant 已有数据; "
+             "写入数据请用 code_p3_main.py)"
+    )
     args = parser.parse_args()
 
     # 1. 加载配置 (已在模块级别完成)
@@ -182,7 +244,7 @@ def main():
         sparse_method = "bge_m3"
         bge_m3_model = config.get("sparse.bge_m3_model", "BAAI/bge-m3")
         batch_size = 4
-        qdrant_path = "./qdrant_data_sample"
+        qdrant_path = args.db_path or "./qdrant_data_sample"
         sample_ratio = 1 / 5
         logger.info(f"模式: sample (Qwen3 + BGE-M3, 1/5 数据)")
     else:
@@ -192,14 +254,23 @@ def main():
         sparse_method = config.get("sparse.method", "bm25")
         bge_m3_model = config.get("sparse.bge_m3_model", "BAAI/bge-m3")
         batch_size = config.get("embedding.batch_size", 32)
-        qdrant_path = config.get("qdrant.path", "./qdrant_data")
+        qdrant_path = args.db_path or config.get("qdrant.path", "./qdrant_data")
         sample_ratio = 1.0
         logger.info(f"模式: all ({dense_model} + BM25, 全量数据)")
 
-    # 3. 加载数据
-    tasks_file = config.get("phase2.tasks_file", "./output/tasks.jsonl")
-    chunks_file = config.get("phase1.chunks_file", "./output/chunks.jsonl")
-    summaries_file = config.get("phase2.chunk_summaries_file", "./output/chunks_summary_p2.jsonl")
+    # 3. 加载数据 (CLI 参数优先, 与 code_p3_main.py 对齐)
+    tasks_file = (
+        args.tasks
+        or config.get("phase2.tasks_file", "./output/tasks.jsonl")
+    )
+    chunks_file = (
+        args.chunks
+        or config.get("phase1.chunks_file", "./output/chunks.jsonl")
+    )
+    summaries_file = (
+        args.summaries
+        or config.get("phase2.chunk_summaries_file", "./output/chunks_summary_p2.jsonl")
+    )
 
     tasks = load_tasks(tasks_file)
     chunks = load_chunks(chunks_file)
@@ -241,14 +312,19 @@ def main():
         offline_mode=config.get("embedding.offline_mode", True),
     )
 
-    store.init_collections()
-
-    # 6. Upsert
-    logger.info("-" * 40)
-    logger.info("开始 upsert ...")
-    store.upsert_tasks(tasks)
-    store.upsert_chunks_summary(chunks, summaries, tasks=tasks)
-    store.upsert_chunks_cleaned_text(chunks, tasks=tasks)
+    # 6. Upsert / BM25 索引
+    if args.upsert:
+        store.init_collections()
+        logger.info("-" * 40)
+        logger.info("开始 upsert ...")
+        store.upsert_tasks(tasks)
+        store.upsert_chunks_summary(chunks, summaries, tasks=tasks)
+        store.upsert_chunks_cleaned_text(chunks, tasks=tasks)
+    else:
+        logger.info("-" * 40)
+        logger.info("只读模式: 跳过 upsert, 直接用 Qdrant 已有数据")
+        if sparse_method == "bm25":
+            _rebuild_bm25_only(store, tasks, chunks, summaries)
 
     stats = store.get_stats()
     elapsed = time.time() - t0

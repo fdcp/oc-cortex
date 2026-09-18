@@ -20,6 +20,7 @@ openai>=1.30.0           # OpenAI-compatible API (OpenCode Zen)
 # Phase 3: Vector Storage (Qdrant + Embedding + BM25)
 # ============================================================
 qdrant-client>=1.7.0     # Qdrant 向量数据库客户端
+httpx[socks]>=0.24.0     # Qdrant/HF http 传输; [socks] 使 shell 常驻 socks5 代理不致崩溃
 sentence-transformers>=2.2.0  # Dense embedding (BAAI/bge-small-zh-v1.5)
 jieba>=0.42.1            # BM25 中文分词
 rank_bm25>=0.2.2         # BM25 稀疏检索
