@@ -21,7 +21,7 @@ query_instruction_for_retrieval + 原始 query
 | 核心类 | `Phase3Store` | `QdrantClient` (直调) | `SessionSearcher` |
 | 检索方式 | Dense / Sparse / Hybrid 三路分开展示 | 仅 Dense (top-5 命中率验证) | 两级 RRF Hybrid + Reranker |
 | 结果粒度 | Chunk 级别 (chunk_id + score) | Task/Chunk 级别 (命中统计) | Task 级别 (附带 Chunk 摘要和文本预览) |
-| 数据写入 | 每次运行重建索引 (upsert) | 只读 | 只读 (假设已由 `code_p3_main.py` 写入) |
+| 数据写入 | 默认只读; `--upsert` 显式开启全量 upsert | 只读 | 只读 (假设已由 `code_p3_main.py` 写入) |
 | 交互模式 | 无 (批量示例查询) | 无 (全自动检视) | 有 (`--interactive`) |
 | 配置文件 | `config/code_p3_config.yaml` | 硬编码 `./qdrant_data` | `config/code_p3_config.yaml` |
 
@@ -29,7 +29,7 @@ query_instruction_for_retrieval + 原始 query
 
 ### 1. `code_p3_search_demo.py` — 检索实验室
 
-这是一个数据注入与检索演示一体化的脚本。每次运行时从 JSONL 文件加载 tasks、chunks、summaries，全量 upsert 到 Qdrant，然后对预设的 5 条示例查询分别执行三种检索并并排展示结果。
+这是一个检索演示脚本，**默认只读**：不写入 Qdrant，只对查询执行检索并展示结果。BM25 稀疏索引不持久化，只读模式下会在进程内从 `--chunks` / `--summaries` JSONL 现场重建内存 BM25，因此这两个参数在 BM25/hybrid 模式下必传，且必须与 Qdrant 里已灌的数据同源。加 `--upsert` 才会走旧流程（从 JSONL 全量 upsert 到 Qdrant 再查询）。
 
 **检索流程：**
 
@@ -44,17 +44,43 @@ Hybrid 跨集合检索 → RRF(dense_summary, sparse_cleaned_text) → HybridRes
 - 三路检索独立执行、独立展示，方便对比不同策略的效果差异。
 - 支持两种模式：`--mode all` 使用 bge-small-zh + BM25 全量数据；`--mode sample` 使用 Qwen3-Embedding + BGE-M3 采样 1/5 数据。
 - 可通过 `--query` 自定义查询覆盖示例集。
-- 运行较慢（每次重建索引），适合调参阶段验证 embedding 模型或 sparse 方法的效果。
+- `--tasks/--chunks/--summaries` 可显式覆盖 config 中的数据路径（默认读 `config/code_p3_config.yaml` 里的 phase1/phase2 路径，已指向 `./output_latest`）。
+- `--db-path` 显式指定 Qdrant embedded 存储路径 (覆盖 config `qdrant.path`); server 模式仍由 `QDRANT_URL` 控制。
+- 支持 server / embedded 双模式：优先 `QDRANT_URL` 环境变量，未设置时用 config `qdrant.url`，再退回 embedded (`qdrant.path` 或 `--db-path`)。server 模式指向 localhost/127.0.0.1 时自动设 `NO_PROXY` 绕开本机代理，避免 clash 把请求路由到 7890 返回 502。
+- 检索启动快（不 upsert），适合调参阶段验证 embedding 模型或 sparse 方法的效果。
 
 **典型用法：**
 
 ```bash
-# 全量 bge-small-zh + BM25 对比
-python src/code_p3_search_demo.py --mode all --config config/code_p3_config.yaml
+# Server 模式混合检索（BM25 数据源 = 本地 JSONL, dense 数据源 = Qdrant server）
+QDRANT_URL=http://localhost:6443 python3 src/code_p3_search_demo.py \
+  --mode all --query "GPU对比分析" --top-k 5 \
+  --tasks ./output_latest/tasks.jsonl \
+  --chunks ./output_latest/chunks.jsonl \
+  --summaries ./output_latest/chunks_summary_p2.jsonl
 
-# 自定义查询
-python src/code_p3_search_demo.py --mode all --query "分布式训练通信优化"
+# 单路 Dense 查询（无需任何 JSONL 输入; 不带 --top-k 时对预设 3 条示例查询执行全流程）
+QDRANT_URL=http://localhost:6443 python3 src/code_p3_search_demo.py \
+  --mode all --query "分布式训练通信优化"
+
+# 旧流程: 全量 upsert 后再查询（写 server 前请确认数据源正确）
+QDRANT_URL=http://localhost:6443 python3 src/code_p3_search_demo.py \
+  --mode all --query "分布式训练通信优化" --upsert
+
+# Embedded 模式（显式声明全部数据源与存储路径）
+python3 src/code_p3_search_demo.py \
+  --config config/code_p3_config.yaml \
+  --query "分布式训练通信优化" \
+  --tasks ./output_latest/tasks.jsonl \
+  --chunks ./output_latest/chunks.jsonl \
+  --summaries ./output_latest/chunks_summary_p2.jsonl \
+  --db-path ./qdrant_data_latest
+
+# Embedded 模式（省略参数时按 config 路径读数据, 已指向 ./output_latest）
+python3 src/code_p3_search_demo.py --mode all --query "分布式训练通信优化"
 ```
+
+> 注意：BM25 模式下三个 JSONL 与 Qdrant 数据不同源会导致 sparse/hybrid 结果与 dense 来自不同数据集；`--tasks` 仅影响结果 payload 的 `task_id` 标注，可省略。
 
 ### 2. `code_MS_inspect.py` — 数据质检
 

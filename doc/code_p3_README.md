@@ -18,14 +18,18 @@ Phase 3 将 Phase 1 (chunks) 和 Phase 2 (tasks + chunk summaries) 的输出向�
 ## 依赖
 
 ```bash
-pip install qdrant-client sentence-transformers jieba rank_bm25
+pip install qdrant-client 'httpx[socks]' sentence-transformers jieba rank_bm25
 ```
+
+`httpx[socks]` 使 shell 里常驻的 socks5 代理 (`all_proxy=socks5://...`) 不会导致 httpx 抛 `socksio` ImportError。
 
 首次运行会自动从 HuggingFace 下载 embedding 模型。国内环境建议设置镜像：
 
 ```bash
 export HF_ENDPOINT=https://hf-mirror.com
 ```
+
+脚本内部通过 `code_p3_hf_config.setup_hf_env()` 在导入 transformers 前自动设置离线模式 (`embedding.offline_mode`, 默认开启)，shell 里无需手动 `export TRANSFORMERS_OFFLINE=1`。
 
 ## 文件结构
 
@@ -39,26 +43,70 @@ code_p3_search_demo.py       # 检索演示: dense / sparse / hybrid 对比
 
 ## 运行
 
+### 部署模式选择
+
+| 模式 | 触发条件 | 说明 |
+|------|---------|------|
+| Server | `QDRANT_URL` 环境变量 或 config `qdrant.url` 非空 | 多客户端共享；指向 `localhost`/`127.0.0.1` 时自动设 `NO_PROXY` 绕开本机代理 |
+| Embedded | 两者都为空 | 单进程独占 `qdrant.path` 目录（文件锁） |
+
+优先级：`QDRANT_URL` env > `qdrant.url` config > embedded。
+
 ### 写入数据
 
 ```bash
 export HF_ENDPOINT=https://hf-mirror.com
+
+# embedded 模式
 python code_p3_main.py
-python code_p3_main.py --config config/code_p3_config.yaml
+
+# embedded 模式 + 显式存储路径 / 数据源
+python code_p3_main.py --db_path ./qdrant_data_latest \
+  --tasks ./output_latest/tasks.jsonl \
+  --chunks ./output_latest/chunks.jsonl \
+  --summaries ./output_latest/chunks_summary_p2.jsonl
+
+# server 模式
+QDRANT_URL=http://localhost:6443 python code_p3_main.py
 ```
+
+数据源路径可用 `--tasks/--chunks/--summaries` 覆盖 config 里的 phase1/phase2 路径；embedded 存储路径可用 `--db_path` 覆盖 config `qdrant.path`。注意 embedded 模式是文件锁单进程独占，同一 `--db_path` 目录不能被两个进程同时打开。
 
 ### 检索演示
 
-```bash
-# 全量数据 bge-small-zh + BM25
-python code_p3_search_demo.py --mode all
+`code_p3_search_demo.py` **默认只读**：不 upsert，直接查 Qdrant 已有数据；BM25 索引每次运行从 JSONL 在内存重建 (`_rebuild_bm25_only()`)。因此 BM25/hybrid 模式下 `--chunks`/`--summaries` 必传且必须与 Qdrant 数据同源；`--tasks` 仅影响结果里的 `task_id` 标注，可省略。加 `--upsert` 才恢复旧的"先全量 upsert 再查询"行为。
 
-# 1/5 数据 Qwen3 + BGE-M3 (示例)
+`--db_path` / `--db-path` 可显式指定 Qdrant embedded 存储路径 (覆盖 config `qdrant.path`)，不传则按 config 走；server 模式仍用 `QDRANT_URL`，两者不需要同时指定。
+
+```bash
+# Server 模式混合检索 (BM25 数据源 = 本地 JSONL, dense 数据源 = Qdrant server)
+QDRANT_URL=http://localhost:6443 python3 src/code_p3_search_demo.py \
+  --mode all --query "GPU对比分析" --top-k 5 \
+  --tasks ./output_latest/tasks.jsonl \
+  --chunks ./output_latest/chunks.jsonl \
+  --summaries ./output_latest/chunks_summary_p2.jsonl
+
+# Embedded 模式 (显式声明全部数据源 + 存储路径)
+python3 src/code_p3_search_demo.py \
+  --config config/code_p3_config.yaml \
+  --query "GPU对比分析" --top-k 5 \
+  --tasks ./output_latest/tasks.jsonl \
+  --chunks ./output_latest/chunks.jsonl \
+  --summaries ./output_latest/chunks_summary_p2.jsonl \
+  --db-path ./qdrant_data_latest
+
+# Embedded 无参数写法: CLI 省略后按 config 路径读数据 (phase1/phase2 已指向 ./output_latest)
+python code_p3_search_demo.py --mode all --query "GPU对比分析"
+
+# 1/5 数据 Qwen3 + BGE-M3 (示例; bge_m3 模式下三个 JSONL 参数可省略)
 python code_p3_search_demo.py --mode sample
 
-# 自定义查询
-python code_p3_search_demo.py --mode all --query "GPU对比分析"
+# 旧流程: 全量 upsert 后再查询
+QDRANT_URL=http://localhost:6443 python code_p3_search_demo.py \
+  --mode all --query "GPU对比分析" --upsert
 ```
+
+> 注意：`VAR=x cmd` 前缀写法只对该条命令生效，不污染当前 bash 会话。
 
 ## 配置说明 (code_p3_config.yaml)
 
@@ -86,7 +134,8 @@ python code_p3_search_demo.py --mode all --query "GPU对比分析"
 
 | 配置项 | 默认值 | 说明 |
 |--------|--------|------|
-| `qdrant.path` | `./qdrant_data` | 文件持久化路径 |
+| `qdrant.url` | `null` | Server 模式地址 (如 `http://localhost:6443`); 非空则优先于 `qdrant.path` |
+| `qdrant.path` | `./qdrant_data` | Embedded 模式文件持久化路径 (单进程独占) |
 | `qdrant.collections.tasks` | `tasks` | task 集合名 |
 | `qdrant.collections.chunks_summary` | `chunks_summary` | chunk summary 集合名 |
 | `qdrant.collections.chunks_cleaned_text` | `chunks_cleaned_text` | chunk cleaned_text 集合名 |
